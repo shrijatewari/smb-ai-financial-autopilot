@@ -49,9 +49,23 @@ def build_collection_queue(receivable_exposure: float, tick: int) -> list[dict[s
             "priority": "medium",
             "note": "Supplier advance adjustment",
         },
+        {
+            "name": "Neha",
+            "amount": round(base * 0.35, 0),
+            "days_late": 2,
+            "priority": "medium",
+            "note": "Credit sale · kirana",
+        },
+        {
+            "name": "Vikram",
+            "amount": round(base * 0.28, 0),
+            "days_late": 4,
+            "priority": "low",
+            "note": "Wholesale partial",
+        },
     ]
     rows.sort(key=lambda r: (-{"high": 3, "medium": 2, "low": 1}[r["priority"]], r["days_late"]))
-    return rows[:3]
+    return rows[:5]
 
 
 def estimate_action_outcomes(

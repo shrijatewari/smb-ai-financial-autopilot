@@ -20,6 +20,7 @@ function speakText(text, enabled, langUi) {
 }
 
 export default function Assistant() {
+  const [searchParams] = useSearchParams()
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
@@ -74,10 +75,14 @@ export default function Assistant() {
           include_audio: includeAudioServer,
         })
         const reply = res.response || ''
+        const showDebug =
+          typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === '1'
         const metaParts = []
-        if (res.intent) metaParts.push(`Intent: ${res.intent}`)
-        if (res.detected_query_language) metaParts.push(`Heard: ${res.detected_query_language}`)
-        if (res.language) metaParts.push(`Reply: ${res.language}`)
+        if (showDebug) {
+          if (res.intent) metaParts.push(`Intent: ${res.intent}`)
+          if (res.detected_query_language) metaParts.push(`Heard: ${res.detected_query_language}`)
+          if (res.language) metaParts.push(`Reply: ${res.language}`)
+        }
         setMessages((m) => [
           ...m,
           {

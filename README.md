@@ -1,255 +1,272 @@
-# SMB AI Financial Autopilot
+# Self-Learning Financial Control System for SMBs
 
-> **Read this first — [full project explanation below](#project-overview).**  
-> This is a **financial operating system for SMBs**: it builds an **AI-style business twin** from messy real inputs (UPI/bank SMS, CSVs, OCR documents, khata/inventory), runs **cash & risk simulation**, surfaces a **live control plane** (dashboard), and can **close the loop** with Razorpay links and Meta WhatsApp—backed by **PostgreSQL + Prisma** (not “just a login table”).
+**Voice-first AI that predicts cash risk, recommends what to do today, and can execute collections — built for real Indian SMB behavior (Hindi / Hinglish, messy data, action over analytics).**
 
-An **AI-assisted financial operating system** for small and medium businesses: cash and risk signals, collections workflow, onboarding-driven dashboards, document intelligence (OCR), inventory / khata flows, and optional integrations (Paytm mock, Razorpay links, Meta WhatsApp Cloud API).
-
-This repository contains:
-
-| Part | Stack | Purpose |
-|------|--------|---------|
-| **`backend/`** | FastAPI, PostgreSQL, Prisma (Python) | REST API, auth, business profile, ingestion, simulation engine, execution adapters |
-| **`financial-control-ui/`** | React (Vite), Tailwind | Dashboard, onboarding gate, transactions, inventory, assistant, etc. |
+*Repository: [smb-ai-financial-autopilot](https://github.com/shrijatewari/smb-ai-financial-autopilot)*
 
 ---
 
-## Project overview
+## Problem
 
-**What this is and why it exists** — detailed product story for judges, investors, and contributors.
+Small businesses rarely fail from lack of effort — they fail because **the financial future is invisible**.
 
-### The problem
+- Cash flow is **unpredictable** (UPI + cash + khata, not one clean ledger)  
+- **Payments are delayed**; owners don’t know who hurts them most today  
+- Records are **incomplete** — digital and cash don’t match  
+- Most “SMB tools” are **dashboards**, not **decision systems**  
 
-Small and medium businesses in India (and similar markets) rarely run a **single source of financial truth**. Cash moves through UPI, bank SMS, Paytm, paper **khata**, WhatsApp reminders, and ad-hoc Excel—yet owners still need answers to: *How much cash do I really have? How fast am I running out? Who owes me what? What should I do today?* Traditional accounting tools expect clean books; real SMB life is **messy, event-driven, and partially observed**.
+Owners don’t want another chart. They need:
 
-### The idea: an “AI business twin” + control plane
-
-**SMB AI Financial Autopilot** is a **financial operating system** that sits **above** raw transactions. It is designed to:
-
-1. **Learn your business context** — not just login credentials. A structured **business profile** (retail vs service vs hybrid, turnover band, inventory posture, credit behavior, GST posture, planned data sources) is **required onboarding** and is stored in the database. That profile drives **module selection** and **dashboard emphasis**—so the product is not a generic dashboard; it adapts to *your* business vector.
-
-2. **Ingest reality from multiple channels** — CSV uploads, **SMS / UPI text** parsing into a working ledger, a **Paytm-style connection** (mock in demo), **document intelligence** (PDF/images → OCR → business signals), and **inventory / khata** flows that tie stock movements to cash effects where configured.
-
-3. **Reconstruct, simulate, and surface risk** — The backend runs pipelines that combine **reconstruction** (what we can infer from messy inputs), **stochastic cash simulation**, and **risk / receivable** views. The **live control plane** exposes a continuously updated snapshot—cash, horizon risk, forecast paths, **collection queue**, and recommended **actions**—via `GET /system/state` for the authenticated user.
-
-4. **Close the loop with execution (optional live hooks)** — The same API can generate **Razorpay payment links** when keys are set, send **WhatsApp payment reminders** via the **Meta WhatsApp Cloud API** when `WHATSAPP_*` env vars are set (otherwise simulated), and expose **simulated call** scripts for collections—so “insight → action” is not only visual.
-
-5. **Persist identity and learn over time (foundation)** — PostgreSQL + Prisma store **users**, **business profiles**, onboarding payloads, inventory, khata uploads, and schema for **transactions**, **predictions**, **actions**, **executions**, **customers**, **documents**, and **RL** transitions—so the system can represent **business state + financial reality + decision history**, not just auth.
-
-### What you see in the product
-
-- **Web app (`financial-control-ui`)** — Sign up / sign in, **mandatory business profile onboarding**, then a **dynamic dashboard** (KPIs, signals, data connection blocks, collections, etc.) with navigation to transactions, cash flow, inventory, risk, GST, documents, assistant, and profile.
-- **API (`backend`)** — FastAPI with OpenAPI docs; JWT auth; onboarding and system state; ingestion and execution routes as described in `backend/README.md`.
-
-### Honest scope note
-
-This codebase mixes **production-shaped** pieces (real Postgres, Prisma, JWT, optional Razorpay / Meta WhatsApp, OCR paths) with **demo/simulation** pieces (e.g. Paytm mock, simulated calls, parts of the engine still backed by in-memory snapshots for speed). The READMEs describe **how to run and extend** the system; treat live money-moving features as **your responsibility** to wire, test, and comply with regulations (payments, messaging, data privacy).
+**“What should I do today?”**
 
 ---
 
-## Architecture (high level)
+## Solution
+
+A **Self-Learning Financial Control System** that:
+
+| Capability | What it means |
+|------------|----------------|
+| **Reconstructs** messy inputs | SMS/UPI text, CSV, OCR, khata → working signals |
+| **Simulates** uncertainty | Monte Carlo paths, cash-at-risk over a horizon |
+| **Decides** | Collect, delay expense, collections priority — not only KPIs |
+| **Executes** (optional live hooks) | Razorpay links, Meta WhatsApp reminders, Twilio voice |
+| **Speaks your language** | Hindi, Hinglish, regional via translation + voice assistant |
+| **Today-first UX** | “Aaj kya karna hai” — one risk line, one action, three buttons |
+
+This is **not** a passive dashboard. It is an **operating layer** that sits on top of messy reality.
+
+---
+
+## Key features
+
+### Financial intelligence
+- Cash & horizon risk from reconstructed ledger + simulation  
+- Monte Carlo cash paths (configurable paths / horizon)  
+- Missing / inferred cash reconstruction from observed flows  
+
+### Decision engine
+- Prioritized actions (e.g. collect payment, reduce expense, delay payable)  
+- **Before / after** outcome hints (collect vs do nothing)  
+- Tabular RL hooks — action ordering can improve over feedback  
+
+### Execution layer
+- **Razorpay payment links** (`POST /execute/payment-link`) when keys are set  
+- **Meta WhatsApp** outbound reminders when `WHATSAPP_*` is configured  
+- **Twilio** Hindi voice calls (`POST /execute/twilio-call`) when `TWILIO_*` is set  
+- Simulated call scripts when integrations are off  
+
+### Voice assistant (India-first)
+- Multilingual pipeline: detect → translate → core engine → translate back  
+- gTTS / browser speech; optional OpenAI Whisper for uploaded audio  
+- Assistant UI: `financial-control-ui` → `/assistant`  
+
+### Data integration
+- SMS / UPI text ingest → ledger rows  
+- Document OCR (Google Vision optional; local Tesseract fallback)  
+- Paytm-style mock feed  
+- Inventory + **khata** sale → stock + ledger movement when you apply a sale  
+
+### Adaptive UI
+- Onboarding-driven **business profile** → module mix and emphasis  
+- **Today** home (`/`) — action-first; full analytics under `/dashboard`  
+
+---
+
+## How it works
+
+```mermaid
+flowchart TB
+  subgraph inputs [Inputs]
+    OB[Onboarding / Business profile]
+    SMS[SMS and UPI text]
+    CSV[CSV upload]
+    OCR[Documents OCR]
+    KH[Khata / inventory sale]
+  end
+  subgraph core [Core pipeline]
+    ING[Ingestion and session ledger]
+    REC[Reconstruction]
+    SIM[Monte Carlo simulation]
+    DEC[Decision engine]
+    RL[RL rank optional]
+  end
+  subgraph plane [Live plane]
+    ENG[Background system engine tick]
+    SNAP[Global snapshot GET /system/state]
+  end
+  subgraph exec [Execution optional]
+    RZ[Razorpay links]
+    WA[WhatsApp Cloud API]
+    TW[Twilio voice]
+  end
+  OB --> ING
+  SMS --> ING
+  CSV --> ING
+  OCR --> ING
+  KH --> ING
+  ING --> REC --> SIM --> DEC --> RL
+  RL --> ENG --> SNAP
+  DEC --> RZ
+  DEC --> WA
+  DEC --> TW
+```
+
+The **system engine** runs on a timer (default ~5s), refreshes simulation output, and updates the snapshot the UI polls.
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph ui [Web UI]
-    FC[financial-control-ui]
+  subgraph client [Browser]
+    UI[React Vite Tailwind]
   end
-  subgraph api [Backend API]
+  subgraph api [API]
     FA[FastAPI]
-    PE[Prisma / PostgreSQL]
-    SE[System engine snapshot]
+    PR[Prisma client]
   end
-  FC -->|JWT + /api proxy| FA
-  FA --> PE
-  FA --> SE
+  subgraph data [Data]
+    PG[(PostgreSQL)]
+    MEM[Session ledger and global snapshot]
+  end
+  UI -->|JWT REST /api proxy| FA
+  FA --> PR --> PG
+  FA --> MEM
 ```
 
-- **PostgreSQL** stores users, normalized **business profiles**, onboarding JSON, inventory, khata uploads, and optional fintech tables (`transactions`, `predictions`, `actions`, etc.—see `backend/prisma/schema.prisma`).
-- **In-memory** layers (`state_store`, global snapshot) still power the live **control plane** (cash, risk, forecast, collection queue) updated by the background system engine.
-- The **frontend** polls `GET /system/state` (authenticated) for KPIs and module mix.
+| Layer | Stack |
+|-------|--------|
+| **API** | FastAPI, Pydantic, JWT, Prisma (Python) |
+| **UI** | React 19, Vite, Tailwind (`financial-control-ui/`) |
+| **ML / rules** | scikit-learn, custom credit / fraud helpers |
+| **Simulation** | Monte Carlo over ledger-derived dynamics |
+| **Voice / NL** | langdetect, deep-translator, gTTS, optional OpenAI Whisper + chat |
+| **Integrations** | Razorpay SDK, Meta WhatsApp Graph, Twilio Voice |
+| **OCR** | PyMuPDF, Pillow, Google Vision or Tesseract |
+| **DB** | PostgreSQL — users, profiles, inventory, documents, RL state, etc. |
 
 ---
 
-## Prerequisites
+## Data model (high level)
 
-- **Python** 3.11+ (3.13 used in development)
-- **Node.js** 18+ and **npm** (for the UI)
-- **PostgreSQL** 16+ (local Docker recommended—see below)
-- **Prisma CLI** is installed **inside** `backend/.venv`—do not rely on a global `prisma` on `PATH` unless you add `.venv/bin` first (required for `prisma-client-py` during `generate`).
+Persistent entities (see `backend/prisma/schema.prisma`):
+
+- **Users** — auth identity  
+- **OnboardingProfile / BusinessProfile** — business context for the twin  
+- **Transactions / predictions / actions / executions** — financial and decision trace  
+- **Customers** — receivable-oriented records  
+- **Documents** — OCR pipeline outputs  
+- **InventoryItem / KhataUpload** — stock and paper khata  
+- **RlState** — learning metadata  
+
+The **live cash / risk / collection queue** in the demo is also driven by an **in-memory snapshot** updated by the engine (fast path for hackathon demos); Prisma holds durable business state.
 
 ---
 
-## Quick start (local development)
+## What makes this different
 
-### 1. Clone and database
+| Typical SMB SaaS | This system |
+|------------------|-------------|
+| Static dashboards | **Decision + execution** loop |
+| English-only analytics | **Hindi / Hinglish / regional** assistant path |
+| “Log in and see charts” | **“What do I do today?”** + optional one-tap actions |
+| Assumes clean books | Built for **partial, messy, real** inputs |
+| Passive | **Self-learning hooks (RL)** + real outbound adapters |
+
+---
+
+## Demo (2 minutes)
+
+1. **Risk** — Snapshot shows stress horizon (e.g. cash shortage probability over N days).  
+2. **Action** — “Collect from [top of collection queue]” with ₹ amount.  
+3. **Execute** — Generate **Razorpay link**; send **WhatsApp** reminder (live with Meta keys); **call** (Twilio when configured).  
+4. **Voice** — Open **`/assistant`**, choose **हिंदी**, ask: *“Mujhe kya karna chahiye?”*  
+5. **Today screen** — **`/`** shows one-line risk + one action + WhatsApp / Call / System buttons.
+
+---
+
+## Setup
+
+### Prerequisites
+
+- Python **3.11+** · Node **18+** · **PostgreSQL** (Docker recommended)  
+
+### Backend
 
 ```bash
 git clone https://github.com/shrijatewari/smb-ai-financial-autopilot.git
 cd smb-ai-financial-autopilot/backend
-```
-
-Start Postgres (from `backend/`):
-
-```bash
 docker compose up -d
-```
-
-Default connection (matches `docker-compose.yml`):
-
-```text
-postgresql://smb:smb@localhost:5432/smb_ai
-```
-
-### 2. Backend
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
 cp .env.example .env
-# Edit .env — at minimum set DATABASE_URL if yours differs; add JWT_SECRET_KEY for production
-
 export PATH="$(pwd)/.venv/bin:$PATH"
-./scripts/sync-prisma-db.sh       # or: prisma db push + prisma generate (see backend README)
+./scripts/sync-prisma-db.sh
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-From **repository root**, you can instead use:
+- API docs: http://127.0.0.1:8000/docs  
+- Optional: `python scripts/seed_mock_data.py` for demo DB rows  
+
+### Frontend
 
 ```bash
-chmod +x scripts/start_backend.sh
-./scripts/start_backend.sh
-```
-
-(That script runs `prisma generate` and `uvicorn app:app`—ensure DB is up and `.env` exists first.)
-
-- **API docs:** http://127.0.0.1:8000/docs  
-- **Health:** `GET /health`  
-- **Live snapshot (dashboard):** `GET /system/state` (requires `Authorization: Bearer <token>`)
-
-### 3. Frontend
-
-```bash
-cd financial-control-ui
+cd ../financial-control-ui
 npm install
-cp .env.example .env.local        # optional; dev uses Vite proxy to /api
 npm run dev
 ```
 
-Open the URL Vite prints (usually http://localhost:5173). The dev server proxies `/api` to the backend (see `financial-control-ui/vite.config.js`).
+Open **http://localhost:5173** — Vite proxies `/api` → backend (see `vite.config.js`).
 
-**Auth flow:** sign up → complete **business profile onboarding** (required before the dashboard) → use the app.
+**Auth:** sign up → complete **onboarding** → app unlocks.
 
----
+### Deploy UI (Vercel)
 
-## Environment variables (summary)
-
-| Location | Purpose |
-|----------|---------|
-| `backend/.env` | `DATABASE_URL`, JWT, Razorpay, Meta WhatsApp, OCR paths, engine tuning |
-| `financial-control-ui/.env` | `VITE_API_URL` in production (omit in dev to use `/api` proxy) |
-
-Copy from each folder’s **`.env.example`** and fill secrets. **Never commit `.env`** or `ocr_key.json`.
-
-Details: **`backend/.env.example`** (comments) and **`financial-control-ui/.env.example`**.
-
----
-
-## Prisma & database
-
-- Schema: `backend/prisma/schema.prisma`
-- **Always** put `backend/.venv/bin` on `PATH` when running `prisma generate` / `db push`, or use:
-
-  ```bash
-  cd backend && ./scripts/sync-prisma-db.sh
-  ```
-
-- Baseline migration lives under `backend/prisma/migrations/`; `prisma migrate status` should show up to date after sync.
-
----
-
-## WhatsApp (Meta Cloud API)
-
-Optional live sends: set **`WHATSAPP_PHONE_NUMBER_ID`** and **`WHATSAPP_ACCESS_TOKEN`** in `backend/.env`.  
-`POST /execute/whatsapp` then calls Meta Graph API; otherwise the response is simulated.  
-See `backend/services/whatsapp_service.py` and comments in `backend/.env.example`.
-
----
-
-## Deploy frontend to Vercel
-
-The **React UI** (`financial-control-ui`) is configured for [Vercel](https://vercel.com) via **`vercel.json`** at the repo root (build runs inside `financial-control-ui/`, output: `financial-control-ui/dist`). The **FastAPI backend is not deployed on Vercel** in this setup—it needs a long‑running process + PostgreSQL (e.g. [Railway](https://railway.app), [Render](https://render.com), [Fly.io](https://fly.io), or your own VPS).
+Root **`vercel.json`** builds `financial-control-ui/`. Set **`VITE_API_URL`** in Vercel to your **HTTPS API origin** (no trailing slash). Backend needs a long-running host (Railway, Render, Fly, VPS) + Postgres — not Vercel serverless.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fshrijatewari%2Fsmb-ai-financial-autopilot&root-directory=.)
 
-### One-time setup
+---
 
-1. Push this repo to GitHub (already configured for `shrijatewari/smb-ai-financial-autopilot`).
-2. In Vercel: **Add New Project** → Import the Git repository.
-3. Vercel should detect settings from **`vercel.json`**. If it asks for framework: **Vite**, root: **repository root** (not `financial-control-ui` only—our root `vercel.json` runs `cd financial-control-ui && …`).
-4. **Environment variables** (Production + Preview as needed):
+## Environment (summary)
 
-   | Name | Example | Purpose |
-   |------|---------|---------|
-   | `VITE_API_URL` | `https://your-api.up.railway.app` | **Required for production builds.** Must be the **public origin** of your FastAPI app **without** a trailing slash. The UI calls `VITE_API_URL + '/auth/...'`, etc. |
+| File | Purpose |
+|------|---------|
+| `backend/.env` | `DATABASE_URL`, JWT, Razorpay, WhatsApp, Twilio, OpenAI (optional), engine tuning |
+| `financial-control-ui/.env` | Production: `VITE_API_URL` pointing at your API origin |
 
-   Without `VITE_API_URL`, the production bundle falls back to `http://localhost:8000` (see `financial-control-ui/src/services/api.js`) and the live site will not reach your API.
-
-5. Deploy. Your site will be `https://<project>.vercel.app` (or your custom domain).
-
-### Backend checklist for a real deploy
-
-- Serve FastAPI with HTTPS (uvicorn/gunicorn behind a reverse proxy or platform).
-- Set `DATABASE_URL`, `JWT_SECRET_KEY`, and any payment/WhatsApp keys on the **hosting provider**, not in Vercel.
-- CORS: `main.py` already allows `*` for development; for production you may restrict `allow_origins` to your Vercel domain.
-
-### Files involved
-
-- **`vercel.json`** (repo root) — `installCommand`, `buildCommand`, `outputDirectory`, SPA `rewrites` for React Router.
-- **`.vercelignore`** — skips heavy/irrelevant paths from uploads (optional optimization).
+Copy from each **`.env.example`**. Never commit secrets.
 
 ---
 
-## Repository layout
+## Future work
 
-```text
-smb-ai-financial-autopilot/
-├── README.md                 # This file
-├── vercel.json               # Vercel: build UI from financial-control-ui/
-├── .vercelignore
-├── scripts/
-│   └── start_backend.sh      # Root helper to start API
-├── backend/                  # FastAPI + Prisma + engine
-│   ├── main.py
-│   ├── prisma/
-│   ├── services/
-│   ├── api/routes/
-│   └── README.md             # Backend-focused documentation
-└── financial-control-ui/     # Vite React app
-    └── README.md             # Frontend-focused documentation
-```
+- Deeper **Paytm / bank** integrations  
+- **Razorpay webhooks** → auto-post settlements into ledger  
+- Richer **RL** policies and evaluation  
+- **Credit / lending** scoring APIs  
+- More **regional languages** end-to-end  
+- SSE / WebSocket for **push** snapshots instead of polling  
 
 ---
 
-## Troubleshooting
+## Vision
 
-| Issue | What to try |
-|-------|-------------|
-| `prisma-client-py: command not found` | `export PATH="$(pwd)/.venv/bin:$PATH"` before `prisma generate`, or run `./scripts/sync-prisma-db.sh` |
-| DB connection refused | `docker compose up -d` in `backend/`, check `DATABASE_URL` |
-| CORS / API errors from UI | Ensure backend is on :8000; in dev, UI uses proxy—don’t set a wrong `VITE_API_URL` |
-| Onboarding loop | Complete `POST /onboarding`; `GET /auth/me` must return `onboarding_completed: true` |
+**Build an AI financial operating system so millions of SMBs can make better cash decisions every day — without needing a finance degree or English-first dashboards.**
 
 ---
 
-## License
+## Reference
 
-Add a `LICENSE` file if you open-source this project; default is **all rights reserved** until you choose one.
+| Topic | Where |
+|-------|--------|
+| Backend route details | `backend/README.md` |
+| Vercel deploy (UI) | Root `vercel.json` — set `VITE_API_URL` to your API |
+| Prisma | `backend/prisma/schema.prisma`, `./scripts/sync-prisma-db.sh` |
+| Troubleshooting | Prisma on `PATH`, DB up, onboarding completed — see legacy notes in git history if needed |
 
----
+**License:** Add a `LICENSE` when you open-source; until then all rights reserved unless stated otherwise.
 
-## Author
-
-Maintained by **[@shrijatewari](https://github.com/shrijatewari)** — repo: **`smb-ai-financial-autopilot`**.
+**Author:** [@shrijatewari](https://github.com/shrijatewari) · **`smb-ai-financial-autopilot`**

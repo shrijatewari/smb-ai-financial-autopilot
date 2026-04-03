@@ -32,6 +32,9 @@ backend/data/khata/
 backend/data/rl_qtable.json
 **/uploads/
 
+# Generated assistant TTS (local dev)
+backend/media/
+
 # Matplotlib cache (set by app.py / streamlit)
 .mplconfig/
 

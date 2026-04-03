@@ -179,6 +179,12 @@ export default function Inventory() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 pb-16">
+      <p className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-950/90">
+        <strong className="font-semibold">Twin vs inventory:</strong> quantities here are stored in the database.
+        The home <strong>cash / risk</strong> screen runs on the <strong>transaction ledger</strong> (SMS, CSV,
+        khata). Stock updates when you <strong>apply a khata sale</strong> (or ingest cash); it is not driven by
+        the Monte Carlo engine directly.
+      </p>
       <PageHeader
         title="Inventory & khata"
         subtitle="Add products, then photograph your khata and record sales — stock goes down and cash (credit) hits the ledger."

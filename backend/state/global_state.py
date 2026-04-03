@@ -131,6 +131,16 @@ def update_from_pipeline(out: dict, tick: int) -> None:
         sug_amt = max(2400.0, rec_exp * 0.12)
     outcomes = estimate_action_outcomes(risk_p, sug_amt, rec_exp)
     collection_q = build_collection_queue(rec_exp, tick)
+    # Align primary "collect_payment" with top of queue (decision_engine used a hardcoded name)
+    if primary and isinstance(primary, dict) and primary.get("action") == "collect_payment" and collection_q:
+        top = collection_q[0]
+        meta = dict(primary.get("metadata") or {})
+        meta["customer"] = str(top.get("name") or meta.get("customer") or "Customer")
+        try:
+            meta["suggested_amount"] = float(top.get("amount", meta.get("suggested_amount", 0)))
+        except (TypeError, ValueError):
+            pass
+        primary = {**primary, "metadata": meta}
     if days_neg is None:
         runway_line = "Majority of simulated paths stay above zero in the horizon — still chase dues to improve buffer."
     else:

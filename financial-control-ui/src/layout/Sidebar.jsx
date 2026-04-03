@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Sun,
   Users,
+  Layers,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useUiStore } from '../store/uiStore'
@@ -35,6 +36,7 @@ const nav = [
   { to: '/documents', hi: 'Documents', en: 'Documents', icon: FileStack, basic: false },
   { to: '/onboarding', hi: 'Shuruat', en: 'Onboarding', icon: ClipboardList, basic: false },
   { to: '/assistant', hi: 'AI se baat', en: 'AI chat', icon: MessageSquare, basic: true },
+  { to: '/platform', hi: 'Platform', en: 'Platform lab', icon: Layers, basic: false },
 ]
 
 export function Sidebar() {

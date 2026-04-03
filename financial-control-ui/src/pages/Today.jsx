@@ -450,6 +450,18 @@ export default function Today() {
           )}
         </motion.h1>
 
+        {!loading && (
+          <div className="mt-3 flex justify-center">
+            <Link
+              to="/assistant?explain=risk"
+              className="inline-flex items-center gap-1 rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#6C3BFF] shadow-sm hover:bg-violet-50"
+            >
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              {t('Yeh number samjhao', 'Explain this')}
+            </Link>
+          </div>
+        )}
+
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-violet-600/90">
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/70 bg-white/90 px-3 py-1.5 shadow-sm"

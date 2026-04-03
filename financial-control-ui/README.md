@@ -114,6 +114,10 @@ flowchart LR
 
 See **`../README.md`** (persisted ledger table) and **`../backend/README.md`** (full API semantics).
 
+### Platform lab (`/platform`)
+
+The **Platform capabilities** page lists live vs mock product features (Account Aggregator, GST, Razorpay webhook, SSE, WhatsApp intents, late-payment demo scores, anomaly / what-if mocks, PWA roadmap, etc.) with interactive demos backed by `src/lib/platformMocks.js`. Use **Advanced** sidebar mode to open **Platform lab**, or **Profile → Platform lab**.
+
 ---
 
 ## Styling

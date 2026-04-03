@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Bell, CreditCard, Database, Landmark, MessageCircle, Radio, Receipt, Sun } from 'lucide-react'
+import { Bell, CreditCard, Database, Landmark, Layers, MessageCircle, Radio, Receipt, Sun } from 'lucide-react'
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -368,6 +368,19 @@ export default function Profile() {
                   </p>
                   <Link className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#6C3BFF] hover:underline" to="/">
                     Open Today
+                  </Link>
+                </div>
+              </li>
+              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
+                <Layers className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden />
+                <div className="min-w-0">
+                  <p className="font-medium text-violet-950">Platform lab</p>
+                  <p className="mt-1 text-xs text-violet-950/70">
+                    One-page map of live vs mock features (AA, GST, webhooks, WhatsApp, what-if, anomalies, PWA roadmap)
+                    with interactive demos.
+                  </p>
+                  <Link className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" to="/platform">
+                    Open platform capabilities
                   </Link>
                 </div>
               </li>

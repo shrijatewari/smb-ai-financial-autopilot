@@ -4,6 +4,7 @@ import { PageHeader } from '../components/twin/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
 import { fetchGstCompliance, fetchGstSummary } from '../services/api'
+import { MOCK_GST_FALLBACK } from '../lib/platformMocks'
 
 function formatInr(n) {
   if (n == null || Number.isNaN(n)) return '—'
@@ -16,18 +17,21 @@ export default function Gst() {
 
   useEffect(() => {
     let c = false
-    fetchGstSummary()
-      .then((d) => {
+    ;(async () => {
+      try {
+        const d = await fetchGstSummary()
         if (!c) setGst({ ...d, _source: 'summary' })
-      })
-      .catch(() =>
-        fetchGstCompliance().then((d) => {
+      } catch {
+        try {
+          const d = await fetchGstCompliance()
           if (!c) setGst({ ...d, _source: 'compliance' })
-        })
-      )
-      .finally(() => {
+        } catch {
+          if (!c) setGst({ ...MOCK_GST_FALLBACK })
+        }
+      } finally {
         if (!c) setLoading(false)
-      })
+      }
+    })()
     return () => {
       c = true
     }
@@ -37,7 +41,7 @@ export default function Gst() {
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
         title="GST & compliance"
-        subtitle="GST liability forecast from your BusinessProfile (GSTIN), return history, and turnover — aligned with Monte Carlo cash simulation on GET /dashboard."
+        subtitle="GST liability forecast from your BusinessProfile (GSTIN), return history, and turnover — aligned with Monte Carlo cash simulation on GET /dashboard. If APIs are unreachable, a demo card is shown from the platform mocks."
       />
       <div className="grid gap-6 md:grid-cols-2">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -77,6 +81,11 @@ export default function Gst() {
                   )}
                   {gst?.basis && (
                     <p className="mt-2 text-xs text-violet-600">Basis: {gst.basis}</p>
+                  )}
+                  {gst?._source === 'mock' && (
+                    <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
+                      Demo data — connect backend and save GSTIN for live GET /gst/summary.
+                    </p>
                   )}
                   <p className="mt-2">{gst?.note ?? '—'}</p>
                 </>

@@ -17,6 +17,7 @@ import Risk from './pages/Risk'
 import Gst from './pages/Gst'
 import ActionCenter from './pages/ActionCenter'
 import Profile from './pages/Profile'
+import PlatformCapabilities from './pages/PlatformCapabilities'
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/gst" element={<Gst />} />
             <Route path="/actions" element={<ActionCenter />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/platform" element={<PlatformCapabilities />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/assistant" element={<Assistant />} />
             <Route path="/documents" element={<Documents />} />

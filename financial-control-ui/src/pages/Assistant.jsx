@@ -62,6 +62,21 @@ export default function Assistant() {
     }
   }, [searchParams, user?.conversation_language])
 
+  /** Platform lab — “Explain this” from Today pre-fills a plain-language question. */
+  useEffect(() => {
+    const ex = searchParams.get('explain')
+    if (ex === 'risk') {
+      setInput(
+        'Explain in simple Hindi and English what the cash risk / runway message on my Today screen means and what I should do first.'
+      )
+      return
+    }
+    const q = searchParams.get('q')
+    if (q && q.trim()) {
+      setInput(decodeURIComponent(q.trim()))
+    }
+  }, [searchParams])
+
   const speechSupported = !!getSpeechRecognition()
 
   useEffect(() => {

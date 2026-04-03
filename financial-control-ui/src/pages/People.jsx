@@ -10,6 +10,7 @@ import {
 } from '../lib/collections'
 import { getApiErrorMessage, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
+import { attachMockPayScores } from '../lib/platformMocks'
 
 const DEFAULT_PHONE = '9004930401'
 
@@ -25,7 +26,7 @@ export default function People() {
     if (snap == null) return
     try {
       const q = snap?.daily_control?.collection_queue ?? []
-      setRows(q)
+      setRows(attachMockPayScores(q))
       setCreditMode(!!snap?.dashboard_context?.flags?.show_credit_priority_list)
     } catch (e) {
       setToast({ type: 'err', text: getApiErrorMessage(e) })
@@ -99,6 +100,9 @@ export default function People() {
                 <th className="px-4 py-3">Kaun</th>
                 <th className="px-4 py-3">Rashi</th>
                 <th className="px-4 py-3">Late</th>
+                <th className="px-4 py-3" title="Mock score — pay this week">
+                  Pay %
+                </th>
                 <th className="px-4 py-3">Priority</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -106,13 +110,13 @@ export default function People() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-violet-600">
+                  <td colSpan={6} className="px-4 py-8 text-center text-violet-600">
                     Loading…
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-violet-600">
+                  <td colSpan={6} className="px-4 py-8 text-center text-violet-600">
                     Abhi queue khali — engine data connect karo
                   </td>
                 </tr>
@@ -122,6 +126,9 @@ export default function People() {
                     <td className="px-4 py-3 font-medium text-violet-950">{row.name}</td>
                     <td className="px-4 py-3 tabular-nums">{formatInr(row.amount)}</td>
                     <td className="px-4 py-3">{row.days_late}</td>
+                    <td className="px-4 py-3 tabular-nums text-violet-800" title={row.payScoreNote || ''}>
+                      {row.payThisWeek != null ? `${(100 * row.payThisWeek).toFixed(0)}%` : '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${

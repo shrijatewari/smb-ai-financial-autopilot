@@ -14,6 +14,14 @@ function resolveApiBaseUrl() {
   return 'http://localhost:8000'
 }
 
+/** Build absolute URL for backend-served files (e.g. /media/assistant_tts/*.mp3). */
+export function resolveBackendMediaUrl(path) {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  const base = resolveApiBaseUrl().replace(/\/$/, '')
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`
+}
+
 export const TOKEN_KEY = 'financial_control_token'
 
 export const api = axios.create({
@@ -133,6 +141,12 @@ export async function postCallSimulation(body) {
   return data
 }
 
+/** POST /execute/twilio-call — real Hindi TTS call when TWILIO_* env is set. */
+export async function postTwilioVoiceCall(body) {
+  const { data } = await api.post('/execute/twilio-call', body)
+  return data
+}
+
 /** POST /transactions/sms — parse UPI/bank SMS text into the ledger. */
 export async function postSmsIngest(message) {
   const { data } = await api.post('/transactions/sms', { message })
@@ -188,10 +202,21 @@ export async function postUserInteraction(payload) {
   return data
 }
 
-/** POST /assistant/query — intent + NL response from simulation / cash / decision engines. */
-export async function postAssistantQuery(query, params = {}) {
-  const { data } = await api.post('/assistant/query', { query }, {
-    params: { initial_balance: DEFAULT_QUERY.initial_balance, ...params },
+/**
+ * POST /assistant/query — intent + NL response; multilingual when `language` is set (hi, ta, …).
+ * Options: language, tone (formal|friendly), include_audio (MP3 URL in response).
+ */
+export async function postAssistantQuery(textOrPayload, options = {}) {
+  const { language, tone, include_audio, ...queryParams } = options
+  const body =
+    typeof textOrPayload === 'string'
+      ? { query: textOrPayload, language, tone, include_audio }
+      : { ...textOrPayload }
+  const clean = Object.fromEntries(
+    Object.entries(body).filter(([, v]) => v !== undefined && v !== '')
+  )
+  const { data } = await api.post('/assistant/query', clean, {
+    params: { initial_balance: DEFAULT_QUERY.initial_balance, ...queryParams },
   })
   return data
 }

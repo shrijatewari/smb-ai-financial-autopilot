@@ -30,11 +30,9 @@ import {
   fetchSystemState,
   getApiErrorMessage,
   getOnboardingState,
-  postCallSimulation,
   postPaymentLink,
   postSmsIngest,
   postUserInteraction,
-  postWhatsappReminder,
 } from '../services/api'
 
 function formatAlertLine(a, formatInrFn) {
@@ -65,6 +63,66 @@ function formatPct(p) {
   return `${(100 * p).toFixed(1)}%`
 }
 
+/** Last 10 digits for IN mobile; wa.me uses country code without + */
+function normalizePhone10(phone) {
+  const d = String(phone || '').replace(/\D/g, '')
+  if (d.length >= 10) return d.slice(-10)
+  return ''
+}
+
+const MOCK_LINE_ITEMS = [
+  'milk and eggs',
+  'rice, dal and oil',
+  'kirana supplies',
+  "last week's stock",
+  'daily essentials',
+  'pending bill items',
+]
+
+function mockLineItemsForCustomer(name) {
+  const key = name.split('(')[0].trim() || 'x'
+  let h = 0
+  for (let i = 0; i < key.length; i++) h = (h + key.charCodeAt(i) * (i + 1)) % 997
+  const i = h % MOCK_LINE_ITEMS.length
+  const j = (h + 3) % MOCK_LINE_ITEMS.length
+  return h % 2 === 0 ? MOCK_LINE_ITEMS[i] : `${MOCK_LINE_ITEMS[i]} and ${MOCK_LINE_ITEMS[j]}`
+}
+
+function firstNameFromCustomer(customer) {
+  return customer.split('(')[0].trim().split(/\s+/)[0] || 'Customer'
+}
+
+function buildWhatsappCollectionMessage(customer, amount, tone) {
+  const first = firstNameFromCustomer(customer)
+  const items = mockLineItemsForCustomer(customer)
+  const rs = Math.round(Number(amount) || 0)
+  if (tone === 'friendly') {
+    return `Hi ${first}, ₹${rs} pending hai — ${items}. Jab bhi ho clear kar dena. Thanks!`
+  }
+  return `Namaste ${first}, please clear ₹${rs} towards ${items} on your account. Thank you.`
+}
+
+function buildCallScript(customer, amount) {
+  const first = firstNameFromCustomer(customer)
+  const items = mockLineItemsForCustomer(customer)
+  const rs = Math.round(Number(amount) || 0)
+  return `Hi ${first}, I'm calling about ₹${rs} still due for ${items}. When can you settle this?`
+}
+
+function openWhatsAppDraft(phone10, message) {
+  const url = `https://wa.me/91${phone10}?text=${encodeURIComponent(message)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+function openTelDialer(phone10) {
+  const a = document.createElement('a')
+  a.href = `tel:+91${phone10}`
+  a.setAttribute('rel', 'noopener')
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 export default function Dashboard() {
   const { user, logout } = useAuth()
   const [snap, setSnap] = useState(null)
@@ -77,7 +135,7 @@ export default function Dashboard() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
   const [rzpBusy, setRzpBusy] = useState(false)
   const [rzpResult, setRzpResult] = useState(null)
-  const [collectPhone, setCollectPhone] = useState('9999999999')
+  const [collectPhone, setCollectPhone] = useState('9004930401')
   const [smsText, setSmsText] = useState('')
   const [smsBusy, setSmsBusy] = useState(false)
   const [smsToast, setSmsToast] = useState(null)
@@ -159,7 +217,7 @@ export default function Dashboard() {
       const res = await postPaymentLink({
         amount: amt,
         customer_name: name,
-        phone: collectPhone.replace(/\D/g, '').slice(-10) || '9999999999',
+        phone: collectPhone.replace(/\D/g, '').slice(-10) || '9004930401',
       })
       setRzpResult(res)
     } catch (e) {
@@ -225,7 +283,7 @@ export default function Dashboard() {
       const payRes = await postPaymentLink({
         amount: amt,
         customer_name: name,
-        phone: collectPhone.replace(/\D/g, '').slice(-10) || '9999999999',
+        phone: collectPhone.replace(/\D/g, '').slice(-10) || '9004930401',
       })
       const act = primaryAction?.action || 'collect_payment'
       const execPayload = { action: act, reference: `auto-${Date.now()}` }
@@ -260,8 +318,8 @@ export default function Dashboard() {
     }
   }
 
-  async function sendWhatsappReminder(customer, amount) {
-    const phone = collectPhone.replace(/\D/g, '').slice(-10) || '9999999999'
+  function sendWhatsappReminder(customer, amount) {
+    const phone = normalizePhone10(collectPhone) || '9004930401'
     if (phone.length < 10) {
       setToast({ type: 'error', text: 'Enter a valid 10-digit phone number above.' })
       setTimeout(() => setToast(null), 6000)
@@ -270,53 +328,36 @@ export default function Dashboard() {
     setWaBusy(true)
     setToast(null)
     try {
-      const res = await postWhatsappReminder({
-        customer,
-        phone,
-        amount,
-        tone: waTone,
-      })
+      const msg = buildWhatsappCollectionMessage(customer, amount, waTone)
+      openWhatsAppDraft(phone, msg)
       setToast({
         type: 'success',
-        text: res.message || `Message sent to ${customer}`,
+        text: `Opened WhatsApp (new tab) with a draft for ${firstNameFromCustomer(customer)} — demo, no API.`,
       })
-    } catch (e) {
-      setToast({ type: 'error', text: getApiErrorMessage(e) })
     } finally {
       setWaBusy(false)
-      setTimeout(() => setToast(null), 12000)
+      setTimeout(() => setToast(null), 14000)
     }
   }
 
-  async function openCallModal(customer, amount) {
-    setCallModal({ phase: 'calling', customer, amount })
-    const started = Date.now()
-    const minCallingMs = 750
-    try {
-      const res = await postCallSimulation({ customer, amount })
-      const elapsed = Date.now() - started
-      const showDone = () =>
-        setCallModal({
-          phase: 'done',
-          customer,
-          amount,
-          script: res.script,
-          likelihood: res.likelihood,
-          status: res.status,
-        })
-      if (elapsed < minCallingMs) {
-        setTimeout(showDone, minCallingMs - elapsed)
-      } else {
-        showDone()
-      }
-    } catch (e) {
-      setCallModal({
-        phase: 'error',
-        customer,
-        amount,
-        error: getApiErrorMessage(e),
-      })
+  function openCallModal(customer, amount) {
+    const phone = normalizePhone10(collectPhone) || ''
+    if (phone.length < 10) {
+      setToast({ type: 'error', text: 'Enter a valid 10-digit phone number above.' })
+      setTimeout(() => setToast(null), 6000)
+      return
     }
+    const script = buildCallScript(customer, amount)
+    openTelDialer(phone)
+    setCallModal({
+      phase: 'done',
+      customer,
+      amount,
+      phone,
+      script,
+      likelihood: 'medium',
+      status: 'mock',
+    })
   }
 
   const collectMeta = primaryAction?.metadata || {}
@@ -642,7 +683,8 @@ export default function Dashboard() {
         </div>
         <p className="mt-2 text-[11px] text-violet-950/50">
           Queue is built server-side from receivable exposure (demo names/amounts). Same phone &amp; tone apply to Recover
-          money below.
+          money below. WhatsApp opens a prefilled draft (wa.me); Call opens your device dialer — both are local mocks, no
+          backend messaging.
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -1188,34 +1230,29 @@ export default function Dashboard() {
         >
           <div className="max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
             <h2 id="call-modal-title" className="text-lg font-semibold text-neutral-900">
-              {callModal.phase === 'calling'
-                ? '📞 Calling…'
-                : callModal.phase === 'done'
-                  ? 'On the line'
-                  : 'Call'}
+              Call (demo)
             </h2>
-            {callModal.phase === 'calling' && (
-              <p className="mt-3 text-sm text-neutral-600">
-                Calling {callModal.customer.split('(')[0].trim()} for {formatInr(callModal.amount)}…
-              </p>
-            )}
             {callModal.phase === 'done' && (
               <>
-                <p className="mt-2 text-sm font-medium text-neutral-800">AI script</p>
+                <p className="mt-3 text-sm text-neutral-600">
+                  We opened your dialer to <span className="font-mono text-neutral-900">+91 {callModal.phone}</span> (the
+                  number in &quot;WhatsApp to&quot;). Use this script if you like:
+                </p>
+                <p className="mt-2 text-sm font-medium text-neutral-800">Suggested wording</p>
                 <p className="mt-2 rounded-lg bg-violet-50/80 px-3 py-2 text-sm leading-relaxed text-violet-950">
                   {callModal.script}
                 </p>
                 <p className="mt-4 text-sm text-neutral-700">
-                  Payment likelihood:{' '}
+                  Payment likelihood (demo):{' '}
                   <span className="font-bold uppercase tracking-wide text-emerald-600">
                     {String(callModal.likelihood || '—').toUpperCase()}
                   </span>
                 </p>
-                <p className="mt-2 text-xs text-neutral-500">Simulated call — no real telephony in demo.</p>
+                <p className="mt-2 text-xs text-neutral-500">
+                  No backend telephony — this is a local mock. On desktop, <code className="rounded bg-neutral-100 px-1">tel:</code>{' '}
+                  may do nothing unless a phone app is linked.
+                </p>
               </>
-            )}
-            {callModal.phase === 'error' && (
-              <p className="mt-3 text-sm text-red-700">{callModal.error}</p>
             )}
             <button
               type="button"

@@ -13,12 +13,16 @@ import {
   FileStack,
   ClipboardList,
   MessageSquare,
+  Sun,
+  Users,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useUiStore } from '../store/uiStore'
 
 const nav = [
-  { to: '/', label: 'Twin', icon: LayoutDashboard, end: true },
+  { to: '/', label: 'Aaj (Today)', icon: Sun, end: true },
+  { to: '/people', label: 'Log / Dues', icon: Users },
+  { to: '/dashboard', label: 'Full dashboard', icon: LayoutDashboard },
   { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { to: '/cash-flow', label: 'Cash flow', icon: LineChart },
   { to: '/inventory', label: 'Inventory', icon: Package },

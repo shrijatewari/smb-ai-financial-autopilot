@@ -10,6 +10,7 @@ from services.call_agent import simulate_call
 from services.execution_service import create_razorpay_payment_link, execute_collect_payment
 from services.financial_pipeline import run_full_pipeline
 from services import rl_engine
+from services.voice_call_service import make_call as twilio_make_call
 from services.whatsapp_service import generate_payment_message, send_whatsapp_message
 
 router_decision = APIRouter()
@@ -57,6 +58,20 @@ class CallSimulateResponse(BaseModel):
     status: str
     script: str
     likelihood: str
+
+
+class TwilioCallBody(BaseModel):
+    phone: str = Field(..., min_length=8, max_length=20)
+    text: str = Field(..., min_length=1, max_length=2000)
+
+
+class TwilioCallResponse(BaseModel):
+    status: str
+    mock: bool = True
+    detail: str | None = None
+    to: str | None = None
+    sid: str | None = None
+    preview: str | None = None
 
 
 @router_decision.get("")
@@ -159,6 +174,26 @@ def post_call_simulation(body: CallSimulateBody):
         status=str(out["status"]),
         script=str(out["script"]),
         likelihood=str(out["likelihood"]),
+    )
+
+
+@router_execute.post("/twilio-call", response_model=TwilioCallResponse)
+def post_twilio_voice_call(body: TwilioCallBody):
+    """
+    Real outbound call via Twilio + Hindi TTS (when TWILIO_* env vars are set).
+    Otherwise returns mock status with the script preview.
+    """
+    out = twilio_make_call(body.phone, body.text)
+    if out.get("status") == "error":
+        raise HTTPException(status_code=502, detail=out.get("detail") or "Call failed")
+    rl_engine.apply_reward_from_feedback(0.4)
+    return TwilioCallResponse(
+        status=str(out.get("status") or "queued"),
+        mock=bool(out.get("mock", True)),
+        detail=out.get("detail"),
+        to=out.get("to"),
+        sid=out.get("sid"),
+        preview=out.get("preview"),
     )
 
 

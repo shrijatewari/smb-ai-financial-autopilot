@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mic } from 'lucide-react'
-import { getApiErrorMessage, postAssistantQuery } from '../services/api'
+import { Mic, Volume2 } from 'lucide-react'
+import { getApiErrorMessage, postAssistantQuery, resolveBackendMediaUrl } from '../services/api'
 
 function getSpeechRecognition() {
   return typeof window !== 'undefined'
@@ -10,11 +10,11 @@ function getSpeechRecognition() {
     : null
 }
 
-function speakText(text, enabled) {
+function speakText(text, enabled, langUi) {
   if (!enabled || typeof window === 'undefined' || !window.speechSynthesis) return
   window.speechSynthesis.cancel()
   const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-IN'
+  u.lang = langUi === 'hi' ? 'hi-IN' : 'en-IN'
   u.rate = 1
   window.speechSynthesis.speak(u)
 }
@@ -23,20 +23,35 @@ export default function Assistant() {
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
-      text: 'Ask about cash risk, balance, what to do next, or collections. You can type or use the microphone.',
+      text:
+        'Ask about cash risk, balance, what to do next, or collections — in English or Hindi / Hinglish. Use the mic or type.',
     },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [listening, setListening] = useState(false)
   const [speakReplies, setSpeakReplies] = useState(true)
+  const [uiLang, setUiLang] = useState('en')
+  const [tone, setTone] = useState('formal')
+  const [includeAudioServer, setIncludeAudioServer] = useState(true)
   const speakRef = useRef(true)
+  const uiLangRef = useRef('en')
   const recRef = useRef(null)
   const bottomRef = useRef(null)
+  const audioRef = useRef(null)
 
   useEffect(() => {
     speakRef.current = speakReplies
   }, [speakReplies])
+
+  useEffect(() => {
+    uiLangRef.current = uiLang
+  }, [uiLang])
+
+  useEffect(() => {
+    const l = searchParams.get('lang')
+    if (l === 'hi' || l === 'en') setUiLang(l)
+  }, [searchParams])
 
   const speechSupported = !!getSpeechRecognition()
 
@@ -52,17 +67,44 @@ export default function Assistant() {
       setInput('')
       setLoading(true)
       try {
-        const res = await postAssistantQuery(q)
+        const lang = uiLangRef.current
+        const res = await postAssistantQuery(q, {
+          language: lang,
+          tone,
+          include_audio: includeAudioServer,
+        })
         const reply = res.response || ''
+        const metaParts = []
+        if (res.intent) metaParts.push(`Intent: ${res.intent}`)
+        if (res.detected_query_language) metaParts.push(`Heard: ${res.detected_query_language}`)
+        if (res.language) metaParts.push(`Reply: ${res.language}`)
         setMessages((m) => [
           ...m,
           {
             role: 'assistant',
             text: reply,
-            meta: res.intent ? `Intent: ${res.intent}` : null,
+            meta: metaParts.length ? metaParts.join(' · ') : null,
+            audioUrl: res.audio_url || null,
           },
         ])
-        speakText(reply, speakRef.current)
+        if (res.audio_url) {
+          try {
+            if (audioRef.current) {
+              audioRef.current.pause()
+              audioRef.current.src = ''
+            }
+            const url = resolveBackendMediaUrl(res.audio_url)
+            const el = new Audio(url)
+            audioRef.current = el
+            el.play().catch(() => {
+              speakText(reply, speakRef.current, lang)
+            })
+          } catch {
+            speakText(reply, speakRef.current, lang)
+          }
+        } else {
+          speakText(reply, speakRef.current, lang)
+        }
       } catch (e) {
         const err = getApiErrorMessage(e)
         setMessages((m) => [...m, { role: 'assistant', text: err, error: true }])
@@ -70,7 +112,7 @@ export default function Assistant() {
         setLoading(false)
       }
     },
-    [loading]
+    [loading, tone, includeAudioServer]
   )
 
   function startListening() {
@@ -78,7 +120,8 @@ export default function Assistant() {
     if (!SR) return
     if (listening) return
     const rec = new SR()
-    rec.lang = 'en-IN'
+    const lang = uiLangRef.current
+    rec.lang = lang === 'hi' ? 'hi-IN' : 'en-IN'
     rec.interimResults = false
     rec.maxAlternatives = 1
     rec.onstart = () => setListening(true)
@@ -111,20 +154,69 @@ export default function Assistant() {
   return (
     <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-gradient-to-b from-transparent to-violet-50/30">
       <header className="border-b border-violet-200/40 bg-white/50 px-4 py-4 backdrop-blur-xl sm:px-6">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-lg font-semibold text-violet-950">AI assistant</h1>
-            <p className="text-xs text-violet-950/55">Ask in plain language — powered by your ledger & models</p>
+            <p className="text-xs text-violet-950/55">
+              India-first: Hindi, Hinglish, English — voice + text financial guidance
+            </p>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-violet-800/80">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-violet-800/70">Language</span>
+            <div className="inline-flex rounded-lg border border-violet-200/80 bg-white p-0.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setUiLang('en')}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  uiLang === 'en'
+                    ? 'bg-[#6C3BFF] text-white shadow-sm'
+                    : 'text-violet-800 hover:bg-violet-50'
+                }`}
+              >
+                English
+              </button>
+              <button
+                type="button"
+                onClick={() => setUiLang('hi')}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  uiLang === 'hi'
+                    ? 'bg-[#6C3BFF] text-white shadow-sm'
+                    : 'text-violet-800 hover:bg-violet-50'
+                }`}
+              >
+                हिंदी
+              </button>
+            </div>
+            <select
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+              className="rounded-lg border border-violet-200/80 bg-white px-2 py-1.5 text-xs text-violet-950 shadow-sm"
+              title="Tone (friendly uses OpenAI polish when API key is set)"
+            >
+              <option value="formal">Formal</option>
+              <option value="friendly">Friendly (Hinglish)</option>
+            </select>
+            <label className="flex items-center gap-1.5 text-xs text-violet-800/80">
               <input
                 type="checkbox"
                 checked={speakReplies}
                 onChange={(e) => setSpeakReplies(e.target.checked)}
                 className="rounded border-violet-300"
               />
-              Speak replies
+              Speak
+            </label>
+            <label
+              className="flex items-center gap-1.5 text-xs text-violet-800/80"
+              title="Play gTTS MP3 from server (extra network call)"
+            >
+              <input
+                type="checkbox"
+                checked={includeAudioServer}
+                onChange={(e) => setIncludeAudioServer(e.target.checked)}
+                className="rounded border-violet-300"
+              />
+              <Volume2 className="h-3.5 w-3.5" aria-hidden />
+              Server voice
             </label>
             <Link to="/" className="text-sm font-medium text-[#6C3BFF] hover:underline">
               Twin home
@@ -134,7 +226,7 @@ export default function Assistant() {
       </header>
 
       <main className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-4 py-6">
-        <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+        <div className="flex-1 space-y-4 overflow-y-auto pb-4">
           {messages.map((msg, i) => (
             <div
               key={i}
@@ -168,12 +260,12 @@ export default function Assistant() {
 
         <div className="space-y-3 border-t border-violet-200/40 bg-white/40 pt-4 backdrop-blur">
           {!speechSupported && (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+            <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               Speech recognition is not available in this browser. Use Chrome or Edge, or type your question.
             </p>
           )}
           <form
-            className="flex gap-2 items-end"
+            className="flex items-end gap-2"
             onSubmit={(e) => {
               e.preventDefault()
               sendQuery(input)
@@ -184,7 +276,11 @@ export default function Assistant() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="e.g. What is my cash risk? What should I do?"
+                placeholder={
+                  uiLang === 'hi'
+                    ? 'जैसे: मेरा रिस्क क्या है? मुझे क्या करना चाहिए?'
+                    : 'e.g. What is my cash risk? What should I do?'
+                }
                 className="w-full rounded-xl border border-violet-200/80 bg-white/90 px-4 py-3 text-sm text-violet-950 shadow-sm focus:border-[#6C3BFF]/40 focus:outline-none focus:ring-2 focus:ring-[#6C3BFF]/20"
                 disabled={loading}
               />
@@ -194,7 +290,11 @@ export default function Assistant() {
                 type="button"
                 onClick={listening ? stopListening : startListening}
                 disabled={loading}
-                animate={listening ? { boxShadow: ['0 0 0 0 rgba(108,59,255,0.4)', '0 0 0 12px rgba(108,59,255,0)'] } : {}}
+                animate={
+                  listening
+                    ? { boxShadow: ['0 0 0 0 rgba(108,59,255,0.4)', '0 0 0 12px rgba(108,59,255,0)'] }
+                    : {}
+                }
                 transition={listening ? { repeat: Infinity, duration: 1.2 } : {}}
                 className={`flex shrink-0 items-center justify-center rounded-xl px-4 py-3 text-sm font-medium transition ${
                   listening

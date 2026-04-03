@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedLayout from './layout/ProtectedLayout'
 import Dashboard from './components/Dashboard'
+import Today from './pages/Today'
+import People from './pages/People'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Onboarding from './pages/Onboarding'
@@ -24,7 +26,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route element={<ProtectedLayout />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Today />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/people" element={<People />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/cash-flow" element={<CashFlow />} />
             <Route path="/inventory" element={<Inventory />} />

@@ -38,7 +38,7 @@ def create_payment_link(
     if len(digits) >= 10:
         contact = f"+91{digits[-10:]}"
     else:
-        contact = "+919999999999"
+        contact = "+919004930401"
 
     payload: dict[str, Any] = {
         "amount": paise,

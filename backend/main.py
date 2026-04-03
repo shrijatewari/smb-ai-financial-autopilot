@@ -46,8 +46,9 @@ if _gac and not os.path.isabs(_gac):
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from api.routes import actions, alerts, assistant, auth, compliance, connect, dashboard, documents, inventory_routes, prediction, rl_routes, simulation, system, transactions
+from api.routes import actions, alerts, assistant, auth, compliance, connect, dashboard, documents, inventory_routes, prediction, rl_routes, simulation, system, transactions, webhooks
 from db.prisma_client import connect_prisma, disconnect_prisma
 from engine.system_engine import start as start_system_engine, stop as stop_system_engine
 
@@ -92,6 +93,7 @@ app.include_router(connect.router, prefix="/connect", tags=["connect"])
 app.include_router(compliance.router, prefix="/compliance", tags=["compliance"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
+app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 app.include_router(system.router, prefix="/system", tags=["system"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(inventory_routes.router, prefix="/inventory", tags=["inventory"])
@@ -113,6 +115,10 @@ app.add_api_route(
     methods=["POST"],
     tags=["legacy"],
 )
+
+_media_root = _backend_dir / "media"
+_media_root.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=str(_media_root)), name="media")
 
 
 @app.get("/health")
@@ -141,7 +147,9 @@ def root():
             "dashboard": "GET /dashboard",
             "compliance_gst": "GET /compliance/gst",
             "alerts_fraud": "GET /alerts/fraud",
-            "assistant": "POST /assistant/query",
+            "assistant": "POST /assistant/query | POST /assistant/query/audio",
+            "assistant_media": "GET /media/assistant_tts/*.mp3 (TTS output)",
+            "webhooks_whatsapp": "GET|POST /webhooks/whatsapp (Meta Cloud API)",
             "system_state": "GET /system/state",
             "documents_upload": "POST /documents/upload",
             "user_interaction": "POST /user/interaction (RL + module personalization)",

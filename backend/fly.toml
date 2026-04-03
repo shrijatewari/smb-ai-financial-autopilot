@@ -1,0 +1,28 @@
+# Rename `app` to a globally unique Fly app name, or run `fly launch` from backend/
+app = "smb-financial-api"
+primary_region = "bom"
+
+[build]
+
+[deploy]
+  release_command = "prisma db push --schema prisma/schema.prisma"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "15s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

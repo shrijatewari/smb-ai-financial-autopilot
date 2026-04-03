@@ -3,6 +3,9 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  VITE_API_URL = "https://smb-financial-api.fly.dev"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

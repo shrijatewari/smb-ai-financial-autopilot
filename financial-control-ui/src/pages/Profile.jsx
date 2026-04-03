@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Bell, CreditCard, Database, Landmark, Layers, MessageCircle, Radio, Receipt, Sun } from 'lucide-react'
+import { Radio } from 'lucide-react'
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -228,274 +228,74 @@ export default function Profile() {
   return (
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
-        title="Settings & profile"
-        subtitle="All sixteen product improvements are summarized below, plus assistant language and trusted helper. Use the checklist to jump to each area."
+        title="Business profile"
+        subtitle="Language, WhatsApp, bank link, and helpers — the same live twin powers Today and the full dashboard."
       />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="lg:col-span-2 scroll-mt-24 border border-violet-200/60 bg-white/90">
+        <Card className="lg:col-span-2 scroll-mt-24 border border-violet-200/60 bg-gradient-to-br from-white to-violet-50/50">
           <CardHeader>
-            <CardTitle>Improvements 1–16 (shipped)</CardTitle>
+            <CardTitle>Quick links</CardTitle>
             <p className="text-sm font-normal text-violet-950/70">
-              End-to-end map of the backend + UI surface area for this workspace.
+              Jump to the screens you use every day. Technical integration status lives under Platform lab.
             </p>
           </CardHeader>
           <CardContent>
-            <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-violet-950/90">
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <li>
-                <span className="font-medium text-violet-950">Payments &amp; profile sync</span> — Razorpay webhook →
-                ledger; conversation language via PATCH /auth/me (Assistant).
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Live twin (SSE)</span> — GET /system/stream; top bar Live
-                badge.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Morning WhatsApp briefing</span> — APScheduler + Meta
-                WhatsApp when configured.
+                <Link
+                  className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
+                  to="/"
+                >
+                  <p className="font-semibold text-violet-950">Today</p>
+                  <p className="mt-1 text-xs text-violet-600">Runway, collections, command palette</p>
+                </Link>
               </li>
               <li>
-                <span className="font-medium text-violet-950">WhatsApp inbound</span> — Bot intents + rate limits;
-                PUBLIC_APP_URL for unknown numbers.
+                <Link
+                  className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
+                  to="/growth"
+                >
+                  <p className="font-semibold text-violet-950">Growth</p>
+                  <p className="mt-1 text-xs text-violet-600">Credit score & referrals</p>
+                </Link>
               </li>
               <li>
-                <span className="font-medium text-violet-950">Account Aggregator</span> — Setu-style consent, FI ingest,
-                /aa/* routes.
+                <Link
+                  className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
+                  to="/transactions"
+                >
+                  <p className="font-semibold text-violet-950">Transactions</p>
+                  <p className="mt-1 text-xs text-violet-600">Ledger, filters, CSV</p>
+                </Link>
               </li>
               <li>
-                <span className="font-medium text-violet-950">Data plane</span> — persisted ledger{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger</code>; GST liability{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /gst/summary</code> + GSTIN on profile.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Notification history</span> —{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /notifications</code> (briefing send attempts,
-                more kinds later). See table below.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger CSV export</span> —{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger/export</code> authenticated
-                download (UTF-8, headers for Excel). Button on the Transactions page.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger date range</span> — optional{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">date_from</code> &amp;{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">date_to</code> (YYYY-MM-DD, UTC day bounds) on{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger</code> and export; date
-                pickers on Transactions.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger summary</span> —{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger/summary</code> returns row
-                count, total credit, total debit, and net for the same optional date range; summary card on the
-                Transactions page.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger description search</span> — optional{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">q</code> (max 200 chars, case-insensitive substring
-                on description) on <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger</code>
-                , summary, and CSV export; search field on Transactions. Paytm/mock rows filtered in the browser when{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">q</code> is set.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger source filter + shareable URL</span> — optional{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">source</code> (exact match, case-insensitive) on
-                ledger, summary, and export; source dropdown on Transactions. Filters sync to the query string (
-                <code className="rounded bg-violet-100 px-1 text-xs">
-                  ?date_from=&amp;date_to=&amp;q=&amp;source=&amp;category=&amp;txn_type=&amp;sort=
-                </code>
-                ) for bookmarking.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger pagination</span> —{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger</code> supports{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">offset</code> +{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">limit</code> (UI: 200 rows per page, Previous/Next on
-                Transactions). Summary + CSV export remain full filtered sets.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger credit/debit filter + URL</span> — optional{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">txn_type</code> (<code className="rounded bg-violet-100 px-1 text-xs">credit</code> or{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">debit</code>) on ledger, summary, and export; Type
-                dropdown on Transactions. Shareable URL includes{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">txn_type=</code> alongside existing query params.
-                Paytm/mock rows filtered in the browser by type when set.
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger sort order</span> — optional{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">sort</code> on{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger</code> and CSV export:{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">date_desc</code> (default),{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">date_asc</code>,{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">amount_desc</code>,{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">amount_asc</code>. Sort dropdown on Transactions;
-                bookmarkable <code className="rounded bg-violet-100 px-1 text-xs">sort=</code> in the query string. Summary
-                aggregates are unchanged (order-independent).
-              </li>
-              <li>
-                <span className="font-medium text-violet-950">Ledger category filter</span> — optional{' '}
-                <code className="rounded bg-violet-100 px-1 text-xs">category</code> (exact match, case-insensitive, max 32
-                chars) on <code className="rounded bg-violet-100 px-1 text-xs">GET /transactions/ledger</code>, summary,
-                and CSV export; category dropdown on Transactions; <code className="rounded bg-violet-100 px-1">category</code>{' '}
-                column in the table. Paytm/mock rows filtered in the browser when set.
-              </li>
-            </ol>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2 scroll-mt-24 border-violet-200/80 bg-gradient-to-br from-white to-violet-50/40">
-          <CardHeader>
-            <CardTitle>Features on your account</CardTitle>
-            <p className="text-sm font-normal text-violet-950/70">
-              Map of the integrations connected to this workspace (including persisted ledger + live feed).
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <Radio className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">Live twin feed (SSE)</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    Status:{' '}
-                    <span
-                      className={cn(
-                        'font-semibold',
-                        streamStatus === 'live' ? 'text-emerald-700' : 'text-amber-700'
-                      )}
-                    >
-                      {streamStatus === 'reconnecting' ? 'Reconnecting…' : streamStatus === 'live' ? 'Live' : 'Starting…'}
-                    </span>{' '}
-                    — see the badge in the top bar. Dashboard and Today use the same stream.
-                  </p>
-                  <Link className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#6C3BFF] hover:underline" to="/">
-                    Open Today
-                  </Link>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <Layers className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">Platform lab</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    One-page map of live vs mock features (AA, GST, webhooks, WhatsApp, what-if, anomalies, PWA roadmap)
-                    with interactive demos.
-                  </p>
-                  <Link className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" to="/platform">
-                    Open platform capabilities
-                  </Link>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-violet-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">Razorpay → ledger</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    Payment links from the dashboard send customers to Razorpay; successful captures can post to your
-                    ledger via the server webhook when <code className="rounded bg-violet-100 px-1">RAZORPAY_WEBHOOK_SECRET</code>{' '}
-                    is set.
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-[#6C3BFF]">
-                    <Link className="hover:underline" to="/dashboard">
-                      Full dashboard
-                    </Link>
-                    <Link className="hover:underline" to="/transactions">
-                      Transactions
-                    </Link>
-                  </div>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <Database className="mt-0.5 h-5 w-5 shrink-0 text-teal-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">Persisted ledger (PostgreSQL)</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    The app loads real rows from <code className="rounded bg-violet-100 px-1">GET /transactions/ledger</code>{' '}
-                    (optional <code className="rounded bg-violet-100 px-1">date_from</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">date_to</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">q</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">source</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">category</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">txn_type</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">sort</code> /{' '}
-                    <code className="rounded bg-violet-100 px-1">offset</code> +{' '}
-                    <code className="rounded bg-violet-100 px-1">limit</code>). Webhooks, Account Aggregator, and other
-                    writers append to the same table.{' '}
-                    <code className="rounded bg-violet-100 px-1">GET /transactions/ledger/summary</code> and{' '}
-                    <code className="rounded bg-violet-100 px-1">GET /transactions/ledger/export</code> share the same
-                    filters from the Transactions page (summary ignores <code className="rounded bg-violet-100 px-1">sort</code>{' '}
-                    and pagination).
-                  </p>
-                  <Link className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" to="/transactions">
-                    Open Transactions (table + CSV export)
-                  </Link>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <Receipt className="mt-0.5 h-5 w-5 shrink-0 text-orange-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">GST liability forecasting</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    Save <span className="font-mono">GSTIN</span> in onboarding (stored on BusinessProfile).{' '}
-                    <code className="rounded bg-violet-100 px-1">GET /gst/summary</code> estimates the next GSTR-3B-style
-                    outflow; the full dashboard run subtracts it in Monte Carlo on the due day when it falls in the
-                    horizon.
-                  </p>
-                  <Link className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" to="/gst">
-                    Open GST page
-                  </Link>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <Sun className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">Morning WhatsApp briefing</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    Scheduled 8:00 AM IST summary — enable below with your WhatsApp number.
-                  </p>
-                  <a className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" href="#profile-briefing">
-                    Jump to briefing
-                  </a>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm">
-                <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" aria-hidden />
-                <div className="min-w-0">
-                  <p className="font-medium text-violet-950">WhatsApp inbound intents</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    Customers can message your business WhatsApp number; the server routes intents like balance / risk /
-                    pay (rate-limited). Unregistered numbers get a signup link when{' '}
-                    <code className="rounded bg-violet-100 px-1">PUBLIC_APP_URL</code> is set.
-                  </p>
-                  <a className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" href="#profile-sms-demo">
-                    SMS command demo
-                  </a>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm sm:col-span-2">
-                <Landmark className="mt-0.5 h-5 w-5 shrink-0 text-indigo-600" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-violet-950">Account Aggregator (bank link)</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    RBI AA consent pulls bank transactions into the ledger (category <span className="font-mono">bank_aa</span>).
-                  </p>
-                  <a className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" href="#profile-aa">
-                    Link bank account
-                  </a>
-                </div>
-              </li>
-              <li className="flex gap-3 rounded-xl border border-violet-100 bg-white/80 p-3 shadow-sm sm:col-span-2">
-                <Bell className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-violet-950">Notification &amp; briefing history</p>
-                  <p className="mt-1 text-xs text-violet-950/70">
-                    Server logs each outbound try (e.g. morning brief). Read-only audit from{' '}
-                    <code className="rounded bg-violet-100 px-1">GET /notifications</code>.
-                  </p>
-                  <a className="mt-2 inline-block text-xs font-medium text-[#6C3BFF] hover:underline" href="#profile-notifications">
-                    View history table
-                  </a>
-                </div>
+                <Link
+                  className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
+                  to="/platform"
+                >
+                  <p className="font-semibold text-violet-950">Platform lab</p>
+                  <p className="mt-1 text-xs text-violet-600">Live vs demo integrations</p>
+                </Link>
               </li>
             </ul>
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-950">
+              <Radio className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
+              <span>
+                Live twin:{' '}
+                <strong
+                  className={cn(
+                    streamStatus === 'live' ? 'text-emerald-700' : 'text-amber-700'
+                  )}
+                >
+                  {streamStatus === 'reconnecting'
+                    ? 'Reconnecting…'
+                    : streamStatus === 'live'
+                      ? 'Connected'
+                      : 'Starting…'}
+                </strong>
+                <span className="text-emerald-900/80"> — matches the badge in the top bar.</span>
+              </span>
+            </div>
           </CardContent>
         </Card>
         <Card className="lg:col-span-2 scroll-mt-24" id="conv-lang">

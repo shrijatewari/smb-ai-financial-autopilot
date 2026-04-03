@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd financial-control-ui && npm install",
+  "buildCommand": "cd financial-control-ui && npm run build",
+  "outputDirectory": "financial-control-ui/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

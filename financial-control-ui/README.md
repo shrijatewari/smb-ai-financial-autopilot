@@ -38,6 +38,12 @@ cp .env.example .env.local
 
 ---
 
+## Deploying (Vercel)
+
+The monorepo root includes **`vercel.json`** so Vercel builds this app from **`financial-control-ui/`** and serves the SPA. Set **`VITE_API_URL`** in the Vercel project to your deployed FastAPI base URL (see repository **`../README.md` → “Deploy frontend to Vercel”**).
+
+---
+
 ## Scripts
 
 | Command | Description |

@@ -178,11 +178,45 @@ See `backend/services/whatsapp_service.py` and comments in `backend/.env.example
 
 ---
 
+## Deploy frontend to Vercel
+
+The **React UI** (`financial-control-ui`) is configured for [Vercel](https://vercel.com) via **`vercel.json`** at the repo root (build runs inside `financial-control-ui/`, output: `financial-control-ui/dist`). The **FastAPI backend is not deployed on Vercel** in this setup—it needs a long‑running process + PostgreSQL (e.g. [Railway](https://railway.app), [Render](https://render.com), [Fly.io](https://fly.io), or your own VPS).
+
+### One-time setup
+
+1. Push this repo to GitHub (already configured for `shrijatewari/smb-ai-financial-autopilot`).
+2. In Vercel: **Add New Project** → Import the Git repository.
+3. Vercel should detect settings from **`vercel.json`**. If it asks for framework: **Vite**, root: **repository root** (not `financial-control-ui` only—our root `vercel.json` runs `cd financial-control-ui && …`).
+4. **Environment variables** (Production + Preview as needed):
+
+   | Name | Example | Purpose |
+   |------|---------|---------|
+   | `VITE_API_URL` | `https://your-api.up.railway.app` | **Required for production builds.** Must be the **public origin** of your FastAPI app **without** a trailing slash. The UI calls `VITE_API_URL + '/auth/...'`, etc. |
+
+   Without `VITE_API_URL`, the production bundle falls back to `http://localhost:8000` (see `financial-control-ui/src/services/api.js`) and the live site will not reach your API.
+
+5. Deploy. Your site will be `https://<project>.vercel.app` (or your custom domain).
+
+### Backend checklist for a real deploy
+
+- Serve FastAPI with HTTPS (uvicorn/gunicorn behind a reverse proxy or platform).
+- Set `DATABASE_URL`, `JWT_SECRET_KEY`, and any payment/WhatsApp keys on the **hosting provider**, not in Vercel.
+- CORS: `main.py` already allows `*` for development; for production you may restrict `allow_origins` to your Vercel domain.
+
+### Files involved
+
+- **`vercel.json`** (repo root) — `installCommand`, `buildCommand`, `outputDirectory`, SPA `rewrites` for React Router.
+- **`.vercelignore`** — skips heavy/irrelevant paths from uploads (optional optimization).
+
+---
+
 ## Repository layout
 
 ```text
 smb-ai-financial-autopilot/
 ├── README.md                 # This file
+├── vercel.json               # Vercel: build UI from financial-control-ui/
+├── .vercelignore
 ├── scripts/
 │   └── start_backend.sh      # Root helper to start API
 ├── backend/                  # FastAPI + Prisma + engine

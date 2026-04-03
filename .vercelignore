@@ -1,0 +1,6 @@
+# Speed up uploads — backend is not built on Vercel (deploy API separately).
+backend/.venv
+backend/**/__pycache__
+backend/.prisma-cache
+**/.venv
+**/node_modules

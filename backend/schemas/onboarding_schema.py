@@ -33,6 +33,11 @@ class OnboardingRequest(BaseModel):
     credit_usage: str = Field(..., description="none | informal | formal")
     payment_mix: PaymentMix
     gst_registered: bool = False
+    gstin: str | None = Field(
+        None,
+        max_length=16,
+        description="Optional 15-char India GSTIN when gst_registered (stored on BusinessProfile).",
+    )
     has_bank_data: bool = False
     has_invoices: bool = False
     notes: str | None = Field(None, description="Optional notes or document reference")
@@ -43,6 +48,10 @@ class OnboardingRequest(BaseModel):
     data_sources: list[str] = Field(
         default_factory=list,
         description="Optional: paytm, bank, sms — used for trust / confidence",
+    )
+    literacy_preference: str = Field(
+        "standard",
+        description="minimal (icons + voice) | standard — UI density for low-literacy users",
     )
 
 

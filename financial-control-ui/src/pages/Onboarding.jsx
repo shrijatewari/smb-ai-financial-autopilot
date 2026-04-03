@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage, getOnboardingState, submitOnboarding } from '../services/api'
+import { OnboardingDocumentStep } from './OnboardingDocumentStep'
 
 /** Maps to backend revenue_model + human-readable business_type */
 const ARCHETYPE = [
@@ -60,10 +61,11 @@ function QuestionBlock({ n, title, purpose, children }) {
 
 export default function Onboarding() {
   const navigate = useNavigate()
-  const { loadMe } = useAuth()
+  const { user, loadMe } = useAuth()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
+  const [literacyPreference, setLiteracyPreference] = useState('standard')
   const [revenueModel, setRevenueModel] = useState('product')
   const [industryDetail, setIndustryDetail] = useState('')
   const [monthlyTurnoverRange, setMonthlyTurnoverRange] = useState('50k_to_5L')
@@ -72,6 +74,7 @@ export default function Onboarding() {
   const [creditUsage, setCreditUsage] = useState('none')
   const [cashPct, setCashPct] = useState(40)
   const [gstRegistered, setGstRegistered] = useState(false)
+  const [gstin, setGstin] = useState('')
   const [hasBankData, setHasBankData] = useState(false)
   const [hasInvoices, setHasInvoices] = useState(false)
   const [customerType, setCustomerType] = useState('repeat')
@@ -102,6 +105,7 @@ export default function Onboarding() {
         const pm = ob.payment_mix
         if (pm && typeof pm.cash === 'number') setCashPct(Math.round(pm.cash * 100))
         if (typeof ob.gst_registered === 'boolean') setGstRegistered(ob.gst_registered)
+        if (ob.gstin) setGstin(String(ob.gstin))
         if (typeof ob.has_bank_data === 'boolean') setHasBankData(ob.has_bank_data)
         if (typeof ob.has_invoices === 'boolean') setHasInvoices(ob.has_invoices)
         if (ob.customer_type) setCustomerType(String(ob.customer_type))
@@ -117,6 +121,9 @@ export default function Onboarding() {
           }
         }
         if (ob.notes) setNotes(String(ob.notes))
+        if (ob.literacy_preference === 'minimal' || ob.literacy_preference === 'standard') {
+          setLiteracyPreference(String(ob.literacy_preference))
+        }
       } catch {
         /* first-time users */
       }
@@ -125,6 +132,15 @@ export default function Onboarding() {
       cancelled = true
     }
   }, [])
+
+  if (!user) return null
+  if (user.documents_uploaded && user.onboarding_completed) {
+    return <Navigate to="/" replace />
+  }
+
+  if (!user.documents_uploaded) {
+    return <OnboardingDocumentStep onSuccess={() => void loadMe()} />
+  }
 
   function toggleDataNone(checked) {
     setDataNone(checked)
@@ -170,11 +186,13 @@ export default function Onboarding() {
           digital: digitalPct / 100,
         },
         gst_registered: gstRegistered,
+        gstin: gstRegistered ? gstin.replace(/\s/g, '').toUpperCase().slice(0, 15) || null : null,
         has_bank_data: hasBankData,
         has_invoices: hasInvoices,
         customer_type: customerType,
         data_sources: dataNone ? ['none'] : data_sources,
         notes: notes.trim() || null,
+        literacy_preference: literacyPreference,
       })
       await loadMe()
       navigate('/', { replace: true })
@@ -189,24 +207,56 @@ export default function Onboarding() {
     <div className="min-h-screen bg-gradient-to-b from-transparent via-violet-50/30 to-white px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-violet-950">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">Step 2 of 2</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-violet-950">
             Business profile
           </h1>
           <p className="mt-2 text-sm text-violet-950/70">
-            Each answer maps to the <strong className="font-medium text-violet-950">module engine</strong> and{' '}
-            <strong className="font-medium text-violet-950">dashboard layout</strong> — not a generic form.
-          </p>
-          <p className="mt-2 text-xs text-violet-950/50">
-            Flow:{' '}
-            <span className="font-mono text-[11px] text-violet-800/80">
-              onboarding → business vector → modules → dynamic dashboard
-            </span>
+            Ye answers aapka <strong className="font-medium text-violet-950">daily action screen</strong> banate hain:
+            kya dikhna hai, kya chhupana hai — generic dashboard nahi.
           </p>
         </header>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <QuestionBlock
             n={1}
+            title="Screen kaise chahiye? (padhai / comfort)"
+            purpose="Kam text + zyada awaz + icons — low literacy ke liye. Standard = normal labels."
+          >
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setLiteracyPreference('minimal')}
+                className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+                  literacyPreference === 'minimal'
+                    ? 'border-[#6C3BFF] bg-gradient-to-br from-[#6C3BFF] to-violet-600 text-white shadow-lg'
+                    : 'border-violet-200/80 bg-white/90 text-violet-950 hover:border-violet-300'
+                }`}
+              >
+                <span className="font-medium">Simple (kam padhai)</span>
+                <span className={`mt-1 block text-xs ${literacyPreference === 'minimal' ? 'text-white/85' : 'text-violet-950/55'}`}>
+                  Icons + voice, kam akshar
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLiteracyPreference('standard')}
+                className={`rounded-xl border px-4 py-3 text-left text-sm transition ${
+                  literacyPreference === 'standard'
+                    ? 'border-[#6C3BFF] bg-gradient-to-br from-[#6C3BFF] to-violet-600 text-white shadow-lg'
+                    : 'border-violet-200/80 bg-white/90 text-violet-950 hover:border-violet-300'
+                }`}
+              >
+                <span className="font-medium">Standard</span>
+                <span className={`mt-1 block text-xs ${literacyPreference === 'standard' ? 'text-white/85' : 'text-violet-950/55'}`}>
+                  Normal text + buttons
+                </span>
+              </button>
+            </div>
+          </QuestionBlock>
+
+          <QuestionBlock
+            n={3}
             title="What type of business do you run?"
             purpose="Core signal — sets retail vs service mix and inventory vs customer emphasis."
           >
@@ -245,7 +295,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={2}
+            n={4}
             title="Monthly turnover range (approx.)"
             purpose="Drives scale score, graph richness, and compliance emphasis."
           >
@@ -266,7 +316,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={3}
+            n={5}
             title="What % of payments are cash vs digital?"
             purpose="Weights cash inference and liquidity alerts."
           >
@@ -286,7 +336,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={4}
+            n={6}
             title="Do you maintain inventory?"
             purpose="Inventory module, reorder-style signals; hidden for pure service with no stock."
           >
@@ -303,7 +353,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={5}
+            n={7}
             title="Do customers take goods or services on credit?"
             purpose="Credit module strength and collection / receivable actions."
           >
@@ -319,7 +369,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={6}
+            n={8}
             title="How often do customers return?"
             purpose="Customer insights module priority."
           >
@@ -335,7 +385,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={7}
+            n={9}
             title="Are you GST registered?"
             purpose="GST / compliance module and filing posture."
           >
@@ -359,10 +409,28 @@ export default function Onboarding() {
                 No
               </button>
             </div>
+            {gstRegistered && (
+              <div className="mt-4">
+                <label className="text-xs font-medium text-violet-800/80" htmlFor="gstin-input">
+                  GSTIN (15 characters)
+                </label>
+                <input
+                  id="gstin-input"
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  maxLength={15}
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 15))}
+                  placeholder="e.g. 22AAAAA0000A1Z5"
+                  className="mt-1 w-full rounded-xl border border-violet-200/80 px-3 py-2.5 font-mono text-sm tracking-wide text-violet-950"
+                />
+              </div>
+            )}
           </QuestionBlock>
 
           <QuestionBlock
-            n={8}
+            n={10}
             title="Which data can you connect?"
             purpose="Trust score and model confidence when real channels are available."
           >
@@ -437,7 +505,7 @@ export default function Onboarding() {
           </QuestionBlock>
 
           <QuestionBlock
-            n={9}
+            n={11}
             title="Operational detail"
             purpose="Headcount helps scale score; document flags help formality."
           >
@@ -473,7 +541,7 @@ export default function Onboarding() {
             </div>
           </QuestionBlock>
 
-          <QuestionBlock n={10} title="Notes (optional)" purpose="Anything else the system should know.">
+          <QuestionBlock n={12} title="Notes (optional)" purpose="Anything else the system should know.">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -495,7 +563,7 @@ export default function Onboarding() {
               disabled={busy}
               className="rounded-full bg-gradient-to-r from-[#6C3BFF] to-violet-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#6C3BFF]/25 hover:opacity-95 disabled:opacity-50"
             >
-              {busy ? 'Saving…' : 'Save & open dashboard'}
+              {busy ? 'Saving…' : 'Save & open Aaj'}
             </button>
           </div>
         </form>

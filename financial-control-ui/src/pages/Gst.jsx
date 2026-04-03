@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { PageHeader } from '../components/twin/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
-import { fetchGstCompliance } from '../services/api'
+import { fetchGstCompliance, fetchGstSummary } from '../services/api'
 
 function formatInr(n) {
   if (n == null || Number.isNaN(n)) return '—'
@@ -16,10 +16,15 @@ export default function Gst() {
 
   useEffect(() => {
     let c = false
-    fetchGstCompliance()
+    fetchGstSummary()
       .then((d) => {
-        if (!c) setGst(d)
+        if (!c) setGst({ ...d, _source: 'summary' })
       })
+      .catch(() =>
+        fetchGstCompliance().then((d) => {
+          if (!c) setGst({ ...d, _source: 'compliance' })
+        })
+      )
       .finally(() => {
         if (!c) setLoading(false)
       })
@@ -32,7 +37,7 @@ export default function Gst() {
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
         title="GST & compliance"
-        subtitle="Plain-language view of estimated GST posture from onboarding and compliance engine."
+        subtitle="GST liability forecast from your BusinessProfile (GSTIN), return history, and turnover — aligned with Monte Carlo cash simulation on GET /dashboard."
       />
       <div className="grid gap-6 md:grid-cols-2">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -44,7 +49,9 @@ export default function Gst() {
               {loading ? (
                 <Skeleton className="h-12 w-40" />
               ) : (
-                <p className="text-4xl font-semibold tabular-nums text-violet-950">{formatInr(gst?.gst_due)}</p>
+                <p className="text-4xl font-semibold tabular-nums text-violet-950">
+                  {formatInr(gst?.estimated_liability_inr ?? gst?.gst_due)}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -60,9 +67,18 @@ export default function Gst() {
               ) : (
                 <>
                   <p>
-                    <span className="font-medium text-violet-900">Due by:</span> {gst?.due_date || '—'}
+                    <span className="font-medium text-violet-900">Due by:</span>{' '}
+                    {gst?.next_due_date || gst?.due_date || '—'}
                   </p>
-                  <p className="mt-2">{gst?.note || '—'}</p>
+                  {gst?.gstin && (
+                    <p className="mt-1 font-mono text-xs text-violet-800">
+                      GSTIN <span className="font-semibold">{gst.gstin}</span>
+                    </p>
+                  )}
+                  {gst?.basis && (
+                    <p className="mt-2 text-xs text-violet-600">Basis: {gst.basis}</p>
+                  )}
+                  <p className="mt-2">{gst?.note ?? '—'}</p>
                 </>
               )}
             </CardContent>

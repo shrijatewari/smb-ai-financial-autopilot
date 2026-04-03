@@ -18,6 +18,16 @@ model User {
   name                     String                    @db.VarChar(255)
   email                    String                    @unique @db.VarChar(320)
   password_hash            String                    @db.Text
+  /// Assistant / WhatsApp bot reply language: `hi` or `en`.
+  conversation_language    String                    @default("hi") @db.VarChar(8)
+  /// Outbound WhatsApp (daily brief, reminders) — 10-digit India or full international digits.
+  whatsapp_number          String?                   @db.VarChar(20)
+  /// Opt-in: scheduled morning financial summary via WhatsApp (8 AM IST).
+  morning_briefing_enabled Boolean                   @default(false)
+  is_active                Boolean                   @default(true)
+  /// Optional trusted helper (e.g. family member) for assisted approvals — UI + future OTP flow.
+  trusted_helper_phone     String?                   @db.VarChar(16)
+  helper_approval_required Boolean                   @default(false)
   created_at                 DateTime                  @default(now())
   inventory_items            InventoryItem[]
   khata_uploads              KhataUpload[]
@@ -31,8 +41,28 @@ model User {
   customers                  Customer[]
   document_records           DocumentRecord[]
   rl_states                  RlState[]
+  notification_logs          NotificationLog[]
+  aa_consents                AAConsent[]
+  gst_records                GSTRecord[]
 
   @@map("users")
+}
+
+/// Setu / Account Aggregator consent — bank statement access.
+model AAConsent {
+  id               Int      @id @default(autoincrement())
+  user_id          Int
+  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  consent_id       String   @unique @db.VarChar(128)
+  /// PENDING | ACTIVE | REVOKED | FAILED
+  status           String   @db.VarChar(32)
+  mobile           String?  @db.VarChar(20)
+  linked_accounts  Json?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@index([user_id, status])
+  @@map("aa_consents")
 }
 
 /// Core business profile — drives dynamic dashboard and model selection.
@@ -48,6 +78,8 @@ model BusinessProfile {
   credit_usage           String   @db.VarChar(32)
   customer_type          String   @db.VarChar(32)
   gst_registered         Boolean  @default(false)
+  /// India GSTIN (15 chars) when registered — used for GST return sync + liability estimates.
+  gstin                  String?  @db.VarChar(16)
   formality_score        Decimal? @db.Decimal(6, 4)
   trust_score            Decimal? @db.Decimal(6, 4)
   created_at             DateTime @default(now())
@@ -55,6 +87,25 @@ model BusinessProfile {
 
   @@index([user_id])
   @@map("business_profiles")
+}
+
+/// Filed or synced GST returns (GSP / manual / mock backfill).
+model GSTRecord {
+  id             Int       @id @default(autoincrement())
+  user_id        Int
+  user           User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  gstin          String    @db.VarChar(16)
+  /// Period label e.g. 2025-12 or Q3-2025
+  period         String    @db.VarChar(16)
+  return_type    String    @db.VarChar(32)
+  filed_at       DateTime?
+  taxable_value  Decimal?  @db.Decimal(18, 2)
+  tax_paid       Decimal?  @db.Decimal(18, 2)
+  raw            Json?
+  created_at     DateTime  @default(now())
+
+  @@index([user_id, period])
+  @@map("gst_records")
 }
 
 /// Append-only financial movements (ingestion from Paytm, SMS, CSV, OCR, manual).
@@ -112,17 +163,18 @@ model Prediction {
 
 /// Recommended or executed business actions (collect, delay expense, etc.).
 model SystemAction {
-  id          Int         @id @default(autoincrement())
-  user_id     Int
-  user        User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  action_type String      @db.VarChar(64)
-  target      String?     @db.VarChar(255)
-  amount      Decimal?    @db.Decimal(18, 2)
-  status      String      @db.VarChar(32)
-  metadata    Json?
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  executions  Execution[]
+  id           Int         @id @default(autoincrement())
+  user_id      Int
+  user         User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  action_type  String      @db.VarChar(64)
+  target       String?     @db.VarChar(255)
+  amount       Decimal?    @db.Decimal(18, 2)
+  status       String      @db.VarChar(32)
+  metadata     Json?
+  completed_at DateTime?
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  executions   Execution[]
 
   @@index([user_id, status])
   @@map("actions")
@@ -220,6 +272,35 @@ model InventoryItem {
 
   @@index([user_id])
   @@map("inventory_items")
+}
+
+/// Inbound provider webhooks (Razorpay, Meta, etc.) — audit + replay support.
+model WebhookLog {
+  id         Int      @id @default(autoincrement())
+  provider   String   @db.VarChar(32)
+  event_type String   @db.VarChar(64)
+  payload    Json
+  status     String   @db.VarChar(32)
+  created_at DateTime @default(now())
+
+  @@index([provider, created_at])
+  @@map("webhook_logs")
+}
+
+/// Outbound notification attempts (WhatsApp brief, etc.).
+model NotificationLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int?
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  channel    String   @db.VarChar(32)
+  kind       String   @db.VarChar(64)
+  status     String   @db.VarChar(32)
+  detail     String?  @db.Text
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  @@index([user_id, created_at])
+  @@map("notification_logs")
 }
 
 /// Photo of a physical khata page (audit trail).

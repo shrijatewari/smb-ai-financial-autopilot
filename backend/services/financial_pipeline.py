@@ -58,6 +58,8 @@ def run_full_pipeline(
     payable_lag_days: float | None = None,
     monte_carlo_paths: int | None = None,
     random_state: int | None = 42,
+    gst_payment_amount: float | None = None,
+    gst_payment_day: int | None = None,
 ) -> dict:
     """
     Load session ledger, classify, reconstruct revenue, build cash path, simulate, score credit, fraud.
@@ -83,6 +85,8 @@ def run_full_pipeline(
         horizon_days=horizon_days,
         n_paths=monte_carlo_paths,
         random_state=random_state,
+        gst_payment_amount=gst_payment_amount,
+        gst_payment_day=gst_payment_day,
     )
 
     credit = default_probability(ledger)

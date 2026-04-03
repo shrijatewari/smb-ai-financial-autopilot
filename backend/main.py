@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import Any
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -48,16 +49,74 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from api.routes import actions, alerts, assistant, auth, compliance, connect, dashboard, documents, inventory_routes, prediction, rl_routes, simulation, system, transactions, webhooks
+from api.routes import (
+    aa_routes,
+    actions,
+    alerts,
+    assistant,
+    auth,
+    compliance,
+    connect,
+    dashboard,
+    documents,
+    gst_routes,
+    inventory_routes,
+    notification_routes,
+    prediction,
+    rl_routes,
+    simulation,
+    sms_commands,
+    system,
+    transactions,
+    webhooks,
+)
 from db.prisma_client import connect_prisma, disconnect_prisma
 from engine.system_engine import start as start_system_engine, stop as stop_system_engine
+
+_briefing_scheduler: Any = None
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    global _briefing_scheduler
     await connect_prisma()
     start_system_engine()
+    briefing_on = os.getenv("BRIEFING_ENABLED", "true").strip().lower() in ("1", "true", "yes")
+    aa_refresh_on = os.getenv("AA_REFRESH_ENABLED", "true").strip().lower() in ("1", "true", "yes")
+    if briefing_on or aa_refresh_on:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+        _briefing_scheduler = AsyncIOScheduler(timezone="UTC")
+        if briefing_on:
+            from services.daily_briefing import send_daily_briefings
+
+            # 8:00 AM India Standard Time (UTC+5:30) → 02:30 UTC
+            _briefing_scheduler.add_job(
+                send_daily_briefings,
+                "cron",
+                hour=2,
+                minute=30,
+                id="morning_whatsapp_briefing",
+                replace_existing=True,
+                misfire_grace_time=3600,
+            )
+        if aa_refresh_on:
+            from services.aa_refresh import refresh_active_aa_consents
+
+            _briefing_scheduler.add_job(
+                refresh_active_aa_consents,
+                "cron",
+                hour=3,
+                minute=0,
+                id="aa_fi_refresh",
+                replace_existing=True,
+                misfire_grace_time=3600,
+            )
+        _briefing_scheduler.start()
     yield
+    if _briefing_scheduler is not None:
+        _briefing_scheduler.shutdown(wait=False)
+        _briefing_scheduler = None
     stop_system_engine()
     await disconnect_prisma()
 
@@ -91,12 +150,16 @@ app.include_router(actions.router_execute, prefix="/execute", tags=["execution"]
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(connect.router, prefix="/connect", tags=["connect"])
 app.include_router(compliance.router, prefix="/compliance", tags=["compliance"])
+app.include_router(gst_routes.router, prefix="/gst", tags=["gst"])
 app.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 app.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
 app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
+app.include_router(aa_routes.router, prefix="/aa", tags=["account-aggregator"])
 app.include_router(system.router, prefix="/system", tags=["system"])
+app.include_router(sms_commands.router, prefix="/sms", tags=["sms"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(inventory_routes.router, prefix="/inventory", tags=["inventory"])
+app.include_router(notification_routes.router, prefix="/notifications", tags=["notifications"])
 app.include_router(rl_routes.user_router, prefix="/user", tags=["rl"])
 app.include_router(rl_routes.rl_router, prefix="/rl", tags=["rl"])
 
@@ -133,7 +196,7 @@ def root():
         "version": "2.0.0",
         "documentation": "/docs",
         "endpoints": {
-            "auth": "POST /auth/signup | /auth/login | GET /auth/me",
+            "auth": "POST /auth/signup | /auth/login | GET /auth/me | PATCH /auth/me (settings incl. morning briefing)",
             "onboarding": "POST /onboarding",
             "connect_paytm": "POST /connect/paytm",
             "transactions_paytm": "GET /transactions/paytm",
@@ -146,11 +209,19 @@ def root():
             "transactions_sms": "POST /transactions/sms",
             "dashboard": "GET /dashboard",
             "compliance_gst": "GET /compliance/gst",
+            "gst_summary": "GET /gst/summary (auth — GSTIN, liability, filing warning)",
+            "transactions_ledger": "GET /transactions/ledger (persisted Prisma ledger; optional date_from, date_to, q, source, category, txn_type, sort, offset, limit)",
+            "transactions_ledger_summary": "GET /transactions/ledger/summary (count + credit/debit/net; optional date range + q + source + category + txn_type)",
+            "transactions_ledger_export": "GET /transactions/ledger/export (CSV download, auth; optional date range + q + source + category + txn_type + sort)",
+            "notifications": "GET /notifications (auth — briefing & outbound notification log)",
             "alerts_fraud": "GET /alerts/fraud",
             "assistant": "POST /assistant/query | POST /assistant/query/audio",
             "assistant_media": "GET /media/assistant_tts/*.mp3 (TTS output)",
-            "webhooks_whatsapp": "GET|POST /webhooks/whatsapp (Meta Cloud API)",
+            "webhooks_whatsapp": "GET|POST /webhooks/whatsapp (Meta Cloud API — bot intents + assistant)",
+            "webhooks_razorpay": "POST /webhooks/razorpay (payment.captured → ledger)",
             "system_state": "GET /system/state",
+            "system_stream": "GET /system/stream (SSE, ~3s snapshot push)",
+            "sms_commands": "POST /sms/commands (auth) — BAL, RISK, PAY",
             "documents_upload": "POST /documents/upload",
             "user_interaction": "POST /user/interaction (RL + module personalization)",
             "rl_feedback": "POST /rl/feedback",

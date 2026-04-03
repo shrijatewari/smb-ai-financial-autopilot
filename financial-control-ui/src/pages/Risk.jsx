@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { PageHeader } from '../components/twin/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
-import { fetchSystemState } from '../services/api'
+import { useSystemSnapshot } from '../context/SystemStreamContext'
 
 function RiskMeter({ value }) {
   const pct = Math.min(100, Math.max(0, (value || 0) * 100))
@@ -35,22 +35,12 @@ function RiskMeter({ value }) {
 }
 
 export default function Risk() {
-  const [snap, setSnap] = useState(null)
+  const { snapshot: snap, error: streamError } = useSystemSnapshot()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let c = false
-    fetchSystemState()
-      .then((s) => {
-        if (!c) setSnap(s)
-      })
-      .finally(() => {
-        if (!c) setLoading(false)
-      })
-    return () => {
-      c = true
-    }
-  }, [])
+    if (snap != null || streamError) setLoading(false)
+  }, [snap, streamError])
 
   const risk = snap?.risk ?? 0
   const expl = snap?.risk_explanation || ''

@@ -24,6 +24,7 @@ def create_payment_link(
     customer_name: str,
     phone: str,
     email: str | None = None,
+    notes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Create a payment link. Amount in INR; Razorpay expects paise (amount * 100).
@@ -53,6 +54,9 @@ def create_payment_link(
         "notify": {"sms": True, "email": bool(email)},
         "reminder_enable": True,
     }
+    if notes:
+        # Razorpay notes: string values only (returned on payment webhooks).
+        payload["notes"] = {str(k): str(v) for k, v in notes.items() if v is not None}
 
     if not key_id or not key_secret:
         return _mock_response(amount_inr, customer_name, contact, None)

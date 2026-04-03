@@ -15,6 +15,7 @@ from auth.deps import get_current_user
 from db.prisma_client import prisma
 from prisma.models import User
 from services import ingestion_service
+from services.khata_vision_service import analyze_khata_file
 
 router = APIRouter()
 
@@ -105,7 +106,6 @@ async def upload_khata_photo(
     path = user_dir / fname
     path.write_bytes(raw)
 
-    rel = str(path.relative_to(Path(__file__).resolve().parent.parent.parent))
     rec = await prisma.khataupload.create(
         data={
             "user_id": user.id,
@@ -113,10 +113,28 @@ async def upload_khata_photo(
             "original_name": file.filename[:255],
         }
     )
+
+    inv = await prisma.inventoryitem.find_many(where={"user_id": user.id}, order={"name": "asc"})
+    vision = analyze_khata_file(path, list(inv))
+
+    n = len(vision.get("suggested_lines") or [])
+    msg = "Khata photo saved."
+    if vision.get("vision_status") == "ok" and n:
+        msg += f" AI ne {n} line(s) suggest ki — neeche check karke Apply dabayein."
+    elif vision.get("vision_status") == "skipped_no_api_key":
+        msg += " Vision ke liye backend/.env mein OPENAI_API_KEY set karein (auto-read)."
+    elif vision.get("vision_status") == "error":
+        msg += " Auto-read is baar fail — manually line bharein."
+    else:
+        msg += " Line manually bharein ya clear photo dubara upload karein."
+
     return {
         "upload_id": rec.id,
         "original_name": rec.original_name,
-        "message": "Khata photo saved. Add sale lines below, then Apply to update stock & cash.",
+        "message": msg,
+        "suggested_lines": vision.get("suggested_lines") or [],
+        "vision_notes": vision.get("notes") or "",
+        "vision_status": vision.get("vision_status") or "unknown",
     }
 
 

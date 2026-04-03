@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from auth.deps import get_current_user_optional
 from models.action import ExecuteActionRequest, ExecuteActionResponse
+from prisma.models import User
 from services.call_agent import simulate_call
 from services.execution_service import create_razorpay_payment_link, execute_collect_payment
 from services.financial_pipeline import run_full_pipeline
@@ -22,6 +24,11 @@ class PaymentLinkRequest(BaseModel):
     customer_name: str = Field(..., min_length=1, max_length=120)
     phone: str = Field(..., min_length=8, max_length=20)
     email: str | None = Field(None, max_length=120)
+    customer_id: int | None = Field(
+        None,
+        ge=1,
+        description="With JWT auth, embedded in Razorpay notes for webhook settlement matching.",
+    )
 
 
 class PaymentLinkResponse(BaseModel):
@@ -97,17 +104,25 @@ def get_decision(
 
 
 @router_execute.post("/payment-link", response_model=PaymentLinkResponse)
-def post_razorpay_payment_link(body: PaymentLinkRequest):
+async def post_razorpay_payment_link(
+    body: PaymentLinkRequest,
+    user: User | None = Depends(get_current_user_optional),
+):
     """
     Create a Razorpay payment link (live API when `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` are set).
 
     Falls back to a structured mock (`mock: true`) with the same response shape.
+    If the caller is authenticated and passes `customer_id`, notes are attached for webhook settlement.
     """
+    notes = None
+    if user is not None and body.customer_id is not None:
+        notes = {"user_id": str(user.id), "customer_id": str(body.customer_id)}
     out = create_razorpay_payment_link(
         amount_inr=body.amount,
         customer_name=body.customer_name,
         phone=body.phone,
         email=body.email,
+        notes=notes,
     )
     return PaymentLinkResponse(
         payment_link=out.get("payment_link"),

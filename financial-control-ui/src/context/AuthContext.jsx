@@ -6,7 +6,16 @@ const AuthContext = createContext(null)
 /** Treat onboarding as complete only when API explicitly says true (strict gate). */
 function normalizeUser(raw) {
   if (!raw) return null
-  return { ...raw, onboarding_completed: raw.onboarding_completed === true }
+  return {
+    ...raw,
+    onboarding_completed: raw.onboarding_completed === true,
+    documents_uploaded: raw.documents_uploaded === true,
+    trusted_helper_phone: raw.trusted_helper_phone ?? null,
+    helper_approval_required: raw.helper_approval_required === true,
+    conversation_language: raw.conversation_language === 'en' ? 'en' : 'hi',
+    whatsapp_number: raw.whatsapp_number ?? null,
+    morning_briefing_enabled: raw.morning_briefing_enabled === true,
+  }
 }
 
 export function AuthProvider({ children }) {

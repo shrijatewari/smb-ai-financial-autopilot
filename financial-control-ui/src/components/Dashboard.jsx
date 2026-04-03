@@ -22,12 +22,12 @@ import {
 } from 'recharts'
 import { Card, CardContent } from './ui/card'
 import { useAuth } from '../context/AuthContext'
+import { useSystemSnapshot } from '../context/SystemStreamContext'
 import {
   connectPaytm,
   executeAction,
   fetchGstCompliance,
   fetchPaytmTransactions,
-  fetchSystemState,
   getApiErrorMessage,
   getOnboardingState,
   postPaymentLink,
@@ -125,7 +125,7 @@ function openTelDialer(phone10) {
 
 export default function Dashboard() {
   const { user, logout } = useAuth()
-  const [snap, setSnap] = useState(null)
+  const { snapshot: snap, error: streamError, refreshSnapshot } = useSystemSnapshot()
   const [gst, setGst] = useState(null)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
@@ -146,16 +146,6 @@ export default function Dashboard() {
   const [callModal, setCallModal] = useState(null)
   const [kpiModal, setKpiModal] = useState(null)
 
-  const loadSystem = useCallback(async () => {
-    try {
-      const data = await fetchSystemState()
-      setSnap(data)
-      setError(null)
-    } catch (e) {
-      setError(getApiErrorMessage(e))
-    }
-  }, [])
-
   const loadAux = useCallback(async () => {
     try {
       const [gstData, ob] = await Promise.all([
@@ -174,10 +164,9 @@ export default function Dashboard() {
   }, [loadAux])
 
   useEffect(() => {
-    loadSystem()
-    const id = setInterval(() => loadSystem(), 3000)
-    return () => clearInterval(id)
-  }, [loadSystem])
+    if (streamError) setError(streamError)
+    else setError(null)
+  }, [streamError])
 
   useEffect(() => {
     if (!kpiModal) return
@@ -237,7 +226,7 @@ export default function Dashboard() {
       setPaytmConnected(true)
       const tx = await fetchPaytmTransactions()
       setPaytmPreview(tx)
-      await loadSystem()
+      await refreshSnapshot()
     } catch (e) {
       setToast({
         type: 'error',
@@ -259,7 +248,7 @@ export default function Dashboard() {
       const n = res?.rows_appended ?? res?.parsed?.length ?? 0
       setSmsToast({ type: 'success', text: `Added ${n} row(s) from SMS text.` })
       setSmsText('')
-      await loadSystem()
+      await refreshSnapshot()
     } catch (e) {
       setSmsToast({
         type: 'error',
@@ -527,7 +516,7 @@ export default function Dashboard() {
           </Link>
           <button
             type="button"
-            onClick={() => loadSystem()}
+            onClick={() => void refreshSnapshot()}
             disabled={loading}
             className="rounded-md border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-50 disabled:opacity-50"
           >
@@ -845,6 +834,15 @@ export default function Dashboard() {
           {rzpResult?.mock && (
             <p className="mt-2 text-xs text-violet-300/80">Mock link when Razorpay keys are not set.</p>
           )}
+          <p className="mt-3 max-w-2xl text-xs leading-relaxed text-violet-200/85">
+            When customers pay through a live link, your server can record the capture in the ledger via the Razorpay
+            webhook (<code className="rounded bg-white/10 px-1">POST /webhooks/razorpay</code> with{' '}
+            <code className="rounded bg-white/10 px-1">RAZORPAY_WEBHOOK_SECRET</code>). See{' '}
+            <Link to="/transactions" className="font-medium text-emerald-200 underline-offset-2 hover:underline">
+              Transactions
+            </Link>{' '}
+            for mixed sources (SMS, AA, webhook).
+          </p>
           {rzpResult?.error && <p className="mt-2 text-xs text-red-300">{rzpResult.error}</p>}
           {autoTrail?.steps && (
             <ul className="mt-4 space-y-1 border-t border-white/10 pt-4 text-xs text-violet-200/90">
@@ -868,7 +866,13 @@ export default function Dashboard() {
         <p className="text-xs text-neutral-500">
           Onboarding only records <em>intent</em>. Wire channels here: paste bank/UPI SMS text (calls{' '}
           <code className="rounded bg-neutral-100 px-1 text-[11px]">POST /transactions/sms</code>), connect Paytm
-          (mock), or upload PDF/CSV via Document intelligence.
+          (mock), or upload PDF/CSV via Document intelligence. For{' '}
+          <strong className="font-medium text-neutral-700">Account Aggregator</strong> bank feeds and{' '}
+          <strong className="font-medium text-neutral-700">morning WhatsApp briefing</strong> / inbound bot settings, use{' '}
+          <Link to="/profile" className="font-medium text-[#6C3BFF] underline-offset-2 hover:underline">
+            Settings &amp; profile
+          </Link>
+          .
         </p>
 
         <div

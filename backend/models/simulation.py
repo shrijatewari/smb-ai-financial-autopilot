@@ -51,6 +51,8 @@ def run_monte_carlo(
     horizon_days: int = 30,
     n_scenarios: int = 1000,
     random_state: int | None = 42,
+    gst_payment_amount: float | None = None,
+    gst_payment_day: int | None = None,
 ) -> dict:
     """
     Simulate futures using:
@@ -80,6 +82,11 @@ def run_monte_carlo(
 
     net_daily = revenue - daily_expense
     paths = last_balance + np.cumsum(net_daily, axis=1)
+
+    if gst_payment_amount and gst_payment_amount > 0 and gst_payment_day is not None:
+        d = int(gst_payment_day)
+        if 0 <= d < horizon_days:
+            paths[:, d:] -= float(gst_payment_amount)
 
     min_along_paths = np.min(paths, axis=1)
     risk_probability = float(np.mean(min_along_paths < 0))

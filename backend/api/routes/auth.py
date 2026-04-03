@@ -36,8 +36,45 @@ class UserOut(BaseModel):
     name: str
     email: str
     onboarding_completed: bool = False
+    """At least one document uploaded (invoice/GST/bank export) — required before business form."""
+    documents_uploaded: bool = False
+    trusted_helper_phone: str | None = None
+    helper_approval_required: bool = False
+    """Assistant / voice / bot replies: Hindi or English."""
+    conversation_language: str = "hi"
+    whatsapp_number: str | None = None
+    morning_briefing_enabled: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class UserPatchBody(BaseModel):
+    trusted_helper_phone: str | None = None
+    helper_approval_required: bool | None = None
+    conversation_language: str | None = Field(
+        None,
+        description="hi | en — assistant and voice conversation language",
+    )
+    whatsapp_number: str | None = Field(None, description="10-digit India or international — for WhatsApp briefings")
+    morning_briefing_enabled: bool | None = None
+
+
+def _normalize_helper_phone(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    s = "".join(c for c in raw.strip() if c.isdigit())
+    if not s:
+        return None
+    if len(s) == 11 and s.startswith("0"):
+        s = s[1:]
+    if len(s) == 12 and s.startswith("91"):
+        s = s[-10:]
+    if len(s) != 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Helper phone must be 10 digits (India).",
+        )
+    return s
 
 
 @router.post("/signup", response_model=TokenResponse)
@@ -67,7 +104,73 @@ async def login(body: LoginBody):
     return TokenResponse(access_token=token)
 
 
+async def _user_out(user: User) -> UserOut:
+    done = await user_has_completed_onboarding(user.id)
+    doc_count = await prisma.documentrecord.count(where={"user_id": user.id})
+    return UserOut(
+        id=user.id,
+        name=user.name,
+        email=user.email,
+        onboarding_completed=done,
+        documents_uploaded=doc_count > 0,
+        trusted_helper_phone=getattr(user, "trusted_helper_phone", None),
+        helper_approval_required=bool(getattr(user, "helper_approval_required", False)),
+        conversation_language=getattr(user, "conversation_language", None) or "hi",
+        whatsapp_number=getattr(user, "whatsapp_number", None),
+        morning_briefing_enabled=bool(getattr(user, "morning_briefing_enabled", False)),
+    )
+
+
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(get_current_user)):
-    done = await user_has_completed_onboarding(user.id)
-    return UserOut(id=user.id, name=user.name, email=user.email, onboarding_completed=done)
+    return await _user_out(user)
+
+
+def _normalize_whatsapp_number(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    s = "".join(c for c in raw.strip() if c.isdigit())
+    if not s:
+        return None
+    if len(s) == 11 and s.startswith("0"):
+        s = s[1:]
+    if len(s) == 12 and s.startswith("91"):
+        s = s[-10:]
+    if len(s) == 10:
+        return s
+    if len(s) >= 8:
+        return s
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="WhatsApp number must be 10 digits (India) or a valid international number.",
+    )
+
+
+def _normalize_conversation_language(raw: str | None) -> str:
+    if raw is None:
+        return "hi"
+    s = raw.strip().lower()
+    if s not in ("hi", "en"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="conversation_language must be 'hi' or 'en'.",
+        )
+    return s
+
+
+@router.patch("/me", response_model=UserOut)
+async def patch_me(body: UserPatchBody, user: User = Depends(get_current_user)):
+    data: dict = {}
+    if body.trusted_helper_phone is not None:
+        data["trusted_helper_phone"] = _normalize_helper_phone(body.trusted_helper_phone)
+    if body.helper_approval_required is not None:
+        data["helper_approval_required"] = body.helper_approval_required
+    if body.conversation_language is not None:
+        data["conversation_language"] = _normalize_conversation_language(body.conversation_language)
+    if body.whatsapp_number is not None:
+        data["whatsapp_number"] = _normalize_whatsapp_number(body.whatsapp_number)
+    if body.morning_briefing_enabled is not None:
+        data["morning_briefing_enabled"] = body.morning_briefing_enabled
+    if data:
+        user = await prisma.user.update(where={"id": user.id}, data=data)
+    return await _user_out(user)

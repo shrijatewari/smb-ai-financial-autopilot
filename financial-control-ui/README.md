@@ -76,6 +76,46 @@ src/
 
 ---
 
+## Transactions & persisted ledger
+
+The **Transactions** page (`/transactions`) loads:
+
+- **`GET /transactions/paytm`** — mock Paytm feed when connected (optional).
+- **`GET /transactions/ledger`** — persisted `LedgerTransaction` rows with filters, sort, and pagination.
+- **`GET /transactions/ledger/summary`** — aggregates for the same **shared** filters (no `sort` / pagination).
+- **`GET /transactions/ledger/export`** — CSV download with the same filters plus optional `sort`.
+
+**`src/services/api.js`** keeps summary and export aligned with the backend:
+
+- **`LEDGER_SHARED_FILTER_KEYS`** — `date_from`, `date_to`, `q`, `source`, `txn_type`, `category`, passed to **`pickLedgerSharedFilters()`** for **`fetchLedgerSummary`** and **`downloadLedgerCsv`**.
+- **`fetchLedgerTransactions`** forwards all params; default **`sort=date_desc`** is omitted so URLs stay minimal.
+
+Filters sync to the **URL query string** (bookmarkable):  
+`?date_from=&date_to=&q=&source=&category=&txn_type=&sort=`  
+Apply / Clear updates the URL; `offset` is client-only (pagination). Paytm/mock preview rows are filtered in the browser for the same dimensions where applicable.
+
+```mermaid
+flowchart LR
+  subgraph page [Transactions.jsx]
+    F["Filters + URL\nsearchParams"]
+    T["Table + summary card"]
+    F --> T
+  end
+  subgraph api [api.js]
+    FL["fetchLedgerTransactions"]
+    FS["fetchLedgerSummary\npickLedgerSharedFilters"]
+    DC["downloadLedgerCsv\npickLedgerSharedFilters"]
+  end
+  BE["FastAPI\n/transactions/ledger*"]
+  page --> FL --> BE
+  page --> FS --> BE
+  page --> DC --> BE
+```
+
+See **`../README.md`** (persisted ledger table) and **`../backend/README.md`** (full API semantics).
+
+---
+
 ## Styling
 
 - **Tailwind CSS v4** with `@tailwindcss/vite`
@@ -96,6 +136,6 @@ src/
 
 ## Related docs
 
-- Repository overview: **`../README.md`**
-- API & database: **`../backend/README.md`**
+- Repository overview (persisted ledger): **`../README.md`**
+- Backend API (full ledger parameter table): **`../backend/README.md`**
 - OpenAPI: `http://localhost:8000/docs` when the backend is running

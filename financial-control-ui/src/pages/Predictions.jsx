@@ -3,7 +3,8 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { PageHeader } from '../components/twin/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
-import { fetchSimulation, fetchSystemState } from '../services/api'
+import { useSystemSnapshot } from '../context/SystemStreamContext'
+import { fetchSimulation } from '../services/api'
 
 function binSamples(samples, bins = 32) {
   if (!samples?.length) return []
@@ -24,7 +25,7 @@ function binSamples(samples, bins = 32) {
 }
 
 export default function Predictions() {
-  const [snap, setSnap] = useState(null)
+  const { snapshot: snap } = useSystemSnapshot()
   const [sim, setSim] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -32,11 +33,8 @@ export default function Predictions() {
     let c = false
     ;(async () => {
       try {
-        const [s, sm] = await Promise.all([fetchSystemState(), fetchSimulation({ paths: 1200 })])
-        if (!c) {
-          setSnap(s)
-          setSim(sm)
-        }
+        const sm = await fetchSimulation({ paths: 1200 })
+        if (!c) setSim(sm)
       } catch {
         if (!c) setSim(null)
       } finally {

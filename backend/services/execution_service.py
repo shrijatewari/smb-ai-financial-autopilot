@@ -22,6 +22,7 @@ def create_razorpay_payment_link(
     customer_name: str,
     phone: str,
     email: str | None = None,
+    notes: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """
     Real Razorpay payment link (paise = amount_inr * 100). Uses official ``razorpay`` SDK
@@ -29,7 +30,7 @@ def create_razorpay_payment_link(
     """
     from services.razorpay_service import create_payment_link
 
-    return create_payment_link(amount_inr, customer_name, phone, email)
+    return create_payment_link(amount_inr, customer_name, phone, email, notes=notes)
 
 
 def send_collect_request(customer: str, amount: float, link: str | None = None) -> tuple[str, str]:

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   buildHindiPaymentScript,
@@ -8,38 +8,31 @@ import {
   openTelDialer,
   openWhatsAppDraft,
 } from '../lib/collections'
-import {
-  fetchSystemState,
-  getApiErrorMessage,
-  postTwilioVoiceCall,
-  postWhatsappReminder,
-} from '../services/api'
+import { getApiErrorMessage, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
+import { useSystemSnapshot } from '../context/SystemStreamContext'
 
 const DEFAULT_PHONE = '9004930401'
 
 export default function People() {
+  const { snapshot: snap } = useSystemSnapshot()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [phone, setPhone] = useState(DEFAULT_PHONE)
   const [toast, setToast] = useState(null)
+  const [creditMode, setCreditMode] = useState(false)
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    if (snap == null) return
     try {
-      const snap = await fetchSystemState()
       const q = snap?.daily_control?.collection_queue ?? []
       setRows(q)
+      setCreditMode(!!snap?.dashboard_context?.flags?.show_credit_priority_list)
     } catch (e) {
       setToast({ type: 'err', text: getApiErrorMessage(e) })
     } finally {
       setLoading(false)
     }
-  }, [])
-
-  useEffect(() => {
-    load()
-    const id = setInterval(load, 8000)
-    return () => clearInterval(id)
-  }, [load])
+  }, [snap])
 
   const phone10 = normalizePhone10(phone) || DEFAULT_PHONE
 
@@ -77,8 +70,12 @@ export default function People() {
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-violet-950">Dues — log</h1>
-            <p className="text-sm text-violet-800/70">Seed / engine se aata hai — har row par message ya call</p>
+            <h1 className="text-xl font-bold text-violet-950">Log — paise lene wale</h1>
+            <p className="text-sm text-violet-800/70">
+              {creditMode
+                ? 'Credit-heavy business: pehle in logon ko follow karein — har row par Message / Call'
+                : 'Engine queue — har row par message ya call'}
+            </p>
           </div>
           <Link to="/" className="text-sm font-medium text-[#6C3BFF] hover:underline">
             ← Aaj wapas

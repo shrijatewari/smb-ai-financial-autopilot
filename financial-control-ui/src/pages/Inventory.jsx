@@ -15,7 +15,30 @@ import {
 } from '../services/api'
 
 function newLine() {
-  return { key: crypto.randomUUID(), inventory_item_id: '', quantity: '', amount_inr: '' }
+  return {
+    key: crypto.randomUUID(),
+    inventory_item_id: '',
+    quantity: '',
+    amount_inr: '',
+    aiProduct: '',
+    aiRaw: '',
+    confidence: null,
+  }
+}
+
+function linesFromVision(suggested) {
+  if (!Array.isArray(suggested) || !suggested.length) return [newLine()]
+  return suggested.map((s) => ({
+    key: crypto.randomUUID(),
+    inventory_item_id: s.matched_inventory_item_id != null ? String(s.matched_inventory_item_id) : '',
+    quantity:
+      s.quantity != null && !Number.isNaN(Number(s.quantity)) ? String(s.quantity) : '',
+    amount_inr:
+      s.amount_inr != null && !Number.isNaN(Number(s.amount_inr)) ? String(s.amount_inr) : '',
+    aiProduct: s.product_name || '',
+    aiRaw: s.raw_text || '',
+    confidence: s.confidence ?? null,
+  }))
 }
 
 export default function Inventory() {
@@ -34,6 +57,7 @@ export default function Inventory() {
   const [khataUploadId, setKhataUploadId] = useState(null)
   const [khataPreviewUrl, setKhataPreviewUrl] = useState(null)
   const [khataBusy, setKhataBusy] = useState(false)
+  const [visionNotes, setVisionNotes] = useState(null)
   const [lines, setLines] = useState([newLine()])
   const [applyBusy, setApplyBusy] = useState(false)
 
@@ -111,12 +135,23 @@ export default function Inventory() {
     if (!f) return
     setKhataBusy(true)
     setToast(null)
+    setVisionNotes(null)
     try {
       if (khataPreviewUrl) URL.revokeObjectURL(khataPreviewUrl)
       const res = await uploadKhataPhoto(f)
       setKhataUploadId(res.upload_id)
       setKhataPreviewUrl(URL.createObjectURL(f))
-      setToast({ type: 'success', text: res.message || 'Photo saved.' })
+      setVisionNotes(res.vision_notes || null)
+      if (Array.isArray(res.suggested_lines) && res.suggested_lines.length) {
+        setLines(linesFromVision(res.suggested_lines))
+        setToast({
+          type: 'success',
+          text: res.message || 'Photo saved — sale lines AI se bhari gayi. Verify karke Apply karein.',
+        })
+      } else {
+        setLines([newLine()])
+        setToast({ type: 'success', text: res.message || 'Photo saved.' })
+      }
     } catch (err) {
       setToast({ type: 'error', text: getApiErrorMessage(err) })
     } finally {
@@ -219,12 +254,14 @@ export default function Inventory() {
             <li>Add your products and opening stock (e.g. milk, packets).</li>
             <li>Upload a photo of your khata page for your records (optional but recommended).</li>
             <li>
-              Enter each sale: product, quantity sold, money received. <strong>Apply</strong> reduces
-              inventory and records that amount as <strong>cash in</strong> (credit) in the system ledger.
+              Khata photo upload par <strong>AI photo padhta hai</strong> (OpenAI vision) aur sale lines suggest
+              karta hai — aap verify karke <strong>Apply</strong> dabate ho. Galat match ho to product dropdown
+              change karo.
             </li>
           </ol>
           <p className="mt-3 text-xs text-violet-950/55">
-            Handwriting OCR is not automatic yet — you confirm entries. Future: suggest lines from the image.
+            Requires <code className="rounded bg-violet-100 px-1">OPENAI_API_KEY</code> in backend — same as
+            assistant. Hindi / English mixed handwriting supported to an extent; hamesha confirm karein.
           </p>
         </CardContent>
       </Card>
@@ -312,7 +349,12 @@ export default function Inventory() {
             </label>
             {khataUploadId && (
               <p className="text-xs text-violet-700">
-                Upload #{khataUploadId} — will be linked when you apply a sale.
+                Upload #{khataUploadId} — Apply par ledger ke saath link hoga.
+              </p>
+            )}
+            {visionNotes && (
+              <p className="rounded-lg border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-xs text-emerald-950">
+                {visionNotes}
               </p>
             )}
             {khataPreviewUrl && (
@@ -330,7 +372,8 @@ export default function Inventory() {
         <CardHeader className="p-0 pb-4">
           <CardTitle className="text-lg">Record sales from khata</CardTitle>
           <p className="text-sm text-violet-200/90">
-            Each line: deducts stock and adds ₹ to your cash ledger (same pipeline as SMS / OCR ingests).
+            Photo upload ke baad AI yahan lines bhar sakta hai — aap sirf check karke Apply karo. Har line stock
+            kam karti hai aur ₹ cash ledger mein jama hota hai.
           </p>
         </CardHeader>
         <CardContent className="p-0">
@@ -350,6 +393,12 @@ export default function Inventory() {
                     <option value="">Select…</option>
                     {itemOptions}
                   </select>
+                  {ln.aiProduct ? (
+                    <span className="mt-1 block text-[10px] text-violet-300/95">
+                      AI: {ln.aiProduct}
+                      {ln.confidence != null ? ` · ${Math.round(Number(ln.confidence) * 100)}% sure` : ''}
+                    </span>
+                  ) : null}
                 </label>
                 <label className="w-24 text-xs">
                   Qty sold

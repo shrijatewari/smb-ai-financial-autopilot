@@ -63,7 +63,8 @@ DATABASE_URL=postgresql://smb:smb@localhost:5432/smb_ai
 | Onboarding form + engine snapshot JSON | `onboarding_profiles` |
 | Normalized KPIs for judges / dashboard | `business_profiles` (upserted on `POST /onboarding`) |
 | Inventory SKUs, khata photo rows | Prisma models `InventoryItem`, `KhataUpload` |
-| Ledger-style rows (optional future wiring) | Tables like `transactions`, `predictions`, `actions`, etc. — schema ready; ingestion may still use session/engine paths |
+| **Persisted ledger** | PostgreSQL `transactions` (`LedgerTransaction`) — Razorpay webhooks, AA, SMS→Prisma, CSV paths; queried via `GET /transactions/ledger*` |
+| Predictions, actions, executions | Prisma models + engine trace |
 | Live cash / risk / collection queue | In-memory **global snapshot** + engine — exposed on `GET /system/state` |
 | RL Q-table (optional) | `data/rl_qtable.json` (gitignored) |
 
@@ -76,16 +77,65 @@ DATABASE_URL=postgresql://smb:smb@localhost:5432/smb_ai
 | `/auth` | `signup`, `login`, `me` |
 | `/onboarding` | GET/POST business profile (persisted) |
 | `/system/state` | Live dashboard snapshot (JWT optional but required for per-user modules) |
-| `/transactions` | Upload, SMS ingest, Paytm mock |
+| `/transactions` | Upload, SMS ingest, Paytm mock, persisted ledger — see **Persisted ledger** below |
 | `/execute` | `payment-link`, `whatsapp`, `call`, `action` |
 | `/documents` | Multipart upload → OCR → profile merge |
 | `/inventory` | Stock + khata sale application |
 | `/compliance/gst` | GST stub from onboarding |
+| `/gst/summary` | **GST liability forecast** (GSTIN, due date, filing warning) — auth |
+| `/notifications` | **Notification log** (morning brief attempts, etc.) — auth |
 | `/assistant` | NL queries |
 | `/dashboard` | Legacy aggregate snapshot |
 | `/v1/dashboard` | Legacy path |
 
 Full list: **Swagger** at `/docs`.
+
+---
+
+## Persisted ledger (`GET /transactions/ledger*`)
+
+`LedgerTransaction` rows are stored in PostgreSQL (`transactions` table). Three authenticated endpoints share **filter semantics**; only the list endpoint supports **sort** and **pagination**. Export applies the same filters and returns up to **50,000** rows per request (default **10,000**; see OpenAPI for `limit`).
+
+### Query parameters
+
+| Parameter | `GET /transactions/ledger` | `GET /transactions/ledger/summary` | `GET /transactions/ledger/export` |
+|-----------|:--------------------------:|:----------------------------------:|:---------------------------------:|
+| `date_from`, `date_to` | ✓ | ✓ | ✓ |
+| `q` | ✓ | ✓ | ✓ |
+| `source` | ✓ | ✓ | ✓ |
+| `category` | ✓ | ✓ | ✓ |
+| `txn_type` | ✓ | ✓ | ✓ |
+| `sort` | ✓ | — | ✓ |
+| `offset`, `limit` | ✓ | — | export: own `limit` (not `offset`) |
+
+- **Dates:** inclusive `YYYY-MM-DD`, UTC day bounds.  
+- **`q`:** case-insensitive substring on `description` (max 200 characters).  
+- **`source` / `category`:** exact match, case-insensitive (max 32 characters).  
+- **`txn_type`:** `credit` or `debit`.  
+- **`sort`:** `date_desc` (default), `date_asc`, `amount_desc`, `amount_asc`.  
+- **List:** JSON includes `total`, `offset`, `limit`, and echoes applied filters.  
+- **Summary:** raw SQL aggregates — count, `total_credit`, `total_debit`, `net`.  
+- **Export:** UTF-8 CSV with BOM; filename suffix reflects active filters.
+
+```mermaid
+flowchart TB
+  subgraph req [Client request]
+    P["Query string\nfilters + optional sort"]
+  end
+  subgraph list [List]
+    L["find_many\norder + skip/take"]
+  end
+  subgraph sum [Summary]
+    R["query_raw\nSUM/COUNT"]
+  end
+  subgraph exp [Export]
+    C["find_many\nordered rows → CSV"]
+  end
+  DB[("PostgreSQL\ntransactions")]
+  P --> L --> DB
+  P --> R --> DB
+  P --> C --> DB
+```
 
 ---
 
@@ -124,5 +174,5 @@ Payment links from `POST /execute/payment-link` when **`RAZORPAY_KEY_ID`** and *
 
 ## Related documentation
 
-- Monorepo overview: **`../README.md`**
-- Frontend: **`../financial-control-ui/README.md`**
+- Monorepo overview (includes persisted ledger summary + diagram): **`../README.md`**
+- Frontend Transactions / `api.js`: **`../financial-control-ui/README.md`**

@@ -55,6 +55,10 @@ async def upsert_normalized_business_profile(
     else:
         cash, dig = cash / s, dig / s
 
+    gi = str(onboarding.get("gstin") or "").strip().upper() or None
+    if gi:
+        gi = gi[:16]
+
     payload = {
         "business_type": str(onboarding.get("revenue_model") or "hybrid")[:32],
         "monthly_turnover_range": str(onboarding.get("monthly_turnover_range") or "")[:32],
@@ -64,6 +68,7 @@ async def upsert_normalized_business_profile(
         "credit_usage": str(onboarding.get("credit_usage") or "none")[:32],
         "customer_type": str(onboarding.get("customer_type") or "repeat")[:32],
         "gst_registered": bool(onboarding.get("gst_registered")),
+        "gstin": gi,
         "formality_score": _dec(formality_score),
         "trust_score": _dec(trust_score),
     }

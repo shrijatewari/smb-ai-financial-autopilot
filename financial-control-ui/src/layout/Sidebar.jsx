@@ -18,26 +18,30 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useUiStore } from '../store/uiStore'
+import { useTr } from '../hooks/useTr'
 
 const nav = [
-  { to: '/', label: 'Aaj (Today)', icon: Sun, end: true },
-  { to: '/people', label: 'Log / Dues', icon: Users },
-  { to: '/dashboard', label: 'Full dashboard', icon: LayoutDashboard },
-  { to: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
-  { to: '/cash-flow', label: 'Cash flow', icon: LineChart },
-  { to: '/inventory', label: 'Inventory', icon: Package },
-  { to: '/predictions', label: 'Predictions', icon: Sparkles },
-  { to: '/risk', label: 'Risk', icon: ShieldAlert },
-  { to: '/gst', label: 'GST', icon: Receipt },
-  { to: '/actions', label: 'Action center', icon: Zap },
-  { to: '/profile', label: 'Business profile', icon: UserCircle },
-  { to: '/documents', label: 'Documents', icon: FileStack },
-  { to: '/onboarding', label: 'Onboarding', icon: ClipboardList },
-  { to: '/assistant', label: 'AI chat', icon: MessageSquare },
+  { to: '/', hi: 'Aaj', en: 'Today', icon: Sun, end: true, basic: true },
+  { to: '/people', hi: 'Log / Dues', en: 'People / dues', icon: Users, basic: true },
+  { to: '/dashboard', hi: 'Poora dashboard', en: 'Full dashboard', icon: LayoutDashboard, basic: false },
+  { to: '/transactions', hi: 'Len-den', en: 'Transactions', icon: ArrowLeftRight, basic: false },
+  { to: '/cash-flow', hi: 'Cash flow', en: 'Cash flow', icon: LineChart, basic: false },
+  { to: '/inventory', hi: 'Stock / inventory', en: 'Inventory', icon: Package, basic: false },
+  { to: '/predictions', hi: 'Andaza', en: 'Predictions', icon: Sparkles, basic: false },
+  { to: '/risk', hi: 'Risk', en: 'Risk', icon: ShieldAlert, basic: false },
+  { to: '/gst', hi: 'GST', en: 'GST', icon: Receipt, basic: false },
+  { to: '/actions', hi: 'Kaam ka centre', en: 'Action center', icon: Zap, basic: false },
+  { to: '/profile', hi: 'Business profile', en: 'Business profile', icon: UserCircle, basic: true },
+  { to: '/documents', hi: 'Documents', en: 'Documents', icon: FileStack, basic: false },
+  { to: '/onboarding', hi: 'Shuruat', en: 'Onboarding', icon: ClipboardList, basic: false },
+  { to: '/assistant', hi: 'AI se baat', en: 'AI chat', icon: MessageSquare, basic: true },
 ]
 
 export function Sidebar() {
+  const t = useTr()
   const collapsed = useUiStore((s) => s.sidebarCollapsed)
+  const uiMode = useUiStore((s) => s.uiMode)
+  const visible = uiMode === 'advanced' ? nav : nav.filter((item) => item.basic)
 
   return (
     <motion.aside
@@ -52,12 +56,14 @@ export function Sidebar() {
         {!collapsed && (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-violet-950">Business Twin</p>
-            <p className="text-[10px] uppercase tracking-wider text-violet-600/80">Financial OS</p>
+            <p className="text-[10px] uppercase tracking-wider text-violet-600/80">
+              {uiMode === 'basic' ? t('Sada mode', 'Simple mode') : t('Financial OS', 'Financial OS')}
+            </p>
           </div>
         )}
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {nav.map(({ to, label, icon: Icon, end }) => (
+        {visible.map(({ to, hi, en, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -72,7 +78,7 @@ export function Sidebar() {
             }
           >
             <Icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
-            {!collapsed && <span>{label}</span>}
+            {!collapsed && <span>{t(hi, en)}</span>}
           </NavLink>
         ))}
       </nav>
@@ -81,7 +87,7 @@ export function Sidebar() {
         onClick={() => useUiStore.getState().toggleSidebar()}
         className="m-3 rounded-xl border border-violet-200/60 bg-white/50 py-2 text-xs text-violet-700 hover:bg-violet-50"
       >
-        {collapsed ? '→' : '← Collapse'}
+        {collapsed ? '→' : t('← Band karo', '← Collapse')}
       </button>
     </motion.aside>
   )

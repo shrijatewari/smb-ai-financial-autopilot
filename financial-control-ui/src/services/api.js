@@ -5,13 +5,19 @@ import axios from 'axios'
  * - Dev: use `/api` so Vite proxies to the backend (see vite.config.js).
  * - Prod: set VITE_API_URL, or deploy API behind the same origin at `/api`.
  */
-function resolveApiBaseUrl() {
+export function resolveApiBaseUrl() {
   const env = import.meta.env.VITE_API_URL
   if (env) return String(env).replace(/\/$/, '')
   // `npm run dev`: use Vite proxy → backend (avoids direct :8000 connection issues).
   if (import.meta.env.DEV) return '/api'
   // `npm run build` + `vite preview` or static hosting: point at API (set VITE_API_URL in real deploys).
   return 'http://localhost:8000'
+}
+
+/** EventSource URL for GET /system/stream (JWT in query — browsers cannot set SSE headers). */
+export function getSystemStreamUrl(token) {
+  const base = resolveApiBaseUrl().replace(/\/$/, '')
+  return `${base}/system/stream?token=${encodeURIComponent(token)}`
 }
 
 /** Build absolute URL for backend-served files (e.g. /media/assistant_tts/*.mp3). */
@@ -105,6 +111,18 @@ export async function fetchGstCompliance() {
   return data
 }
 
+/** GET /gst/summary — GSTIN, next due date, estimated liability, Monte Carlo alignment fields. */
+export async function fetchGstSummary() {
+  const { data } = await api.get('/gst/summary')
+  return data
+}
+
+/** GET /notifications — NotificationLog rows (morning briefing sends, etc.). */
+export async function fetchNotifications(params = {}) {
+  const { data } = await api.get('/notifications', { params })
+  return data
+}
+
 export async function connectPaytm() {
   const { data } = await api.post('/connect/paytm')
   return data
@@ -113,6 +131,63 @@ export async function connectPaytm() {
 export async function fetchPaytmTransactions() {
   const { data } = await api.get('/transactions/paytm')
   return data
+}
+
+/** Query keys shared by GET /ledger/summary and /ledger/export (same semantics as list filters, excluding sort/offset/limit). */
+const LEDGER_SHARED_FILTER_KEYS = ['date_from', 'date_to', 'q', 'source', 'txn_type', 'category']
+
+function pickLedgerSharedFilters(params = {}) {
+  const clean = {}
+  for (const k of LEDGER_SHARED_FILTER_KEYS) {
+    const v = params[k]
+    if (v != null && String(v).trim() !== '') clean[k] = typeof v === 'string' ? v.trim() : v
+  }
+  return clean
+}
+
+/**
+ * GET /transactions/ledger — persisted Prisma rows (webhooks, AA, SMS, etc.).
+ * Pass-through params: date_from, date_to, q, source, category, txn_type, sort (date_desc default — omitted when default),
+ * offset, limit.
+ */
+export async function fetchLedgerTransactions(params = {}) {
+  const clean = { ...params }
+  if (clean.sort === 'date_desc' || !clean.sort) delete clean.sort
+  const { data } = await api.get('/transactions/ledger', { params: clean })
+  return data
+}
+
+/** GET /transactions/ledger/summary — count + credit/debit totals + net (same shared filters as ledger; no sort/offset/limit). */
+export async function fetchLedgerSummary(params = {}) {
+  const clean = pickLedgerSharedFilters(params)
+  const { data } = await api.get('/transactions/ledger/summary', { params: clean })
+  return data
+}
+
+/** GET /transactions/ledger/export — CSV download (auth). Shared filters + optional sort (non-default). */
+export async function downloadLedgerCsv(params = {}) {
+  const clean = pickLedgerSharedFilters(params)
+  if (params.sort && params.sort !== 'date_desc') clean.sort = params.sort
+  const res = await api.get('/transactions/ledger/export', { responseType: 'blob', params: clean })
+  const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const from = clean.date_from || 'all'
+  const to = clean.date_to || 'all'
+  const qpart = clean.q ? `_${String(clean.q).slice(0, 32).replace(/[^\w\u0900-\u0fff-]+/g, '_')}` : ''
+  const spart = clean.source ? `_${String(clean.source).slice(0, 24).replace(/[^\w-]+/g, '_')}` : ''
+  const tpart = clean.txn_type ? `_${clean.txn_type}` : ''
+  const sortpart = clean.sort && clean.sort !== 'date_desc' ? `_${clean.sort}` : ''
+  const catpart = clean.category
+    ? `_${String(clean.category).slice(0, 24).replace(/[^\w-]+/g, '_')}`
+    : ''
+  a.download = `ledger_export_${from}_${to}${qpart}${spart}${tpart}${sortpart}${catpart}.csv`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 /**
@@ -165,6 +240,30 @@ export async function login({ email, password }) {
 
 export async function fetchMe() {
   const { data } = await api.get('/auth/me')
+  return data
+}
+
+/** PATCH /auth/me — trusted helper phone + optional approval gate (demo). */
+export async function patchMe(body) {
+  const { data } = await api.patch('/auth/me', body)
+  return data
+}
+
+/** GET /aa/status — latest Account Aggregator consent for the signed-in user. */
+export async function getAaStatus() {
+  const { data } = await api.get('/aa/status')
+  return data
+}
+
+/** POST /aa/initiate — start AA consent; open `redirect_url` in a new tab. */
+export async function postAaInitiate(body = {}) {
+  const { data } = await api.post('/aa/initiate', body)
+  return data
+}
+
+/** POST /sms/commands — SMS-style BAL / RISK / PAY (authenticated; Twilio can proxy here). */
+export async function postSmsCommand(text) {
+  const { data } = await api.post('/sms/commands', { text })
   return data
 }
 

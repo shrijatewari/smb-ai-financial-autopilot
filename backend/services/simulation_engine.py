@@ -14,6 +14,8 @@ def run_simulation(
     horizon_days: int = 30,
     n_paths: int | None = None,
     random_state: int | None = 42,
+    gst_payment_amount: float | None = None,
+    gst_payment_day: int | None = None,
 ) -> dict:
     """
     Run N stochastic paths; return fintech-style metrics including expected terminal cash.
@@ -27,6 +29,8 @@ def run_simulation(
         horizon_days=horizon_days,
         n_scenarios=n_paths,
         random_state=random_state,
+        gst_payment_amount=gst_payment_amount,
+        gst_payment_day=gst_payment_day,
     )
     paths = raw.get("future_balances") or []
     terminal = np.array([p[-1] for p in paths if p], dtype=float)

@@ -11,6 +11,18 @@ export function mockTransactionsFromState(snap) {
       amount: 18400,
       type: 'credit',
       confidence: 0.94,
+      source: 'sms',
+      category: 'sale',
+    },
+    {
+      id: 'm-rzp',
+      date: new Date().toISOString().slice(0, 10),
+      description: 'Razorpay payment captured (webhook)',
+      amount: 2400,
+      type: 'credit',
+      confidence: 0.99,
+      source: 'razorpay_webhook',
+      category: 'collection',
     },
     {
       id: 'm2',
@@ -19,6 +31,18 @@ export function mockTransactionsFromState(snap) {
       amount: -9200,
       type: 'debit',
       confidence: 0.88,
+      source: 'sms',
+      category: 'supplier',
+    },
+    {
+      id: 'm-aa',
+      date: new Date().toISOString().slice(0, 10),
+      description: 'AA: UPI / IMPS sample (linked bank)',
+      amount: 1900,
+      type: 'debit',
+      confidence: 0.95,
+      source: 'account_aggregator',
+      category: 'bank_aa',
     },
     {
       id: 'm3',
@@ -27,6 +51,8 @@ export function mockTransactionsFromState(snap) {
       amount: 2100,
       type: 'uncertain',
       confidence: 0.52,
+      source: 'api',
+      category: 'unknown',
     },
   ]
   return { rows, meta: { cash, risk } }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Area,
@@ -13,7 +13,8 @@ import * as Slider from '@radix-ui/react-slider'
 import { PageHeader } from '../components/twin/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
-import { fetchCashflowPrediction, fetchSystemState } from '../services/api'
+import { useSystemSnapshot } from '../context/SystemStreamContext'
+import { fetchCashflowPrediction } from '../services/api'
 
 function formatInr(n) {
   if (n == null || Number.isNaN(n)) return '—'
@@ -21,7 +22,9 @@ function formatInr(n) {
 }
 
 export default function CashFlow() {
-  const [snap, setSnap] = useState(null)
+  const { snapshot: snap } = useSystemSnapshot()
+  const snapRef = useRef(snap)
+  snapRef.current = snap
   const [cf, setCf] = useState([])
   const [horizon, setHorizon] = useState(30)
   const [loading, setLoading] = useState(true)
@@ -30,17 +33,16 @@ export default function CashFlow() {
     let c = false
     ;(async () => {
       try {
-        const [s, pred] = await Promise.all([
-          fetchSystemState(),
-          fetchCashflowPrediction({ horizon_days: horizon }),
-        ])
+        const pred = await fetchCashflowPrediction({ horizon_days: horizon })
         if (!c) {
-          setSnap(s)
-          const series = pred?.cash_flow_series || s?.forecast || []
+          const series = pred?.cash_flow_series || snapRef.current?.forecast || []
           setCf(Array.isArray(series) ? series : [])
         }
       } catch {
-        if (!c) setCf([])
+        if (!c) {
+          const series = snapRef.current?.forecast || []
+          setCf(Array.isArray(series) ? series : [])
+        }
       } finally {
         if (!c) setLoading(false)
       }

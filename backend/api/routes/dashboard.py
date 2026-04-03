@@ -9,6 +9,7 @@ from auth.deps import get_current_user_optional
 from prisma.models import User
 from models.business_profile_engine import compute_business_vector, compute_formality_score
 from services import state_store
+from integrations.gst import resolve_gst_monte_carlo_params
 from services.financial_pipeline import run_full_pipeline
 from services.module_selector import infer_profile_type_label, select_modules
 from services.onboarding_persistence import ensure_user_business_context_loaded
@@ -23,15 +24,22 @@ async def get_dashboard(
     horizon_days: int = Query(30, ge=5, le=120),
 ):
     """Current cash, risk, reconstruction, fraud, modules from business profile, and recommended actions."""
+    gst_amt, gst_day = None, None
+    if user is not None:
+        await ensure_user_business_context_loaded(user.id)
+        gst_amt, gst_day = await resolve_gst_monte_carlo_params(user.id, horizon_days)
     try:
-        out = run_full_pipeline(initial_balance=initial_balance, horizon_days=horizon_days)
+        out = run_full_pipeline(
+            initial_balance=initial_balance,
+            horizon_days=horizon_days,
+            gst_payment_amount=gst_amt,
+            gst_payment_day=gst_day,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     sim = out["simulation"]
     uid = user.id if user else None
-    if user is not None:
-        await ensure_user_business_context_loaded(user.id)
     snap = state_store.get_business_profile_snapshot(uid)
     ob = state_store.get_onboarding(uid)
 

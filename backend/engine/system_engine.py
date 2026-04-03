@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import threading
 import time
+
 import traceback
 
 from services.financial_pipeline import run_full_pipeline
@@ -61,3 +62,17 @@ def start() -> None:
 
 def stop() -> None:
     _stop.set()
+
+
+def refresh_snapshot() -> None:
+    """
+    Run one control-plane tick immediately (e.g. after Razorpay webhook posts to the ledger).
+    Safe to call from async request handlers; runs synchronously in the caller thread.
+    """
+    if os.environ.get("SYSTEM_ENGINE_DISABLED", "").lower() in ("1", "true", "yes"):
+        return
+    tick = int(time.time()) % 1_000_000_000
+    try:
+        _run_tick(tick)
+    except Exception as e:
+        update_from_error(f"{e}\n{traceback.format_exc()}", tick)

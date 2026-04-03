@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Mic, Volume2 } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage, postAssistantQuery, resolveBackendMediaUrl } from '../services/api'
 
 function getSpeechRecognition() {
@@ -20,6 +21,7 @@ function speakText(text, enabled, langUi) {
 }
 
 export default function Assistant() {
+  const { user } = useAuth()
   const [searchParams] = useSearchParams()
   const [messages, setMessages] = useState(() => [
     {
@@ -51,8 +53,14 @@ export default function Assistant() {
 
   useEffect(() => {
     const l = searchParams.get('lang')
-    if (l === 'hi' || l === 'en') setUiLang(l)
-  }, [searchParams])
+    if (l === 'hi' || l === 'en') {
+      setUiLang(l)
+      return
+    }
+    if (user?.conversation_language === 'hi' || user?.conversation_language === 'en') {
+      setUiLang(user.conversation_language)
+    }
+  }, [searchParams, user?.conversation_language])
 
   const speechSupported = !!getSpeechRecognition()
 
@@ -164,6 +172,19 @@ export default function Assistant() {
             <h1 className="text-lg font-semibold text-violet-950">AI assistant</h1>
             <p className="text-xs text-violet-950/55">
               India-first: Hindi, Hinglish, English — voice + text financial guidance
+            </p>
+            <p className="mt-1.5 text-[11px] leading-snug text-violet-950/50">
+              Reply language defaults from{' '}
+              <Link
+                to="/profile#conv-lang"
+                className="font-medium text-[#6C3BFF]/90 underline-offset-2 hover:text-[#6C3BFF] hover:underline"
+              >
+                Profile → Assistant / voice language
+              </Link>
+              {user?.conversation_language === 'hi' || user?.conversation_language === 'en'
+                ? ` (${user.conversation_language === 'hi' ? 'हिंदी' : 'English'})`
+                : ''}
+              . Use the EN / हिंदी toggles here to override for this session only.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

@@ -1,10 +1,19 @@
+import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
+import { SystemStreamProvider } from '../context/SystemStreamContext'
+import { warmSpeechVoices } from '../lib/voice'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { FloatingAssistant } from './FloatingAssistant'
+import { BottomNav } from './BottomNav'
 
 export function AppShell() {
+  useEffect(() => {
+    warmSpeechVoices()
+  }, [])
+
   return (
+    <SystemStreamProvider>
     <div className="twin-app flex min-h-screen">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -left-40 top-20 h-96 w-96 rounded-full bg-[#6C3BFF]/15 blur-[100px]" />
@@ -14,11 +23,13 @@ export function AppShell() {
       <Sidebar />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 overflow-x-hidden p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-x-hidden p-4 pb-24 md:p-6 md:pb-8 lg:p-8">
           <Outlet />
         </main>
       </div>
+      <BottomNav />
       <FloatingAssistant />
     </div>
+    </SystemStreamProvider>
   )
 }

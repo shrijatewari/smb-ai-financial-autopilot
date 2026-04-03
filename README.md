@@ -66,6 +66,7 @@ This is **not** a passive dashboard. It is an **operating layer** that sits on t
 - Document OCR (Google Vision optional; local Tesseract fallback)  
 - Paytm-style mock feed  
 - Inventory + **khata** sale → stock + ledger movement when you apply a sale  
+- **Persisted ledger** (`LedgerTransaction` in PostgreSQL) — filtered list, aggregates, and CSV export via `GET /transactions/ledger*`, with the **Transactions** page (`/transactions`) in `financial-control-ui` staying in sync (bookmarkable query string). See **Persisted ledger API** below and `backend/README.md`.  
 
 ### Adaptive UI
 - Onboarding-driven **business profile** → module mix and emphasis  
@@ -116,6 +117,45 @@ The **system engine** runs on a timer (default ~5s), refreshes simulation output
 
 ---
 
+## Persisted ledger API (PostgreSQL)
+
+Durable rows live in the `transactions` table (Prisma model `LedgerTransaction`). The UI calls the same query parameters for **list**, **summary**, and **CSV export** (summary omits `sort` and pagination; export uses a server-side row cap).
+
+```mermaid
+flowchart LR
+  subgraph ui [financial-control-ui]
+    TX["/transactions"]
+    API["api.js\nfetchLedger* / downloadLedgerCsv"]
+    TX --> API
+  end
+  subgraph be [FastAPI]
+    L["GET /transactions/ledger"]
+    S["GET /transactions/ledger/summary"]
+    E["GET /transactions/ledger/export"]
+  end
+  PG[("PostgreSQL\ntransactions")]
+  API -->|"JWT + filters"| L
+  API -->|"shared filters"| S
+  API -->|"shared filters + sort"| E
+  L --> PG
+  S --> PG
+  E --> PG
+```
+
+| Query param | List | Summary | Export | Purpose |
+|-------------|:----:|:-------:|:------:|---------|
+| `date_from`, `date_to` | ✓ | ✓ | ✓ | UTC day bounds (`YYYY-MM-DD`) |
+| `q` | ✓ | ✓ | ✓ | Case-insensitive substring on description (max 200 chars) |
+| `source` | ✓ | ✓ | ✓ | Exact match, case-insensitive (max 32 chars) |
+| `category` | ✓ | ✓ | ✓ | Exact match, case-insensitive (max 32 chars) |
+| `txn_type` | ✓ | ✓ | ✓ | `credit` or `debit` |
+| `sort` | ✓ | — | ✓ | `date_desc` (default), `date_asc`, `amount_desc`, `amount_asc` |
+| `offset`, `limit` | ✓ | — | — | Pagination on list only (export is full filtered set up to server `limit`) |
+
+Filters can be combined; the Transactions page mirrors them in the URL for sharing (`?date_from=&date_to=&q=&source=&category=&txn_type=&sort=`).
+
+---
+
 ## Architecture
 
 ```mermaid
@@ -155,7 +195,8 @@ Persistent entities (see `backend/prisma/schema.prisma`):
 
 - **Users** — auth identity  
 - **OnboardingProfile / BusinessProfile** — business context for the twin  
-- **Transactions / predictions / actions / executions** — financial and decision trace  
+- **LedgerTransaction** (`transactions` table) — persisted movements (ingestion, webhooks, AA); list/summary/export via `GET /transactions/ledger*`  
+- **Predictions / actions / executions** — financial and decision trace  
 - **Customers** — receivable-oriented records  
 - **Documents** — OCR pipeline outputs  
 - **InventoryItem / KhataUpload** — stock and paper khata  
@@ -262,7 +303,8 @@ Copy from each **`.env.example`**. Never commit secrets.
 
 | Topic | Where |
 |-------|--------|
-| Backend route details | `backend/README.md` |
+| Backend route details & persisted ledger | `backend/README.md` |
+| Frontend ledger / `api.js` | `financial-control-ui/README.md` |
 | Vercel deploy (UI) | Root `vercel.json` — set `VITE_API_URL` to your API |
 | Prisma | `backend/prisma/schema.prisma`, `./scripts/sync-prisma-db.sh` |
 | Troubleshooting | Prisma on `PATH`, DB up, onboarding completed — see legacy notes in git history if needed |

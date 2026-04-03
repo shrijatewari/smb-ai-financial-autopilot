@@ -22,6 +22,10 @@ import { useAuth } from '../context/AuthContext'
 import { useTr } from '../hooks/useTr'
 import { Bilingual } from '../lib/i18n'
 import { cn } from '../lib/utils'
+import { TodayStatsBar } from '../components/TodayStatsBar'
+import { CollectionQueueList } from '../components/CollectionQueueList'
+import { CustomerCollectionTimeline } from '../components/CustomerCollectionTimeline'
+import { attachMockPayScores } from '../lib/platformMocks'
 
 const DEFAULT_PHONE = '9004930401'
 const GUIDED_DONE_KEY = 'SMB_GUIDED_FIRST_DONE'
@@ -116,6 +120,7 @@ export default function Today() {
   const [toast, setToast] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [videoOpen, setVideoOpen] = useState(null)
+  const [timelineRow, setTimelineRow] = useState(null)
   const actionRef = useRef(null)
   const headlineSpoken = useRef(false)
   const autoGuidedApplied = useRef(false)
@@ -124,6 +129,7 @@ export default function Today() {
   const dc = snap?.daily_control
   const primary = snap?.action
   const queue = dc?.collection_queue ?? []
+  const queueRows = useMemo(() => attachMockPayScores(queue), [queue])
   const meta = primary?.metadata || {}
   const collectAmount = Number(meta.suggested_amount ?? queue[0]?.amount ?? 2400)
   const collectName = String(meta.customer || queue[0]?.name || 'Customer')
@@ -336,6 +342,54 @@ export default function Today() {
     }
   }
 
+  async function queueMessage(row) {
+    if (helperBlocks()) {
+      setToast({ type: 'warn', text: t('Helper approval demo…', 'Helper approval demo…') })
+      return
+    }
+    setBusy('wa')
+    setToast(null)
+    try {
+      await postWhatsappReminder({
+        customer: row.name,
+        phone: phone10,
+        amount: Number(row.amount),
+        tone: 'friendly',
+      })
+      setToast({
+        type: 'ok',
+        text: t('Reminder bheja gaya.', 'Reminder sent.'),
+      })
+    } catch (e) {
+      openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
+      setToast({ type: 'warn', text: getApiErrorMessage(e) })
+    } finally {
+      setBusy(null)
+      setTimeout(() => setToast(null), 8000)
+    }
+  }
+
+  async function queueCall(row) {
+    if (helperBlocks()) {
+      setToast({ type: 'warn', text: t('Helper approval demo…', 'Helper approval demo…') })
+      return
+    }
+    setBusy('call')
+    setToast(null)
+    const script = buildHindiPaymentScript(row.name, row.amount)
+    try {
+      const res = await postTwilioVoiceCall({ phone: phone10, text: script })
+      if (res.mock) openTelDialer(phone10)
+      setToast({ type: res.mock ? 'warn' : 'ok', text: res.mock ? 'Dialer' : 'Call queued' })
+    } catch (e) {
+      openTelDialer(phone10)
+      setToast({ type: 'warn', text: getApiErrorMessage(e) })
+    } finally {
+      setBusy(null)
+      setTimeout(() => setToast(null), 8000)
+    }
+  }
+
   function openConfirm(kind) {
     const short = collectName.split('(')[0].trim()
     const amt = formatInr(collectAmount)
@@ -413,8 +467,36 @@ export default function Today() {
         embedUrl={videoOpen?.url}
         onClose={() => setVideoOpen(null)}
       />
+      {timelineRow && (
+        <CustomerCollectionTimeline
+          row={timelineRow}
+          busy={!!busy}
+          onClose={() => setTimelineRow(null)}
+          onWhatsApp={() => {
+            void queueMessage(timelineRow)
+            setTimelineRow(null)
+          }}
+          onPaymentLink={async () => {
+            setBusy('sys')
+            try {
+              await postPaymentLink({
+                amount: Number(timelineRow.amount),
+                customer_name: timelineRow.name,
+                phone: phone10,
+              })
+              setToast({ type: 'ok', text: t('Payment link banaya.', 'Payment link created.') })
+            } catch (e) {
+              setToast({ type: 'err', text: getApiErrorMessage(e) })
+            } finally {
+              setBusy(null)
+              setTimelineRow(null)
+              setTimeout(() => setToast(null), 8000)
+            }
+          }}
+        />
+      )}
 
-      <div className="mx-auto max-w-lg">
+      <div className="mx-auto max-w-2xl">
         <div className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">
           <Bilingual
             mode={localeDisplay}
@@ -459,6 +541,12 @@ export default function Today() {
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
               {t('Yeh number samjhao', 'Explain this')}
             </Link>
+          </div>
+        )}
+
+        {!loading && snap && (
+          <div className="mt-6">
+            <TodayStatsBar snap={snap} loading={loading} />
           </div>
         )}
 
@@ -590,74 +678,54 @@ export default function Today() {
 
         <div
           className={cn(
-            'mt-10 rounded-3xl border-2 border-violet-200/80 bg-white p-6 shadow-xl shadow-violet-500/10',
-            guidedHandActive && guidedStep === 0 && 'ring-4 ring-[#6C3BFF]/60 ring-offset-2 animate-pulse'
+            'mt-8 space-y-4',
+            guidedHandActive && guidedStep === 0 && 'rounded-3xl ring-4 ring-[#6C3BFF]/60 ring-offset-2'
           )}
         >
-          <p className="text-center text-xs font-medium uppercase tracking-wide text-violet-500">
-            {literacyMinimal
-              ? t('Ek kaam', 'One action')
-              : t('Abhi sirf ek kaam', 'Only one action now')}
-          </p>
-          <p className="mt-3 text-center text-xl font-semibold leading-snug text-violet-950">
-            {loading
-              ? '—'
-              : literacyMinimal
-                ? (
-                    <span className="flex flex-wrap items-center justify-center gap-3 text-2xl">
-                      <span aria-hidden>🧑‍🤝‍🧑</span>
-                      <span className="font-mono font-bold tabular-nums">{formatInr(collectAmount)}</span>
-                      <span aria-hidden>{line.urgent ? '🔴' : '🟢'}</span>
-                    </span>
-                  )
-                : (() => {
-                    const short = collectName.split('(')[0].trim()
-                    const hiLine = `👉 ${short} se ${formatInr(collectAmount)} lena hai`
-                    if (localeDisplay === 'en') {
-                      return (
-                        <span lang="en">
-                          👉 Collect {formatInr(collectAmount)} from {short}
-                        </span>
-                      )
-                    }
-                    if (localeDisplay === 'both') {
-                      return (
-                        <>
-                          <span className="block">{hiLine}</span>
-                          <span className="mt-1 block text-base font-medium text-violet-800/90" lang="en">
-                            Collect {formatInr(collectAmount)} from {short}
-                          </span>
-                        </>
-                      )
-                    }
-                    return hiLine
-                  })()}
-          </p>
-          {!literacyMinimal && (
-            <p className="mt-2 text-center text-xs text-violet-600/80">
-              {localeDisplay === 'en' ? (
-                <span lang="en">
-                  Collect {formatInr(collectAmount)} from {collectName.split('(')[0].trim()}
-                </span>
-              ) : localeDisplay === 'both' ? (
-                <span className="block">{collectName.split('(')[0].trim()}</span>
-              ) : (
-                collectName.split('(')[0].trim()
-              )}
-            </p>
-          )}
-          <label className="mt-6 flex flex-col gap-1 text-xs text-violet-800/80">
+          <label className="flex flex-col gap-1 text-xs text-violet-800/80">
             <span className="font-medium">
-              {t('Customer ka number (10 digit)', 'Customer phone (10 digits)')}
+              {t('Default WhatsApp / call number (sab customers)', 'Default number for WhatsApp / calls')}
             </span>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3 text-center text-lg font-mono tabular-nums text-violet-950"
+              className="rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-2.5 text-center font-mono tabular-nums text-violet-950"
               inputMode="numeric"
             />
           </label>
+
+          {!loading && queueRows.length > 0 && (
+            <CollectionQueueList
+              rows={queueRows}
+              title={t('Aaj collect karein', 'Collect today')}
+              subtitle={t('Poori ranked list — row par tap karke timeline dekho', 'Full ranked list — tap a row for timeline')}
+              totalDueLabel={t('Total', 'Total')}
+              busyKey={() => busy}
+              onMessage={(row) => void queueMessage(row)}
+              onCall={(row) => void queueCall(row)}
+              onOpenTimeline={(row) => setTimelineRow(row)}
+            />
+          )}
+
+          <div className="rounded-2xl border border-violet-200/80 bg-white/90 px-4 py-3 text-center shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500">
+              {literacyMinimal ? t('Top priority', 'Top priority') : t('Engine — pehla target', 'Engine top target')}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-violet-950">
+              {loading
+                ? '—'
+                : literacyMinimal
+                  ? (
+                      <span className="tabular-nums">{formatInr(collectAmount)}</span>
+                    )
+                  : (
+                      <>
+                        {collectName.split('(')[0].trim()} · {formatInr(collectAmount)}
+                      </>
+                    )}
+            </p>
+          </div>
         </div>
 
         <p className="mt-10 text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-violet-400">
@@ -760,6 +828,20 @@ export default function Today() {
           <p className="mt-6 text-center text-sm text-red-700" role="alert">
             {error}
           </p>
+        )}
+
+        {user?.subscription_tier === 'free' && (
+          <div className="fixed bottom-20 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-center justify-between gap-3 rounded-xl border border-violet-200/80 bg-violet-950/95 px-4 py-2.5 text-xs font-medium text-white shadow-xl md:bottom-8">
+            <span className="leading-snug">
+              {t(
+                'Free tier: outbound messages limited — upgrade for full automation.',
+                'Free tier: outbound messages are limited — upgrade for full automation.'
+              )}
+            </span>
+            <Link to="/growth" className="shrink-0 font-bold text-amber-300 underline-offset-2 hover:underline">
+              {t('Upgrade', 'Upgrade')}
+            </Link>
+          </div>
         )}
 
         {toast && (

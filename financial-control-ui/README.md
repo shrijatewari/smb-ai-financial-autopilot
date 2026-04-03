@@ -85,6 +85,8 @@ The **Transactions** page (`/transactions`) loads:
 - **`GET /transactions/ledger/summary`** — aggregates for the same **shared** filters (no `sort` / pagination).
 - **`GET /transactions/ledger/export`** — CSV download with the same filters plus optional `sort`.
 
+**`fetchNotifications`** (Profile → briefing log): if **`GET /notifications`** errors or returns an invalid payload, **`getMockNotificationsResponse()`** in **`src/lib/platformMocks.js`** supplies demo rows (`_mockFallback: true`).
+
 **`src/services/api.js`** keeps summary and export aligned with the backend:
 
 - **`LEDGER_SHARED_FILTER_KEYS`** — `date_from`, `date_to`, `q`, `source`, `txn_type`, `category`, passed to **`pickLedgerSharedFilters()`** for **`fetchLedgerSummary`** and **`downloadLedgerCsv`**.

@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom'
 import {
   buildHindiPaymentScript,
   buildWhatsappCollectionMessage,
-  formatInr,
   normalizePhone10,
   openTelDialer,
   openWhatsAppDraft,
 } from '../lib/collections'
-import { getApiErrorMessage, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
+import { getApiErrorMessage, postPaymentLink, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { attachMockPayScores } from '../lib/platformMocks'
+import { CollectionQueueList } from '../components/CollectionQueueList'
+import { CustomerCollectionTimeline } from '../components/CustomerCollectionTimeline'
 
 const DEFAULT_PHONE = '9004930401'
 
@@ -21,6 +22,8 @@ export default function People() {
   const [phone, setPhone] = useState(DEFAULT_PHONE)
   const [toast, setToast] = useState(null)
   const [creditMode, setCreditMode] = useState(false)
+  const [timelineRow, setTimelineRow] = useState(null)
+  const [busy, setBusy] = useState(null)
 
   useEffect(() => {
     if (snap == null) return
@@ -37,7 +40,8 @@ export default function People() {
 
   const phone10 = normalizePhone10(phone) || DEFAULT_PHONE
 
-  async function onMessage(row) {
+  async function queueMessage(row) {
+    setBusy('wa')
     try {
       await postWhatsappReminder({
         customer: row.name,
@@ -49,11 +53,14 @@ export default function People() {
     } catch {
       openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
       setToast({ type: 'warn', text: 'API fail — draft khola' })
+    } finally {
+      setBusy(null)
+      setTimeout(() => setToast(null), 6000)
     }
-    setTimeout(() => setToast(null), 6000)
   }
 
-  async function onCall(row) {
+  async function queueCall(row) {
+    setBusy('call')
     const script = buildHindiPaymentScript(row.name, row.amount)
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
@@ -62,8 +69,10 @@ export default function People() {
     } catch (e) {
       openTelDialer(phone10)
       setToast({ type: 'warn', text: getApiErrorMessage(e) })
+    } finally {
+      setBusy(null)
+      setTimeout(() => setToast(null), 6000)
     }
-    setTimeout(() => setToast(null), 6000)
   }
 
   return (
@@ -93,75 +102,50 @@ export default function People() {
           />
         </label>
 
-        <div className="overflow-hidden rounded-2xl border border-violet-200/80 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-violet-100 bg-violet-50/80 text-xs uppercase tracking-wide text-violet-600">
-                <th className="px-4 py-3">Kaun</th>
-                <th className="px-4 py-3">Rashi</th>
-                <th className="px-4 py-3">Late</th>
-                <th className="px-4 py-3" title="Mock score — pay this week">
-                  Pay %
-                </th>
-                <th className="px-4 py-3">Priority</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-violet-600">
-                    Loading…
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-violet-600">
-                    Abhi queue khali — engine data connect karo
-                  </td>
-                </tr>
-              ) : (
-                rows.map((row) => (
-                  <tr key={row.name} className="border-b border-violet-50">
-                    <td className="px-4 py-3 font-medium text-violet-950">{row.name}</td>
-                    <td className="px-4 py-3 tabular-nums">{formatInr(row.amount)}</td>
-                    <td className="px-4 py-3">{row.days_late}</td>
-                    <td className="px-4 py-3 tabular-nums text-violet-800" title={row.payScoreNote || ''}>
-                      {row.payThisWeek != null ? `${(100 * row.payThisWeek).toFixed(0)}%` : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          row.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-amber-50 text-amber-900'
-                        }`}
-                      >
-                        {row.priority}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => void onMessage(row)}
-                          className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900 hover:bg-emerald-200"
-                        >
-                          Message
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void onCall(row)}
-                          className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-50"
-                        >
-                          Call
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <p className="py-12 text-center text-violet-600">Loading…</p>
+        ) : rows.length === 0 ? (
+          <p className="py-12 text-center text-violet-600">Abhi queue khali — engine data connect karo</p>
+        ) : (
+          <CollectionQueueList
+            rows={rows}
+            title="Aaj collect karein"
+            subtitle="Ranked by engine — risk bar = late-payment risk"
+            totalDueLabel="Total"
+            busyKey={() => busy}
+            onMessage={(row) => void queueMessage(row)}
+            onCall={(row) => void queueCall(row)}
+            onOpenTimeline={(row) => setTimelineRow(row)}
+          />
+        )}
+
+        {timelineRow && (
+          <CustomerCollectionTimeline
+            row={timelineRow}
+            busy={!!busy}
+            onClose={() => setTimelineRow(null)}
+            onWhatsApp={() => {
+              void queueMessage(timelineRow)
+              setTimelineRow(null)
+            }}
+            onPaymentLink={async () => {
+              setBusy('sys')
+              try {
+                await postPaymentLink({
+                  amount: Number(timelineRow.amount),
+                  customer_name: timelineRow.name,
+                  phone: phone10,
+                })
+                setToast({ type: 'ok', text: 'Payment link' })
+              } catch (e) {
+                setToast({ type: 'err', text: getApiErrorMessage(e) })
+              } finally {
+                setBusy(null)
+                setTimelineRow(null)
+              }
+            }}
+          />
+        )}
 
         {toast && (
           <p

@@ -55,11 +55,15 @@ from api.routes import (
     alerts,
     assistant,
     auth,
+    collections_routes,
     compliance,
     connect,
+    credit_routes,
     dashboard,
     documents,
     gst_routes,
+    growth_routes,
+    insights_routes,
     inventory_routes,
     notification_routes,
     prediction,
@@ -83,7 +87,9 @@ async def lifespan(_: FastAPI):
     start_system_engine()
     briefing_on = os.getenv("BRIEFING_ENABLED", "true").strip().lower() in ("1", "true", "yes")
     aa_refresh_on = os.getenv("AA_REFRESH_ENABLED", "true").strip().lower() in ("1", "true", "yes")
-    if briefing_on or aa_refresh_on:
+    ladder_on = os.getenv("COLLECTION_LADDER_ENABLED", "true").strip().lower() in ("1", "true", "yes")
+    benchmark_on = os.getenv("BENCHMARK_CRON_ENABLED", "true").strip().lower() in ("1", "true", "yes")
+    if briefing_on or aa_refresh_on or ladder_on or benchmark_on:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
         _briefing_scheduler = AsyncIOScheduler(timezone="UTC")
@@ -109,6 +115,29 @@ async def lifespan(_: FastAPI):
                 hour=3,
                 minute=0,
                 id="aa_fi_refresh",
+                replace_existing=True,
+                misfire_grace_time=3600,
+            )
+        if ladder_on:
+            from services.collection_ladder import run_collection_ladder_tick
+
+            _briefing_scheduler.add_job(
+                run_collection_ladder_tick,
+                "interval",
+                minutes=15,
+                id="collection_ladder",
+                replace_existing=True,
+                misfire_grace_time=300,
+            )
+        if benchmark_on:
+            from services.benchmark_service import refresh_benchmark_aggregates
+
+            _briefing_scheduler.add_job(
+                refresh_benchmark_aggregates,
+                "cron",
+                hour=4,
+                minute=0,
+                id="benchmark_refresh",
                 replace_existing=True,
                 misfire_grace_time=3600,
             )
@@ -162,6 +191,10 @@ app.include_router(inventory_routes.router, prefix="/inventory", tags=["inventor
 app.include_router(notification_routes.router, prefix="/notifications", tags=["notifications"])
 app.include_router(rl_routes.user_router, prefix="/user", tags=["rl"])
 app.include_router(rl_routes.rl_router, prefix="/rl", tags=["rl"])
+app.include_router(credit_routes.router, prefix="/credit", tags=["credit"])
+app.include_router(growth_routes.router, prefix="/growth", tags=["growth"])
+app.include_router(collections_routes.router, prefix="/collections", tags=["collections"])
+app.include_router(insights_routes.router, prefix="/insights", tags=["insights"])
 
 # Legacy integrations (Streamlit / prior clients)
 from routes import dashboard as legacy_dashboard
@@ -227,5 +260,9 @@ def root():
             "rl_feedback": "POST /rl/feedback",
             "rl_debug": "GET /rl/debug",
             "legacy_dashboard": "GET /v1/dashboard",
+            "credit_score": "GET /credit/score?refresh= | GET /credit/history",
+            "growth": "GET /growth/summary | POST /growth/subscription | GET /growth/benchmarks | POST /growth/benchmarks/refresh | GET /growth/audit",
+            "collections_ladder": "GET /collections/customers | POST /collections/ladder/start | GET /collections/ladder",
+            "insights_suppliers": "GET /insights/suppliers",
         },
     }

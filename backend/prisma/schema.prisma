@@ -44,6 +44,18 @@ model User {
   notification_logs          NotificationLog[]
   aa_consents                AAConsent[]
   gst_records                GSTRecord[]
+  /// free | pro | enterprise — feature gating + MRR.
+  subscription_tier          String                   @default("free") @db.VarChar(32)
+  /// Shareable code for referral loop (unique when set).
+  referral_code              String?                  @unique @db.VarChar(16)
+  referred_by_user_id        Int?
+  referred_by                User?                    @relation("UserReferrals", fields: [referred_by_user_id], references: [id], onDelete: SetNull)
+  referred_users             User[]                   @relation("UserReferrals")
+  credit_score_snapshots     CreditScoreSnapshot[]
+  audit_logs                 AuditLog[]
+  collection_campaigns       CollectionCampaign[]
+  referral_events_as_referrer ReferralEvent[]         @relation("ReferralReferrer")
+  referral_event_as_referee   ReferralEvent?          @relation("ReferralReferee")
 
   @@map("users")
 }
@@ -211,6 +223,7 @@ model Customer {
 
   @@index([user_id])
   @@index([user_id, phone])
+  collection_campaigns CollectionCampaign[]
   @@map("customers")
 }
 
@@ -314,4 +327,80 @@ model KhataUpload {
 
   @@index([user_id])
   @@map("khata_uploads")
+}
+
+/// Lender-facing credit signal snapshot (derived from ledger, GST, RL, customers).
+model CreditScoreSnapshot {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  score      Int
+  band       String   @db.VarChar(16)
+  factors    Json
+  created_at DateTime @default(now())
+
+  @@index([user_id, created_at])
+  @@map("credit_score_snapshots")
+}
+
+/// Append-only audit trail for regulated / sensitive flows (lending, payouts, referral redeem).
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  user_id    Int?
+  user       User?    @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  actor      String   @db.VarChar(32)
+  action     String   @db.VarChar(128)
+  resource   String?  @db.VarChar(255)
+  metadata   Json?
+  ip         String?  @db.VarChar(64)
+  created_at DateTime @default(now())
+
+  @@index([user_id, created_at])
+  @@index([action, created_at])
+  @@map("audit_logs")
+}
+
+/// 14-step autonomous collections ladder (WhatsApp / log — channel in metadata).
+model CollectionCampaign {
+  id           Int       @id @default(autoincrement())
+  user_id      Int
+  user         User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  customer_id  Int
+  customer     Customer  @relation(fields: [customer_id], references: [id], onDelete: Cascade)
+  step_index   Int       @default(0)
+  status       String    @db.VarChar(32)
+  next_run_at  DateTime?
+  last_channel String?   @db.VarChar(32)
+  metadata     Json?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@index([user_id, status, next_run_at])
+  @@map("collection_campaigns")
+}
+
+model ReferralEvent {
+  id              Int      @id @default(autoincrement())
+  referrer_id     Int
+  referrer        User     @relation("ReferralReferrer", fields: [referrer_id], references: [id], onDelete: Cascade)
+  referee_user_id Int      @unique
+  referee         User     @relation("ReferralReferee", fields: [referee_user_id], references: [id], onDelete: Cascade)
+  created_at      DateTime @default(now())
+
+  @@index([referrer_id])
+  @@map("referral_events")
+}
+
+/// Anonymized peer benchmarks — updated by nightly job from active users.
+model BenchmarkAggregate {
+  id           Int      @id @default(autoincrement())
+  industry_key String   @db.VarChar(64)
+  metric       String   @db.VarChar(64)
+  p50          Float?
+  p90          Float?
+  sample_count Int      @default(0)
+  updated_at   DateTime @updatedAt
+
+  @@unique([industry_key, metric])
+  @@map("benchmark_aggregates")
 }

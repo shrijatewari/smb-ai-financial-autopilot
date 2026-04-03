@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
@@ -8,10 +8,12 @@ import { Button } from '../components/ui/button'
 export default function Signup() {
   const { signup, isAuthenticated, loading } = useAuth()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [referralCode, setReferralCode] = useState(() => (params.get('ref') || '').trim().toUpperCase())
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -35,7 +37,7 @@ export default function Signup() {
     }
     setBusy(true)
     try {
-      await signup({ name, email, password })
+      await signup({ name, email, password, referral_code: referralCode || undefined })
       navigate('/onboarding', { replace: true })
     } catch (err) {
       setError(getApiErrorMessage(err))
@@ -78,6 +80,17 @@ export default function Signup() {
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 w-full rounded-xl border border-violet-200/80 bg-white/90 px-3 py-2.5 text-sm text-violet-950 focus:border-[#6C3BFF]/40 focus:outline-none focus:ring-2 focus:ring-[#6C3BFF]/20"
               autoComplete="email"
+            />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-violet-800/80">Referral code (optional)</span>
+            <input
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.trim().toUpperCase())}
+              placeholder="AB12CD34"
+              className="mt-1 w-full rounded-xl border border-violet-200/80 bg-white/90 px-3 py-2.5 font-mono text-sm text-violet-950 focus:border-[#6C3BFF]/40 focus:outline-none focus:ring-2 focus:ring-[#6C3BFF]/20"
+              autoComplete="off"
             />
           </label>
           <label className="block">

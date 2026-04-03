@@ -40,6 +40,15 @@ _state: dict[str, Any] = {
 
 
 def get_snapshot() -> dict[str, Any]:
+    try:
+        from services.redis_snapshot import fetch_snapshot, snapshot_enabled
+
+        if snapshot_enabled():
+            remote = fetch_snapshot()
+            if isinstance(remote, dict) and remote.get("meta") is not None:
+                return copy.deepcopy(remote)
+    except Exception:
+        pass
     with _lock:
         return copy.deepcopy(_state)
 
@@ -76,6 +85,18 @@ def update_from_error(message: str, tick: int) -> None:
         _state["meta"]["error"] = message
         _state["meta"]["tick"] = tick
         _state["meta"]["updated_at"] = datetime.now(timezone.utc).isoformat()
+    _publish_snapshot_wire()
+
+
+def _publish_snapshot_wire() -> None:
+    try:
+        from services.redis_snapshot import publish_snapshot
+
+        with _lock:
+            snap = _json_safe(copy.deepcopy(_state))
+        publish_snapshot(snap)
+    except Exception:
+        pass
 
 
 def _terminal_samples(sim: dict, max_points: int = 500) -> list[float]:
@@ -210,3 +231,4 @@ def update_from_pipeline(out: dict, tick: int) -> None:
             "error": None,
             "rl": _json_safe(rl_out) if isinstance(rl_out, dict) else {},
         }
+    _publish_snapshot_wire()

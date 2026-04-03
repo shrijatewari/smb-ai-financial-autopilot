@@ -104,6 +104,7 @@ export default function PlatformCapabilities() {
                 ['PWA offline', 'planned', 'Mock install panel'],
                 ['Multi-business / CA', 'planned', 'Mock grid'],
                 ['Explain this (voice)', 'live', 'Today → Assistant'],
+                ['Notification log (briefing)', 'live', 'Profile — mock rows if GET /notifications fails'],
               ].map(([cap, be, fe]) => (
                 <tr key={cap} className="border-b border-violet-50">
                   <td className="py-2 pr-3 font-medium">{cap}</td>

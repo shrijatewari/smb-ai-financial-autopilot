@@ -15,6 +15,8 @@ function normalizeUser(raw) {
     conversation_language: raw.conversation_language === 'en' ? 'en' : 'hi',
     whatsapp_number: raw.whatsapp_number ?? null,
     morning_briefing_enabled: raw.morning_briefing_enabled === true,
+    subscription_tier: raw.subscription_tier || 'free',
+    referral_code: raw.referral_code ?? null,
   }
 }
 
@@ -66,8 +68,8 @@ export function AuthProvider({ children }) {
     return u
   }, [])
 
-  const signup = useCallback(async ({ name, email, password }) => {
-    const { access_token } = await apiSignup({ name, email, password })
+  const signup = useCallback(async ({ name, email, password, referral_code }) => {
+    const { access_token } = await apiSignup({ name, email, password, referral_code })
     localStorage.setItem(TOKEN_KEY, access_token)
     setToken(access_token)
     const me = await fetchMe()

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getMockNotificationsResponse } from '../lib/platformMocks'
 
 /**
  * Base URL for the Financial Control backend.
@@ -117,10 +118,20 @@ export async function fetchGstSummary() {
   return data
 }
 
-/** GET /notifications — NotificationLog rows (morning briefing sends, etc.). */
+/**
+ * GET /notifications — NotificationLog rows (morning briefing sends, etc.).
+ * On network/API failure, returns demo rows from `getMockNotificationsResponse()` so Profile still shows a table.
+ */
 export async function fetchNotifications(params = {}) {
-  const { data } = await api.get('/notifications', { params })
-  return data
+  try {
+    const { data } = await api.get('/notifications', { params })
+    if (data && Array.isArray(data.items)) {
+      return { ...data, _source: 'api' }
+    }
+    return { ...getMockNotificationsResponse(), _fallbackReason: 'invalid_response' }
+  } catch {
+    return getMockNotificationsResponse()
+  }
 }
 
 export async function connectPaytm() {
@@ -228,8 +239,12 @@ export async function postSmsIngest(message) {
   return data
 }
 
-export async function signup({ name, email, password }) {
-  const { data } = await api.post('/auth/signup', { name, email, password })
+export async function signup({ name, email, password, referral_code }) {
+  const body = { name, email, password }
+  if (referral_code && String(referral_code).trim()) {
+    body.referral_code = String(referral_code).trim().toUpperCase()
+  }
+  const { data } = await api.post('/auth/signup', body)
   return data
 }
 
@@ -349,6 +364,60 @@ export async function uploadKhataPhoto(file) {
 /** POST /inventory/khata/apply — deduct stock + credit cash ledger. */
 export async function applyKhataSale(payload) {
   const { data } = await api.post('/inventory/khata/apply', payload)
+  return data
+}
+
+/** GET /credit/score — SMB credit signal (0–1000). */
+export async function fetchCreditScore(refresh = false) {
+  const { data } = await api.get('/credit/score', { params: { refresh } })
+  return data
+}
+
+/** GET /growth/summary — subscription tier, referral code, counts. */
+export async function fetchGrowthSummary() {
+  const { data } = await api.get('/growth/summary')
+  return data
+}
+
+/** POST /growth/subscription — demo tier switch when GROWTH_ALLOW_TIER_OVERRIDE is on. */
+export async function postGrowthSubscription(tier) {
+  const { data } = await api.post('/growth/subscription', { tier })
+  return data
+}
+
+/** GET /growth/benchmarks — peer percentiles for your industry. */
+export async function fetchGrowthBenchmarks() {
+  const { data } = await api.get('/growth/benchmarks')
+  return data
+}
+
+/** POST /growth/benchmarks/refresh — recompute aggregates (ops / demo). */
+export async function postGrowthBenchmarksRefresh() {
+  const { data } = await api.post('/growth/benchmarks/refresh')
+  return data
+}
+
+/** GET /collections/ladder — active 14-day collection campaigns. */
+export async function fetchCollectionLadders() {
+  const { data } = await api.get('/collections/ladder')
+  return data
+}
+
+/** GET /collections/customers — receivable rows for ladder start. */
+export async function fetchCollectionCustomers() {
+  const { data } = await api.get('/collections/customers')
+  return data
+}
+
+/** POST /collections/ladder/start */
+export async function postCollectionLadderStart(customerId) {
+  const { data } = await api.post('/collections/ladder/start', { customer_id: customerId })
+  return data
+}
+
+/** GET /insights/suppliers — payables concentration. */
+export async function fetchSupplierInsights() {
+  const { data } = await api.get('/insights/suppliers')
   return data
 }
 

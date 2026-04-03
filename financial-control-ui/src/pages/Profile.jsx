@@ -583,51 +583,67 @@ export default function Profile() {
           <CardContent className="space-y-3">
             <p className="text-sm text-violet-950/75">
               Rows come from <code className="rounded bg-violet-100 px-1">NotificationLog</code> on the server (e.g.
-              daily WhatsApp brief attempts). Empty until the scheduler has run at least once.
+              daily WhatsApp brief attempts). If the API cannot be reached, the app shows{' '}
+              <strong>demo rows</strong> from <code className="rounded bg-violet-100 px-1">platformMocks.js</code> so the
+              screen still works offline.
             </p>
             {notifLoading ? (
               <Skeleton className="h-24 w-full" />
-            ) : (notif?.items || []).length === 0 ? (
-              <p className="text-sm text-violet-600">No entries yet — enable briefing and wait for the next 8:00 AM IST send.</p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-violet-100">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-violet-100 bg-violet-50/50 text-violet-700">
-                      <th className="px-3 py-2">Time</th>
-                      <th className="px-3 py-2">Kind</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(notif.items || []).map((row) => (
-                      <tr key={row.id} className="border-b border-violet-50/80">
-                        <td className="px-3 py-2 tabular-nums text-violet-800">
-                          {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
-                        </td>
-                        <td className="px-3 py-2 font-medium text-violet-950">{row.kind || '—'}</td>
-                        <td className="px-3 py-2">
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5',
-                              row.status === 'sent' || row.status === 'mock'
-                                ? 'bg-emerald-100 text-emerald-900'
-                                : 'bg-amber-100 text-amber-900'
-                            )}
-                          >
-                            {row.status}
-                            {row.mock ? ' · demo' : ''}
-                          </span>
-                        </td>
-                        <td className="max-w-[200px] truncate px-3 py-2 text-violet-700" title={row.detail || ''}>
-                          {row.detail || '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                {notif?._mockFallback && (
+                  <p className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-950">
+                    Showing <strong>demo notification log</strong> — connect the backend (or fix auth) to load real{' '}
+                    <code className="rounded bg-amber-100 px-1">GET /notifications</code> rows.
+                  </p>
+                )}
+                {(notif?.items || []).length === 0 ? (
+                  !notif?._mockFallback && (
+                    <p className="text-sm text-violet-600">
+                      No entries yet — enable briefing and wait for the next 8:00 AM IST send.
+                    </p>
+                  )
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-violet-100">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-violet-100 bg-violet-50/50 text-violet-700">
+                          <th className="px-3 py-2">Time</th>
+                          <th className="px-3 py-2">Kind</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(notif.items || []).map((row) => (
+                          <tr key={row.id} className="border-b border-violet-50/80">
+                            <td className="px-3 py-2 tabular-nums text-violet-800">
+                              {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+                            </td>
+                            <td className="px-3 py-2 font-medium text-violet-950">{row.kind || '—'}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={cn(
+                                  'rounded-full px-2 py-0.5',
+                                  row.status === 'sent' || row.status === 'mock'
+                                    ? 'bg-emerald-100 text-emerald-900'
+                                    : 'bg-amber-100 text-amber-900'
+                                )}
+                              >
+                                {row.status}
+                                {row.mock ? ' · demo' : ''}
+                              </span>
+                            </td>
+                            <td className="max-w-[200px] truncate px-3 py-2 text-violet-700" title={row.detail || ''}>
+                              {row.detail || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

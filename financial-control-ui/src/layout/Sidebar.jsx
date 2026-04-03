@@ -16,10 +16,12 @@ import {
   Sun,
   Users,
   Layers,
+  TrendingUp,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useUiStore } from '../store/uiStore'
 import { useTr } from '../hooks/useTr'
+import { useNavBadges } from '../hooks/useNavBadges'
 
 const nav = [
   { to: '/', hi: 'Aaj', en: 'Today', icon: Sun, end: true, basic: true },
@@ -37,10 +39,12 @@ const nav = [
   { to: '/onboarding', hi: 'Shuruat', en: 'Onboarding', icon: ClipboardList, basic: false },
   { to: '/assistant', hi: 'AI se baat', en: 'AI chat', icon: MessageSquare, basic: true },
   { to: '/platform', hi: 'Platform', en: 'Platform lab', icon: Layers, basic: false },
+  { to: '/growth', hi: 'Growth', en: 'Growth', icon: TrendingUp, basic: false },
 ]
 
 export function Sidebar() {
   const t = useTr()
+  const badges = useNavBadges()
   const collapsed = useUiStore((s) => s.sidebarCollapsed)
   const uiMode = useUiStore((s) => s.uiMode)
   const visible = uiMode === 'advanced' ? nav : nav.filter((item) => item.basic)
@@ -65,24 +69,46 @@ export function Sidebar() {
         )}
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {visible.map(({ to, hi, en, icon: Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-                isActive
-                  ? 'bg-gradient-to-r from-[#6C3BFF]/15 to-violet-500/10 text-[#6C3BFF] shadow-[inset_0_0_0_1px_rgba(108,59,255,0.2)]'
-                  : 'text-violet-950/70 hover:bg-white/60 hover:text-violet-950'
-              )
-            }
-          >
-            <Icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
-            {!collapsed && <span>{t(hi, en)}</span>}
-          </NavLink>
-        ))}
+        {visible.map(({ to, hi, en, icon: Icon, end }) => {
+          const badge = badges[to] ?? null
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  isActive
+                    ? 'bg-gradient-to-r from-[#6C3BFF]/15 to-violet-500/10 text-[#6C3BFF] shadow-[inset_0_0_0_1px_rgba(108,59,255,0.2)]'
+                    : 'text-violet-950/70 hover:bg-white/60 hover:text-violet-950'
+                )
+              }
+            >
+              <Icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
+              {!collapsed && (
+                <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                  <span className="truncate">{t(hi, en)}</span>
+                  {badge && (
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide',
+                        to === '/' && badge === 'URGENT' && 'bg-red-600 text-white uppercase',
+                        to === '/' && badge === 'SOON' && 'bg-amber-400/90 text-amber-950 uppercase',
+                        to === '/' && badge === 'RISK' && 'bg-violet-600 text-white uppercase',
+                        (to === '/people' || to === '/gst') && 'bg-amber-100 text-amber-950 normal-case',
+                        to === '/risk' && badge === 'HIGH' && 'bg-red-600 text-white uppercase',
+                        to === '/risk' && badge === 'WATCH' && 'bg-amber-200 text-amber-950 normal-case'
+                      )}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </span>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
       <button
         type="button"

@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { FloatingAssistant } from './FloatingAssistant'
 import { BottomNav } from './BottomNav'
+import { CommandPalette } from '../components/CommandPalette'
 
 export function AppShell() {
   useEffect(() => {
@@ -14,6 +15,7 @@ export function AppShell() {
 
   return (
     <SystemStreamProvider>
+    <CommandPalette />
     <div className="twin-app flex min-h-screen">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -left-40 top-20 h-96 w-96 rounded-full bg-[#6C3BFF]/15 blur-[100px]" />

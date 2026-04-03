@@ -96,6 +96,50 @@ export const MOCK_BUSINESSES = [
   { id: 'b2', name: 'Wholesale — Mandi', risk: 0.31 },
 ]
 
+/**
+ * GET /notifications shape when the API fails (network, 5xx, etc.) — Profile “Briefing & notification log”.
+ * Matches backend list_notifications items: id, channel, kind, status, detail, created_at, mock.
+ */
+export function getMockNotificationsResponse() {
+  const now = Date.now()
+  const iso = (msAgo) => new Date(now - msAgo).toISOString()
+  return {
+    count: 3,
+    _source: 'mock',
+    _mockFallback: true,
+    items: [
+      {
+        id: 'demo-notif-1',
+        channel: 'whatsapp',
+        kind: 'daily_briefing',
+        status: 'mock',
+        detail:
+          'Demo: morning briefing payload — real rows appear after scheduler runs with Meta WhatsApp configured.',
+        created_at: iso(3600000 * 5),
+        mock: true,
+      },
+      {
+        id: 'demo-notif-2',
+        channel: 'whatsapp',
+        kind: 'daily_briefing',
+        status: 'failed',
+        detail: 'Demo: example failed send (rate limit) — check server logs in production.',
+        created_at: iso(86400000 * 1),
+        mock: true,
+      },
+      {
+        id: 'demo-notif-3',
+        channel: 'whatsapp',
+        kind: 'outbound_reminder',
+        status: 'sent',
+        detail: 'Demo: collection reminder template test (mock).',
+        created_at: iso(86400000 * 3),
+        mock: true,
+      },
+    ],
+  }
+}
+
 /** GST fallback when GET /gst/summary and /compliance/gst both fail (demo UI). */
 export const MOCK_GST_FALLBACK = {
   estimated_liability_inr: 42000,

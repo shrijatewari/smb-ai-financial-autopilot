@@ -4,8 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { Button } from '../components/ui/button'
 import { useUiStore } from '../store/uiStore'
-import { useTr } from '../hooks/useTr'
 import { cn } from '../lib/utils'
+import { useTr } from '../hooks/useTr'
 
 export function Topbar() {
   const { user, logout } = useAuth()
@@ -18,17 +18,27 @@ export function Topbar() {
   const setLocaleDisplay = useUiStore((s) => s.setLocaleDisplay)
   const voiceGuidanceEnabled = useUiStore((s) => s.voiceGuidanceEnabled)
   const setVoiceGuidanceEnabled = useUiStore((s) => s.setVoiceGuidanceEnabled)
+  const setCommandPaletteOpen = useUiStore((s) => s.setCommandPaletteOpen)
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-white/25 bg-white/35 px-4 backdrop-blur-xl md:px-8">
       <div className="relative max-w-md flex-1">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-400" />
-        <input
-          type="search"
-          placeholder={t('Insights, actions, customers dhoondo…', 'Search insights, actions, customers…')}
-          className="h-10 w-full rounded-full border border-violet-200/50 bg-white/70 pl-10 pr-4 text-sm text-violet-950 placeholder:text-violet-400/80 focus:border-[#6C3BFF]/40 focus:outline-none focus:ring-2 focus:ring-[#6C3BFF]/20"
-          aria-label={t('Khoj', 'Search')}
-        />
+        <button
+          type="button"
+          onClick={() => setCommandPaletteOpen(true)}
+          className={cn(
+            'relative flex h-10 w-full items-center gap-2 rounded-full border border-violet-200/50 bg-white/70 pl-10 pr-3 text-left text-sm text-violet-500 transition hover:border-[#6C3BFF]/40 hover:bg-white/90'
+          )}
+          aria-label={t('Command palette (⌘K)', 'Command palette (⌘K)')}
+        >
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-violet-400" />
+          <span className="flex-1 truncate">
+            {t('Ramesh, GST, nayi transaction…', 'Search customers, GST, add txn…')}
+          </span>
+          <kbd className="hidden shrink-0 rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600 sm:inline">
+            ⌘K
+          </kbd>
+        </button>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
         <div

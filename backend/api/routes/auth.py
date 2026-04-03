@@ -11,6 +11,7 @@ from auth.deps import get_current_user
 from db.prisma_client import prisma
 from prisma.models import User
 from services.onboarding_persistence import user_has_completed_onboarding
+from services.referral_codes import ensure_referral_code
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ class SignupBody(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
+    referral_code: str | None = Field(None, description="Optional invite code from another user")
 
 
 class LoginBody(BaseModel):
@@ -44,6 +46,8 @@ class UserOut(BaseModel):
     conversation_language: str = "hi"
     whatsapp_number: str | None = None
     morning_briefing_enabled: bool = False
+    subscription_tier: str = "free"
+    referral_code: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -83,13 +87,31 @@ async def signup(body: SignupBody):
     existing = await prisma.user.find_unique(where={"email": email})
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    referred_by_id: int | None = None
+    if body.referral_code and str(body.referral_code).strip():
+        code = str(body.referral_code).strip().upper()
+        inviter = await prisma.user.find_first(where={"referral_code": code})
+        if inviter:
+            referred_by_id = inviter.id
     user = await prisma.user.create(
         data={
             "name": body.name.strip(),
             "email": email,
             "password_hash": hash_password(body.password),
+            "referred_by_user_id": referred_by_id,
         }
     )
+    await ensure_referral_code(user.id)
+    if referred_by_id is not None:
+        try:
+            await prisma.referralevent.create(
+                data={
+                    "referrer_id": referred_by_id,
+                    "referee_user_id": user.id,
+                }
+            )
+        except Exception:
+            pass
     token = create_access_token(user.id, {"email": user.email})
     return TokenResponse(access_token=token)
 
@@ -107,6 +129,9 @@ async def login(body: LoginBody):
 async def _user_out(user: User) -> UserOut:
     done = await user_has_completed_onboarding(user.id)
     doc_count = await prisma.documentrecord.count(where={"user_id": user.id})
+    ref_code = getattr(user, "referral_code", None)
+    if not ref_code:
+        ref_code = await ensure_referral_code(user.id)
     return UserOut(
         id=user.id,
         name=user.name,
@@ -118,6 +143,8 @@ async def _user_out(user: User) -> UserOut:
         conversation_language=getattr(user, "conversation_language", None) or "hi",
         whatsapp_number=getattr(user, "whatsapp_number", None),
         morning_briefing_enabled=bool(getattr(user, "morning_briefing_enabled", False)),
+        subscription_tier=getattr(user, "subscription_tier", None) or "free",
+        referral_code=str(ref_code) if ref_code else None,
     )
 
 

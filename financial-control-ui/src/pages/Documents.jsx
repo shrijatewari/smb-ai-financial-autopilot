@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchDocumentProfile, getApiErrorMessage, uploadDocuments } from '../services/api'
+import { MOCK_ANOMALY_FLAGS } from '../lib/platformMocks'
 
 function formatPct(p) {
   if (p == null || Number.isNaN(p)) return '—'
@@ -160,10 +161,50 @@ export default function Documents() {
         )}
 
         {result?.status === 'success' && (
-          <p className="mt-4 text-sm text-emerald-800">
-            Processed {result.documents_processed} document(s). Profile merged into your business
-            snapshot — the engine will use this on the next tick.
-          </p>
+          <div className="mt-4 space-y-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-4 text-left">
+            <p className="text-sm font-semibold text-emerald-900">
+              Processed {result.documents_processed} file(s) — profile merged for the next engine tick.
+            </p>
+            {result?.profile && (
+              <div className="flex flex-wrap gap-2">
+                {result.profile.business_type && (
+                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold capitalize text-emerald-900 shadow-sm">
+                    {String(result.profile.business_type).replace(/_/g, ' ')}
+                  </span>
+                )}
+                {result.profile.transaction_frequency && (
+                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-emerald-900 shadow-sm">
+                    {result.profile.transaction_frequency}
+                  </span>
+                )}
+                {result.profile.vendor_count != null && (
+                  <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-emerald-900 shadow-sm">
+                    {result.profile.vendor_count} vendors (est.)
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="grid gap-2 text-xs text-emerald-950/90 sm:grid-cols-3">
+              <div className="rounded-xl bg-white/80 px-3 py-2 shadow-sm">
+                <p className="font-semibold text-emerald-900">Amounts parsed</p>
+                <p className="tabular-nums text-lg font-bold">
+                  {result.profile?.amount_samples != null ? result.profile.amount_samples : '—'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white/80 px-3 py-2 shadow-sm">
+                <p className="font-semibold text-emerald-900">Median ticket</p>
+                <p className="tabular-nums text-lg font-bold">{formatInr(result.profile?.avg_ticket_size)}</p>
+              </div>
+              <div className="rounded-xl bg-white/80 px-3 py-2 shadow-sm">
+                <p className="font-semibold text-emerald-900">Anomaly hints</p>
+                <p className="tabular-nums text-lg font-bold">{MOCK_ANOMALY_FLAGS.length} (demo)</p>
+              </div>
+            </div>
+            <p className="text-[11px] leading-relaxed text-emerald-900/80">
+              Live anomaly detection uses your ledger history; demo count shows the kind of signal you&apos;ll see at
+              scale.
+            </p>
+          </div>
         )}
 
         {Array.isArray(result?.results) && result.results.length > 0 && (

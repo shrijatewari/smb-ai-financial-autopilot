@@ -13,6 +13,9 @@ export const useUiStore = create(
       voiceGuidanceEnabled: true,
       guidedHandActive: false,
       guidedStep: 0,
+      /** Cmd+K command palette (search customers, jump, actions). */
+      commandPaletteOpen: false,
+      setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setAssistantOpen: (open) => set({ assistantOpen: open }),
       setUiMode: (uiMode) => set({ uiMode }),

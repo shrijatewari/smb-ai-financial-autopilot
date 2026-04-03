@@ -4,6 +4,13 @@
 #       PATH=".venv/bin:$PATH" prisma db push
 
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - smb_redis_data:/data
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -16,4 +23,5 @@ services:
       - smb_pg_data:/var/lib/postgresql/data
 
 volumes:
+  smb_redis_data:
   smb_pg_data:

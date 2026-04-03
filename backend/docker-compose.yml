@@ -1,0 +1,19 @@
+# Local PostgreSQL for Prisma (development)
+# From backend/: docker compose up -d
+# Then: export DATABASE_URL=postgresql://smb:smb@localhost:5432/smb_ai
+#       PATH=".venv/bin:$PATH" prisma db push
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: smb
+      POSTGRES_PASSWORD: smb
+      POSTGRES_DB: smb_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - smb_pg_data:/var/lib/postgresql/data
+
+volumes:
+  smb_pg_data:

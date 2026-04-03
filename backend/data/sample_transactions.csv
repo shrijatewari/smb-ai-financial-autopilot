@@ -1,0 +1,27 @@
+date,amount,type,description
+2026-03-01,125.50,credit,Card sale — coffee shop
+2026-03-01,89.00,credit,POS sale register 1
+2026-03-01,2100.00,debit,Monthly supplier invoice — beans
+2026-03-02,45.99,credit,Online order pickup
+2026-03-02,3200.00,debit,Commercial rent payment
+2026-03-02,112.00,credit,Walk-in customer
+2026-03-03,78.25,credit,Mobile app order
+2026-03-03,450.00,debit,Utilities — electric
+2026-03-04,156.00,credit,Weekend brunch rush
+2026-03-04,95.50,credit,Card sale
+2026-03-05,1800.00,debit,Vendor restock — dairy
+2026-03-05,62.00,credit,Small ticket sale
+2026-03-06,1340.00,debit,Equipment repair
+2026-03-06,210.00,credit,Catering order
+2026-03-07,88.00,credit,POS sale
+2026-03-07,275.00,debit,Marketing — local ads
+2026-03-08,102.00,credit,Card sale
+2026-03-08,5400.00,credit,Wholesale account payment
+2026-03-09,150.00,debit,Office supplies
+2026-03-09,72.00,credit,POS sale
+2026-03-10,980.00,debit,Insurance — quarterly
+2026-03-10,4000.00,debit,Payroll transfer
+2026-03-11,99.00,credit,POS sale
+2026-03-11,118.50,credit,Lunch crowd
+2026-03-12,65.00,credit,Card sale
+2026-03-12,220.00,debit,Freight — inbound shipment

@@ -1,0 +1,7 @@
+.env
+ocr_key.json
+*-credentials.json
+data/*.db
+data/khata/
+.prisma-cache/
+data/rl_qtable.json

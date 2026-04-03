@@ -1,0 +1,47 @@
+# Secrets & local config
+.env
+.env.local
+.env.*.local
+**/ocr_key.json
+**/*-credentials.json
+**/*.pem
+
+# Python
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Prisma
+**/.prisma-cache/
+
+# Node / frontend
+**/node_modules/
+financial-control-ui/dist/
+npm-debug.log*
+.pnpm-store/
+
+# Data & uploads (local only)
+backend/data/*.db
+backend/data/khata/
+backend/data/rl_qtable.json
+**/uploads/
+
+# Matplotlib cache (set by app.py / streamlit)
+.mplconfig/
+
+# OS & editors
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/

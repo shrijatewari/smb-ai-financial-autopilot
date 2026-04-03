@@ -1,0 +1,221 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Mic } from 'lucide-react'
+import { getApiErrorMessage, postAssistantQuery } from '../services/api'
+
+function getSpeechRecognition() {
+  return typeof window !== 'undefined'
+    ? window.SpeechRecognition || window.webkitSpeechRecognition
+    : null
+}
+
+function speakText(text, enabled) {
+  if (!enabled || typeof window === 'undefined' || !window.speechSynthesis) return
+  window.speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(text)
+  u.lang = 'en-IN'
+  u.rate = 1
+  window.speechSynthesis.speak(u)
+}
+
+export default function Assistant() {
+  const [messages, setMessages] = useState(() => [
+    {
+      role: 'assistant',
+      text: 'Ask about cash risk, balance, what to do next, or collections. You can type or use the microphone.',
+    },
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [listening, setListening] = useState(false)
+  const [speakReplies, setSpeakReplies] = useState(true)
+  const speakRef = useRef(true)
+  const recRef = useRef(null)
+  const bottomRef = useRef(null)
+
+  useEffect(() => {
+    speakRef.current = speakReplies
+  }, [speakReplies])
+
+  const speechSupported = !!getSpeechRecognition()
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const sendQuery = useCallback(
+    async (text) => {
+      const q = text.trim()
+      if (!q || loading) return
+      setMessages((m) => [...m, { role: 'user', text: q }])
+      setInput('')
+      setLoading(true)
+      try {
+        const res = await postAssistantQuery(q)
+        const reply = res.response || ''
+        setMessages((m) => [
+          ...m,
+          {
+            role: 'assistant',
+            text: reply,
+            meta: res.intent ? `Intent: ${res.intent}` : null,
+          },
+        ])
+        speakText(reply, speakRef.current)
+      } catch (e) {
+        const err = getApiErrorMessage(e)
+        setMessages((m) => [...m, { role: 'assistant', text: err, error: true }])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loading]
+  )
+
+  function startListening() {
+    const SR = getSpeechRecognition()
+    if (!SR) return
+    if (listening) return
+    const rec = new SR()
+    rec.lang = 'en-IN'
+    rec.interimResults = false
+    rec.maxAlternatives = 1
+    rec.onstart = () => setListening(true)
+    rec.onend = () => {
+      setListening(false)
+      recRef.current = null
+    }
+    rec.onerror = () => setListening(false)
+    rec.onresult = (event) => {
+      const transcript = event.results[0][0].transcript
+      if (transcript?.trim()) sendQuery(transcript)
+    }
+    recRef.current = rec
+    try {
+      rec.start()
+    } catch {
+      setListening(false)
+    }
+  }
+
+  function stopListening() {
+    try {
+      recRef.current?.stop()
+    } catch {
+      /* ignore */
+    }
+    setListening(false)
+  }
+
+  return (
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-gradient-to-b from-transparent to-violet-50/30">
+      <header className="border-b border-violet-200/40 bg-white/50 px-4 py-4 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+          <div>
+            <h1 className="text-lg font-semibold text-violet-950">AI assistant</h1>
+            <p className="text-xs text-violet-950/55">Ask in plain language — powered by your ledger & models</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-violet-800/80">
+              <input
+                type="checkbox"
+                checked={speakReplies}
+                onChange={(e) => setSpeakReplies(e.target.checked)}
+                className="rounded border-violet-300"
+              />
+              Speak replies
+            </label>
+            <Link to="/" className="text-sm font-medium text-[#6C3BFF] hover:underline">
+              Twin home
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-4 py-6">
+        <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-gradient-to-br from-[#6C3BFF] to-violet-600 text-white shadow-lg shadow-[#6C3BFF]/25'
+                    : msg.error
+                      ? 'border border-red-100 bg-red-50 text-red-900'
+                      : 'border border-violet-200/60 bg-white/90 text-violet-950 shadow-md backdrop-blur'
+                }`}
+              >
+                <p className="whitespace-pre-wrap">{msg.text}</p>
+                {msg.meta && (
+                  <p className="mt-2 text-[10px] uppercase tracking-wider text-neutral-400">{msg.meta}</p>
+                )}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl border border-violet-200/60 bg-white/80 px-4 py-3 text-sm text-violet-600">
+                Thinking…
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="space-y-3 border-t border-violet-200/40 bg-white/40 pt-4 backdrop-blur">
+          {!speechSupported && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              Speech recognition is not available in this browser. Use Chrome or Edge, or type your question.
+            </p>
+          )}
+          <form
+            className="flex gap-2 items-end"
+            onSubmit={(e) => {
+              e.preventDefault()
+              sendQuery(input)
+            }}
+          >
+            <div className="flex-1">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="e.g. What is my cash risk? What should I do?"
+                className="w-full rounded-xl border border-violet-200/80 bg-white/90 px-4 py-3 text-sm text-violet-950 shadow-sm focus:border-[#6C3BFF]/40 focus:outline-none focus:ring-2 focus:ring-[#6C3BFF]/20"
+                disabled={loading}
+              />
+            </div>
+            {speechSupported && (
+              <motion.button
+                type="button"
+                onClick={listening ? stopListening : startListening}
+                disabled={loading}
+                animate={listening ? { boxShadow: ['0 0 0 0 rgba(108,59,255,0.4)', '0 0 0 12px rgba(108,59,255,0)'] } : {}}
+                transition={listening ? { repeat: Infinity, duration: 1.2 } : {}}
+                className={`flex shrink-0 items-center justify-center rounded-xl px-4 py-3 text-sm font-medium transition ${
+                  listening
+                    ? 'bg-red-600 text-white hover:bg-red-700'
+                    : 'border border-violet-200 bg-white text-violet-900 hover:bg-violet-50'
+                } disabled:opacity-50`}
+                title={listening ? 'Stop' : 'Speak'}
+              >
+                <Mic className="h-5 w-5" />
+              </motion.button>
+            )}
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              className="shrink-0 rounded-xl bg-gradient-to-r from-[#6C3BFF] to-violet-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6C3BFF]/25 hover:opacity-95 disabled:opacity-40"
+            >
+              Send
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
+  )
+}

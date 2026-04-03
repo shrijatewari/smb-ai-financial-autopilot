@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-twin-primary: #6c3bff;
+  --color-twin-accent: #34d399;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  @apply min-h-screen text-violet-950;
+  background: linear-gradient(165deg, #ffffff 0%, #f5f0ff 45%, #ede9fe 100%);
+}
+
+/* Twin dashboard: soften legacy neutral panels without rewriting every line */
+.twin-dashboard .rounded-xl.border.border-neutral-200\/80.bg-white,
+.twin-dashboard section.rounded-xl.border.border-neutral-200\/80.bg-white {
+  @apply rounded-2xl border-white/50 bg-white/80 shadow-[0_8px_32px_-12px_rgba(108,59,255,0.15)] backdrop-blur-md;
+}
+
+.twin-dashboard .text-neutral-900 {
+  @apply text-violet-950;
+}
+
+.twin-dashboard .text-neutral-500 {
+  @apply text-violet-950/55;
+}
+
+.twin-dashboard .text-neutral-600 {
+  @apply text-violet-950/65;
+}
+
+.twin-dashboard .text-neutral-400 {
+  @apply text-violet-950/45;
+}
+
+.twin-dashboard .border-neutral-200 {
+  @apply border-violet-200/60;
+}
+
+.twin-dashboard .bg-neutral-900 {
+  @apply bg-gradient-to-br from-violet-950 via-violet-900 to-violet-950;
+}
+
+.twin-dashboard .bg-neutral-50 {
+  @apply bg-violet-50/50;
+}
+
+.twin-dashboard .bg-neutral-100 {
+  @apply bg-violet-100/50;
+}

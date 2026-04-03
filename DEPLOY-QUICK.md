@@ -35,13 +35,29 @@ Copy the **Production** URL (e.g. `https://something.vercel.app`).
 
 ## Option C — Netlify (alternative)
 
+**If you see Netlify’s “Page not found” on the root URL:** the deploy folder was empty, wrong, or missing SPA fallback. This repo now includes `public/_redirects` (copied into `dist/`) and `netlify.toml`.
+
+### CLI (manual `dist` upload)
+
 ```bash
 cd financial-control-ui
+npm install
 npm run build
+# dist/ must contain index.html AND _redirects
+ls dist/
 npx netlify-cli deploy --prod --dir=dist
 ```
 
-Follow the CLI to log in; you get a `*.netlify.app` URL.
+### Git-connected site (dashboard)
+
+1. **Site settings → Build & deploy → Continuous deployment**
+2. **Base directory:** `financial-control-ui`
+3. **Build command:** `npm run build`
+4. **Publish directory:** `dist` (relative to base → `financial-control-ui/dist` from repo root)
+5. **Environment:** `VITE_API_URL` = your API URL (no trailing slash)
+6. Trigger **Deploy site**
+
+Root `netlify.toml` also defines `base` + `publish` for monorepo builds from the repo root.
 
 ---
 

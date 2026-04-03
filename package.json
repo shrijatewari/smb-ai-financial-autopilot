@@ -1,0 +1,12 @@
+{
+  "name": "smb-ai-system",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Monorepo: Vite app lives in financial-control-ui/",
+  "scripts": {
+    "build": "cd financial-control-ui && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

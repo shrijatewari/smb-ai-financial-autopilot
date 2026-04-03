@@ -182,6 +182,8 @@ See `backend/services/whatsapp_service.py` and comments in `backend/.env.example
 
 The **React UI** (`financial-control-ui`) is configured for [Vercel](https://vercel.com) via **`vercel.json`** at the repo root (build runs inside `financial-control-ui/`, output: `financial-control-ui/dist`). The **FastAPI backend is not deployed on Vercel** in this setup—it needs a long‑running process + PostgreSQL (e.g. [Railway](https://railway.app), [Render](https://render.com), [Fly.io](https://fly.io), or your own VPS).
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fshrijatewari%2Fsmb-ai-financial-autopilot&root-directory=.)
+
 ### One-time setup
 
 1. Push this repo to GitHub (already configured for `shrijatewari/smb-ai-financial-autopilot`).

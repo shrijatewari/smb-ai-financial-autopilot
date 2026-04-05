@@ -6,6 +6,8 @@ Run: uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import sys
 from typing import Any
@@ -78,12 +80,35 @@ from db.prisma_client import connect_prisma, disconnect_prisma
 from engine.system_engine import start as start_system_engine, stop as stop_system_engine
 
 _briefing_scheduler: Any = None
+_log = logging.getLogger(__name__)
+
+
+async def _connect_prisma_with_retry() -> None:
+    """Fly Postgres / network can lag right after deploy; block startup until DB accepts connections."""
+    attempts = int(os.getenv("PRISMA_CONNECT_ATTEMPTS", "20"))
+    base = float(os.getenv("PRISMA_CONNECT_DELAY_SEC", "2"))
+    last: Exception | None = None
+    for n in range(1, attempts + 1):
+        try:
+            await connect_prisma()
+            if n > 1:
+                _log.info("Prisma connected on attempt %s", n)
+            return
+        except Exception as e:
+            last = e
+            _log.warning("Prisma connect attempt %s/%s failed: %s", n, attempts, e)
+            if n == attempts:
+                break
+            await asyncio.sleep(min(base * (2 ** (n - 1)), 30.0))
+    if last is not None:
+        raise last
+    raise RuntimeError("Prisma connect failed with no exception recorded")
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     global _briefing_scheduler
-    await connect_prisma()
+    await _connect_prisma_with_retry()
     start_system_engine()
     briefing_on = os.getenv("BRIEFING_ENABLED", "true").strip().lower() in ("1", "true", "yes")
     aa_refresh_on = os.getenv("AA_REFRESH_ENABLED", "true").strip().lower() in ("1", "true", "yes")

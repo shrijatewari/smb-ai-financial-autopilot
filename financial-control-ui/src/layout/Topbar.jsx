@@ -1,4 +1,4 @@
-import { Search, Bell, LogOut, Layers, Volume2, VolumeX, Languages } from 'lucide-react'
+import { Search, LogOut, Layers, Volume2, VolumeX, Languages } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button'
 import { useUiStore } from '../store/uiStore'
 import { cn } from '../lib/utils'
 import { useTr } from '../hooks/useTr'
+import { NotificationsMenu } from '../components/NotificationsMenu'
 
 export function Topbar() {
   const { user, logout } = useAuth()
@@ -151,14 +152,7 @@ export function Topbar() {
         >
           {voiceGuidanceEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
         </button>
-        <button
-          type="button"
-          className="relative flex h-10 w-10 items-center justify-center rounded-full border border-violet-200/60 bg-white/70 text-violet-800 transition hover:border-[#6C3BFF]/40 hover:shadow-md"
-          aria-label={t('सूचनाएँ', 'Notifications')}
-        >
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-white" />
-        </button>
+        <NotificationsMenu />
         <div className="hidden flex-col items-end text-right sm:flex">
           <span className="max-w-[140px] truncate text-sm font-medium text-violet-950">{user?.name || 'Founder'}</span>
           <span className="max-w-[180px] truncate text-xs text-violet-600/80">{user?.email}</span>

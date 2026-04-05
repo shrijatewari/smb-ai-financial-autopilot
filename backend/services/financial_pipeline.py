@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from services import ingestion_service
@@ -25,6 +26,24 @@ def _cash_flow_series(ledger: pd.DataFrame) -> list[dict]:
         dt = r["date"]
         ds = dt.strftime("%Y-%m-%d") if hasattr(dt, "strftime") else str(dt)[:10]
         out.append({"date": ds, "balance": float(r["balance"])})
+    return out
+
+
+def _append_forecast_to_cash_series(historical: list[dict], sim: dict) -> list[dict]:
+    """
+    Append mean simulated path (one point per horizon day) so `horizon_days` changes the chart.
+    Historical segment alone does not depend on forecast horizon.
+    """
+    paths = sim.get("future_balances") or []
+    if not paths:
+        return historical
+    arr = np.asarray(paths, dtype=float)
+    if arr.ndim != 2 or arr.size == 0:
+        return historical
+    mean_path = np.mean(arr, axis=0)
+    out = list(historical)
+    for i in range(int(mean_path.shape[0])):
+        out.append({"date": f"+{i + 1}d", "balance": float(mean_path[i])})
     return out
 
 
@@ -125,6 +144,7 @@ def run_full_pipeline(
     ledger_out = fraud.get("dataframe", ledger)
     roll_mu, roll_var = _rolling_revenue_stats(ledger_out)
     cash_series = _cash_flow_series(ledger_out)
+    cash_series = _append_forecast_to_cash_series(cash_series, sim)
     suspicious = _suspicious_transactions_list(ledger_out)
     spike_alerts = _revenue_spike_alerts(roll_mu, roll_var)
 

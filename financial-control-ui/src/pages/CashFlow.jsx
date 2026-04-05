@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import {
   Area,
   AreaChart,
@@ -30,30 +29,36 @@ export default function CashFlow() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let c = false
+    let cancelled = false
+    setLoading(true)
     ;(async () => {
       try {
         const pred = await fetchCashflowPrediction({ horizon_days: horizon })
-        if (!c) {
-          const series = pred?.cash_flow_series || snapRef.current?.forecast || []
-          setCf(Array.isArray(series) ? series : [])
+        if (cancelled) return
+        const fromApi = pred?.cash_flow_series
+        if (Array.isArray(fromApi) && fromApi.length > 0) {
+          setCf(fromApi)
+          return
         }
+        const fallback = snapRef.current?.forecast || []
+        setCf(Array.isArray(fallback) ? fallback : [])
       } catch {
-        if (!c) {
-          const series = snapRef.current?.forecast || []
-          setCf(Array.isArray(series) ? series : [])
+        if (!cancelled) {
+          const fallback = snapRef.current?.forecast || []
+          setCf(Array.isArray(fallback) ? fallback : [])
         }
       } finally {
-        if (!c) setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     })()
     return () => {
-      c = true
+      cancelled = true
     }
   }, [horizon])
 
   const chartData = useMemo(() => {
-    const base = (cf.length ? cf : snap?.forecast || []).map((p, i) => ({
+    const raw = cf.length ? cf : snap?.forecast || []
+    const base = raw.map((p, i) => ({
       date: p.date || `D${i + 1}`,
       balance: p.balance ?? p.value ?? 0,
     }))
@@ -94,7 +99,11 @@ export default function CashFlow() {
             <Skeleton className="h-full w-full rounded-xl" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart
+                key={`cf-${horizon}-${chartData.length}`}
+                data={chartData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="cfG" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#6C3BFF" stopOpacity={0.4} />
@@ -121,14 +130,10 @@ export default function CashFlow() {
           )}
         </CardContent>
       </Card>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center text-sm text-violet-950/55"
-      >
-        Predicted region uses Monte Carlo envelopes when simulation API returns paths — otherwise shows smooth ledger
-        projection.
-      </motion.p>
+      <p className="text-center text-sm text-violet-950/55">
+        Historical dates are from your ledger; +1d…+Nd is the mean Monte Carlo path for the selected horizon (change
+        days above to stretch or shorten the forecast).
+      </p>
     </div>
   )
 }

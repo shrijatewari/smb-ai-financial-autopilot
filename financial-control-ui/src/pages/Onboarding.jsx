@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage, getOnboardingState, submitOnboarding } from '../services/api'
 import { OnboardingDocumentStep } from './OnboardingDocumentStep'
@@ -62,6 +62,8 @@ function QuestionBlock({ n, title, purpose, children }) {
 export default function Onboarding() {
   const navigate = useNavigate()
   const { user, loadMe } = useAuth()
+  /** True when user finished both document + business steps — allow return to this page to edit (no redirect to Today). */
+  const reviewMode = !!(user?.documents_uploaded && user?.onboarding_completed)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -91,7 +93,8 @@ export default function Onboarding() {
     ;(async () => {
       try {
         const ob = await getOnboardingState()
-        if (cancelled || !ob || typeof ob !== 'object' || !ob.revenue_model) return
+        if (cancelled) return
+        if (ob && typeof ob === 'object' && ob.revenue_model) {
         setRevenueModel(String(ob.revenue_model))
         const bt = String(ob.business_type || '')
         const sep = ' — '
@@ -124,6 +127,34 @@ export default function Onboarding() {
         if (ob.literacy_preference === 'minimal' || ob.literacy_preference === 'standard') {
           setLiteracyPreference(String(ob.literacy_preference))
         }
+        } else if (!reviewMode) {
+        try {
+          const raw = localStorage.getItem('onboarding_draft_v1')
+          if (!raw) return
+          const d = JSON.parse(raw)
+          if (!d || typeof d !== 'object') return
+          if (d.revenueModel) setRevenueModel(String(d.revenueModel))
+          if (d.industryDetail != null) setIndustryDetail(String(d.industryDetail))
+          if (d.monthlyTurnoverRange) setMonthlyTurnoverRange(String(d.monthlyTurnoverRange))
+          if (d.numEmployees != null) setNumEmployees(Number(d.numEmployees))
+          if (d.inventoryType) setInventoryType(String(d.inventoryType))
+          if (d.creditUsage) setCreditUsage(String(d.creditUsage))
+          if (typeof d.cashPct === 'number') setCashPct(d.cashPct)
+          if (typeof d.gstRegistered === 'boolean') setGstRegistered(d.gstRegistered)
+          if (d.gstin) setGstin(String(d.gstin))
+          if (typeof d.hasBankData === 'boolean') setHasBankData(d.hasBankData)
+          if (typeof d.hasInvoices === 'boolean') setHasInvoices(d.hasInvoices)
+          if (d.customerType) setCustomerType(String(d.customerType))
+          if (d.literacyPreference) setLiteracyPreference(String(d.literacyPreference))
+          if (d.notes != null) setNotes(String(d.notes))
+          if (typeof d.dataNone === 'boolean') setDataNone(d.dataNone)
+          if (typeof d.dataPaytm === 'boolean') setDataPaytm(d.dataPaytm)
+          if (typeof d.dataBank === 'boolean') setDataBank(d.dataBank)
+          if (typeof d.dataSms === 'boolean') setDataSms(d.dataSms)
+        } catch {
+          /* ignore */
+        }
+        }
       } catch {
         /* first-time users */
       }
@@ -131,12 +162,64 @@ export default function Onboarding() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reviewMode])
+
+  /* Local draft while Step 2 is in progress — survives refresh until you save or sign out device. */
+  useEffect(() => {
+    if (reviewMode) return
+    const id = window.setTimeout(() => {
+      try {
+        localStorage.setItem(
+          'onboarding_draft_v1',
+          JSON.stringify({
+            literacyPreference,
+            revenueModel,
+            industryDetail,
+            monthlyTurnoverRange,
+            numEmployees,
+            inventoryType,
+            creditUsage,
+            cashPct,
+            gstRegistered,
+            gstin,
+            hasBankData,
+            hasInvoices,
+            customerType,
+            dataPaytm,
+            dataBank,
+            dataSms,
+            dataNone,
+            notes,
+          })
+        )
+      } catch {
+        /* quota / private mode */
+      }
+    }, 1200)
+    return () => window.clearTimeout(id)
+  }, [
+    reviewMode,
+    literacyPreference,
+    revenueModel,
+    industryDetail,
+    monthlyTurnoverRange,
+    numEmployees,
+    inventoryType,
+    creditUsage,
+    cashPct,
+    gstRegistered,
+    gstin,
+    hasBankData,
+    hasInvoices,
+    customerType,
+    dataPaytm,
+    dataBank,
+    dataSms,
+    dataNone,
+    notes,
+  ])
 
   if (!user) return null
-  if (user.documents_uploaded && user.onboarding_completed) {
-    return <Navigate to="/" replace />
-  }
 
   if (!user.documents_uploaded) {
     return <OnboardingDocumentStep onSuccess={() => void loadMe()} />
@@ -174,7 +257,7 @@ export default function Onboarding() {
         data_sources = [dataPaytm && 'paytm', dataBank && 'bank', dataSms && 'sms'].filter(Boolean)
       }
 
-      await submitOnboarding({
+      const payload = {
         business_type,
         revenue_model: revenueModel,
         monthly_turnover_range: monthlyTurnoverRange,
@@ -193,9 +276,15 @@ export default function Onboarding() {
         data_sources: dataNone ? ['none'] : data_sources,
         notes: notes.trim() || null,
         literacy_preference: literacyPreference,
-      })
+      }
+      await submitOnboarding(payload)
+      try {
+        localStorage.removeItem('onboarding_draft_v1')
+      } catch {
+        /* ignore */
+      }
       await loadMe()
-      navigate('/', { replace: true })
+      navigate(reviewMode ? '/profile' : '/', { replace: true })
     } catch (err) {
       setError(getApiErrorMessage(err))
     } finally {
@@ -207,13 +296,24 @@ export default function Onboarding() {
     <div className="min-h-screen bg-gradient-to-b from-transparent via-violet-50/30 to-white px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">Step 2 of 2</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">
+            {reviewMode ? 'Aapka business profile' : 'Step 2 of 2'}
+          </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-violet-950">
-            Business profile
+            {reviewMode ? 'Review & update' : 'Business profile'}
           </h1>
           <p className="mt-2 text-sm text-violet-950/70">
-            Ye answers aapka <strong className="font-medium text-violet-950">daily action screen</strong> banate hain:
-            kya dikhna hai, kya chhupana hai — generic dashboard nahi.
+            {reviewMode ? (
+              <>
+                Changes save to your account on <strong className="font-medium text-violet-950">Save</strong>. Use this
+                anytime from the sidebar.
+              </>
+            ) : (
+              <>
+                Ye answers aapka <strong className="font-medium text-violet-950">daily action screen</strong> banate hain:
+                kya dikhna hai, kya chhupana hai — generic dashboard nahi.
+              </>
+            )}
           </p>
         </header>
 
@@ -563,7 +663,7 @@ export default function Onboarding() {
               disabled={busy}
               className="rounded-full bg-gradient-to-r from-[#6C3BFF] to-violet-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#6C3BFF]/25 hover:opacity-95 disabled:opacity-50"
             >
-              {busy ? 'Saving…' : 'Save & open Aaj'}
+              {busy ? 'Saving…' : reviewMode ? 'Save changes' : 'Save & open Aaj'}
             </button>
           </div>
         </form>

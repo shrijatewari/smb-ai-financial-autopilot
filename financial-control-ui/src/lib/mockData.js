@@ -5,6 +5,7 @@ export function mockTransactionsFromState(snap) {
   const risk = snap?.risk ?? 0.18
   const rows = [
     {
+      demo: true,
       id: 'm1',
       date: new Date().toISOString().slice(0, 10),
       description: 'UPI settlement — counter sales',
@@ -15,6 +16,7 @@ export function mockTransactionsFromState(snap) {
       category: 'sale',
     },
     {
+      demo: true,
       id: 'm-rzp',
       date: new Date().toISOString().slice(0, 10),
       description: 'Razorpay payment captured (webhook)',
@@ -25,6 +27,7 @@ export function mockTransactionsFromState(snap) {
       category: 'collection',
     },
     {
+      demo: true,
       id: 'm2',
       date: new Date().toISOString().slice(0, 10),
       description: 'Supplier — dry goods',
@@ -35,6 +38,7 @@ export function mockTransactionsFromState(snap) {
       category: 'supplier',
     },
     {
+      demo: true,
       id: 'm-aa',
       date: new Date().toISOString().slice(0, 10),
       description: 'AA: UPI / IMPS sample (linked bank)',
@@ -45,6 +49,7 @@ export function mockTransactionsFromState(snap) {
       category: 'bank_aa',
     },
     {
+      demo: true,
       id: 'm3',
       date: new Date().toISOString().slice(0, 10),
       description: 'Unlabeled transfer',

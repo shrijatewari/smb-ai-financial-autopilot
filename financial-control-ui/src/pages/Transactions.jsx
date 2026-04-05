@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import {
   Area,
@@ -292,13 +291,32 @@ export default function Transactions() {
     .filter((r) => rowMatchesTxnType(r, appliedTxnType))
     .filter((r) => rowMatchesCategory(r, appliedCategory))
 
-  const rows = hasPersistedLedger
+  const coreRows = hasPersistedLedger
     ? paytmRowsFiltered.length
       ? [...paytmRowsFiltered, ...ledgerRows]
       : ledgerRows
     : paytmRowsFiltered.length
       ? [...paytmRowsFiltered, ...mockRowsFiltered.slice(0, 2)]
       : mockRowsFiltered
+
+  const filtersActive = Boolean(
+    appliedQ.trim() ||
+      appliedFrom.trim() ||
+      appliedTo.trim() ||
+      appliedSource.trim() ||
+      appliedTxnType.trim() ||
+      appliedCategory.trim()
+  )
+
+  /** If nothing to show and user did not narrow with filters, show demo rows so the page is never empty. */
+  const rows =
+    coreRows.length === 0 && !filtersActive ? mockRowsFiltered : coreRows
+
+  const noSavedTransactions =
+    ledgerSummary?.status === 'ok' && (ledgerSummary?.count ?? 0) === 0
+  /** Empty DB / empty page → we fill with client demo rows; or persisted query returned nothing without filters. */
+  const showDemoExplainer =
+    noSavedTransactions || (coreRows.length === 0 && !filtersActive && rows.length > 0)
   const spark = rows.slice(0, 8).map((r, i) => ({ i, v: Math.abs(r.amount) }))
 
   async function onExportLedger() {
@@ -397,7 +415,7 @@ export default function Transactions() {
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
         title="Transactions"
-        subtitle="Ledger lines with AI confidence. Filters map to query params (?date_from=&date_to=&q=&source=&category=&txn_type=&sort=) for sharing. Persisted rows use GET /transactions/ledger with offset/limit (200 per page); category= exact match; sort= date_desc|date_asc|amount_desc|amount_asc; txn_type=credit|debit. Totals from GET /transactions/ledger/summary (full filtered set). Paytm/mock: description, source, category, and type filtered in the browser. Export uses the same filters (not paginated)."
+        subtitle="Your ledger from SMS, bank, Razorpay, and uploads — with AI confidence on each line. Use filters to narrow by date, source, or description; export matches what you see (with the same filters)."
       >
         <div className="flex w-full min-w-0 flex-col items-stretch gap-3 sm:items-end">
           <div className="flex w-full min-w-0 flex-wrap items-end justify-end gap-x-2 gap-y-3">
@@ -531,6 +549,17 @@ export default function Transactions() {
           {exportErr && <p className="max-w-xs text-right text-xs text-red-600">{exportErr}</p>}
         </div>
       </PageHeader>
+      <details className="mb-6 rounded-xl border border-violet-200/60 bg-violet-50/40 px-4 py-3 text-sm text-violet-800/90">
+        <summary className="cursor-pointer font-medium text-violet-950">Technical details (API & query params)</summary>
+        <p className="mt-2 text-xs leading-relaxed text-violet-950/75">
+          Filters sync to the URL for sharing. Persisted data uses{' '}
+          <code className="rounded bg-white/80 px-1">GET /transactions/ledger</code> with pagination (200 rows per page),
+          <code className="rounded bg-white/80 px-1">sort=</code>, <code className="rounded bg-white/80 px-1">txn_type=</code>
+          , and <code className="rounded bg-white/80 px-1">category=</code>. Totals use{' '}
+          <code className="rounded bg-white/80 px-1">GET /transactions/ledger/summary</code> over the full filtered set.
+          Paytm rows are merged in the browser when connected. CSV export applies the same filters as the table.
+        </p>
+      </details>
       {!loading && hasPersistedLedger && (
         <p className="mb-4 text-sm text-emerald-800/90">
           Showing {ledgerRows.length} persisted row{ledgerRows.length === 1 ? '' : 's'}
@@ -579,17 +608,23 @@ export default function Transactions() {
           .
         </p>
       )}
+      {showDemoExplainer && (
+        <div className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 shadow-sm">
+          <p className="font-medium text-amber-950">Example transactions (demo)</p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-950/85">
+            No rows are stored in your database yet (or the API could not load them). The table below shows{' '}
+            <strong>sample</strong> UPI, Razorpay, and supplier lines so you can explore filters and layout. Connect
+            Paytm, upload a CSV, or add SMS under Today to build your real ledger.
+          </p>
+        </div>
+      )}
       {!loading && ledgerSummary?.status === 'ok' && (
         <Card className="mb-6 border border-teal-200/60 bg-gradient-to-br from-white to-teal-50/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Persisted ledger totals (PostgreSQL)</CardTitle>
+            <CardTitle className="text-base">Ledger totals (saved in your database)</CardTitle>
             <p className="text-xs font-normal text-violet-950/65">
-              Same date range, <code className="rounded bg-violet-100 px-1">q</code>,{' '}
-              <code className="rounded bg-violet-100 px-1">source</code>,{' '}
-              <code className="rounded bg-violet-100 px-1">category</code>, and{' '}
-              <code className="rounded bg-violet-100 px-1">txn_type</code> (credit or debit) as filters above. Counts and
-              sums are over the full filtered set (not the current 200-row page). Paytm mock rows are not included —
-              only rows stored in <code className="rounded bg-violet-100 px-1">transactions</code>.
+              Matches the date range and filters above. Counts and sums are for the full filtered set, not just this page.
+              Demo / sample rows in the table are not included here.
             </p>
           </CardHeader>
           <CardContent>
@@ -675,9 +710,14 @@ export default function Transactions() {
         </Card>
       </div>
 
-      <Card className="mt-8">
+        <Card className="mt-8">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <CardTitle>Recent lines</CardTitle>
+          <div>
+            <CardTitle>Recent lines</CardTitle>
+            {showDemoExplainer && (
+              <p className="mt-1 text-xs font-medium text-amber-800/90">Showing demo data — not your live bank feed</p>
+            )}
+          </div>
           {hasPersistedLedger && ledgerTotal != null && ledgerTotal > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs tabular-nums text-violet-600">
@@ -728,14 +768,28 @@ export default function Transactions() {
                       </td>
                     </tr>
                   ))
-                : rows.map((r) => (
-                    <motion.tr
+                : rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-violet-600">
+                        No transactions match these filters. Clear filters or widen the date range.
+                      </td>
+                    </tr>
+                  ) : (
+                    rows.map((r) => (
+                    <tr
                       key={r.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
                       className="border-b border-violet-50/80 hover:bg-violet-50/30"
                     >
-                      <td className="px-4 py-3 tabular-nums text-violet-950/80">{r.date}</td>
+                      <td className="px-4 py-3 tabular-nums text-violet-950/80">
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          {r.date}
+                          {r.demo ? (
+                            <Badge variant="warning" className="text-[10px] font-semibold uppercase">
+                              Demo
+                            </Badge>
+                          ) : null}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-violet-950">{r.description}</td>
                       <td className="px-4 py-3 text-xs text-violet-700/90">{formatSource(r.source)}</td>
                       <td className="px-4 py-3 text-xs capitalize text-violet-700/85">{formatCategory(r.category)}</td>
@@ -758,8 +812,9 @@ export default function Transactions() {
                           <span className="text-xs text-violet-600">{((r.confidence || 0) * 100).toFixed(0)}%</span>
                         </div>
                       </td>
-                    </motion.tr>
-                  ))}
+                    </tr>
+                    ))
+                  )}
             </tbody>
           </table>
         </CardContent>

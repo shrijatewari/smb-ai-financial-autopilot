@@ -1,5 +1,5 @@
 """
-Handwritten khata (ledger) understanding via multimodal LLM — similar to Gemini / ChatGPT photo chat.
+Handwritten khata (ledger) understanding via multimodal LLM – similar to Gemini / ChatGPT photo chat.
 
 Uses OpenAI vision when OPENAI_API_KEY is set; otherwise returns empty suggestions (upload still works).
 """

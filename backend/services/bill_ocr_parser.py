@@ -1,4 +1,4 @@
-"""Heuristic parsing of OCR text from retail bills — line items, total, phone, name."""
+"""Heuristic parsing of OCR text from retail bills – line items, total, phone, name."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def _money(s: str) -> float | None:
 def parse_bill_ocr_text(text: str) -> dict[str, Any]:
     """
     Extract line items, total, optional 10-digit India phone, and a guess at customer name.
-    Never raises — returns best-effort structure with empty lists on failure.
+    Never raises – returns best-effort structure with empty lists on failure.
     """
     raw = (text or "").replace("\r", "\n")
     lines = [ln.strip() for ln in raw.split("\n") if ln.strip()]

@@ -1,4 +1,4 @@
-"""Password hashing (bcrypt directly — avoids passlib / bcrypt wheel mismatches on newer Python)."""
+"""Password hashing (bcrypt directly – avoids passlib / bcrypt wheel mismatches on newer Python)."""
 
 from __future__ import annotations
 

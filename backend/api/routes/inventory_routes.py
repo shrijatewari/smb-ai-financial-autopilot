@@ -128,11 +128,11 @@ async def upload_khata_photo(
     n = len(vision.get("suggested_lines") or [])
     msg = "Khata photo saved."
     if vision.get("vision_status") == "ok" and n:
-        msg += f" AI ne {n} line(s) suggest ki — neeche check karke Apply dabayein."
+        msg += f" AI ne {n} line(s) suggest ki – neeche check karke Apply dabayein."
     elif vision.get("vision_status") == "skipped_no_api_key":
         msg += " Vision ke liye backend/.env mein OPENAI_API_KEY set karein (auto-read)."
     elif vision.get("vision_status") == "error":
-        msg += " Auto-read is baar fail — manually line bharein."
+        msg += " Auto-read is baar fail – manually line bharein."
     else:
         msg += " Line manually bharein ya clear photo dubara upload karein."
 
@@ -219,7 +219,7 @@ def _item_out(r) -> dict:
         ce = max(float(ce_raw), q, 1e-9)
         pct = min(100.0, max(0.0, (q / ce) * 100.0))
     else:
-        # No ceiling yet (run migration or save item once) — reorder band only.
+        # No ceiling yet (run migration or save item once) – reorder band only.
         denom = max(th * 5.0, 1e-6)
         pct = min(100.0, max(0.0, (q / denom) * 100.0))
     status = "low" if q <= th else "ok"

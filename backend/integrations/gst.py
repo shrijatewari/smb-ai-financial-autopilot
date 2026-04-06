@@ -1,5 +1,5 @@
 """
-GST liability forecasting — return history (mock / future GSP), next filing estimate, Monte Carlo hooks.
+GST liability forecasting – return history (mock / future GSP), next filing estimate, Monte Carlo hooks.
 
 Live Government GST portal integration can replace mock data; env `GST_GSP_ENABLED` reserved for future use.
 """

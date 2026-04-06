@@ -1,6 +1,6 @@
 # Self-Learning Financial Control System for SMBs
 
-**Voice-first AI that predicts cash risk, recommends what to do today, and can execute collections — built for real Indian SMB behavior (Hindi / Hinglish, messy data, action over analytics).**
+**Voice-first AI that predicts cash risk, recommends what to do today, and can execute collections – built for real Indian SMB behavior (Hindi / Hinglish, messy data, action over analytics).**
 
 *Repository: [smb-ai-financial-autopilot](https://github.com/shrijatewari/smb-ai-financial-autopilot)*
 
@@ -8,11 +8,11 @@
 
 ## Problem
 
-Small businesses rarely fail from lack of effort — they fail because **the financial future is invisible**.
+Small businesses rarely fail from lack of effort – they fail because **the financial future is invisible**.
 
 - Cash flow is **unpredictable** (UPI + cash + khata, not one clean ledger)  
 - **Payments are delayed**; owners don’t know who hurts them most today  
-- Records are **incomplete** — digital and cash don’t match  
+- Records are **incomplete** – digital and cash don’t match  
 - Most “SMB tools” are **dashboards**, not **decision systems**  
 
 Owners don’t want another chart. They need:
@@ -29,10 +29,10 @@ A **Self-Learning Financial Control System** that:
 |------------|----------------|
 | **Reconstructs** messy inputs | SMS/UPI text, CSV, OCR, khata → working signals |
 | **Simulates** uncertainty | Monte Carlo paths, cash-at-risk over a horizon |
-| **Decides** | Collect, delay expense, collections priority — not only KPIs |
+| **Decides** | Collect, delay expense, collections priority – not only KPIs |
 | **Executes** (optional live hooks) | Razorpay links, Meta WhatsApp reminders, Twilio voice |
 | **Speaks your language** | Hindi, Hinglish, regional via translation + voice assistant |
-| **Today-first UX** | “Aaj kya karna hai” — one risk line, one action, three buttons |
+| **Today-first UX** | “Aaj kya karna hai” – one risk line, one action, three buttons |
 
 This is **not** a passive dashboard. It is an **operating layer** that sits on top of messy reality.
 
@@ -48,12 +48,12 @@ This is **not** a passive dashboard. It is an **operating layer** that sits on t
 ### Decision engine
 - Prioritized actions (e.g. collect payment, reduce expense, delay payable)  
 - **Before / after** outcome hints (collect vs do nothing)  
-- Tabular RL hooks — action ordering can improve over feedback  
+- Tabular RL hooks – action ordering can improve over feedback  
 
 ### Execution layer
 - **Razorpay payment links** (`POST /execute/payment-link`) when `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` are set; optional `description` for the link; otherwise structured mock `rzp.io` URLs  
-- **Collections in one step** — `POST /execute/collect` creates a Razorpay link for the outstanding amount and sends the WhatsApp message with the link embedded (same body as `POST /execute/whatsapp`)  
-- **`POST /execute/whatsapp`** — reminder text includes shop name and ends with the Razorpay payment link; response returns `payment_link`, `payment_link_mock`, `razorpay_id` for the UI  
+- **Collections in one step** – `POST /execute/collect` creates a Razorpay link for the outstanding amount and sends the WhatsApp message with the link embedded (same body as `POST /execute/whatsapp`)  
+- **`POST /execute/whatsapp`** – reminder text includes shop name and ends with the Razorpay payment link; response returns `payment_link`, `payment_link_mock`, `razorpay_id` for the UI  
 - **Meta WhatsApp** outbound when `WHATSAPP_*` is configured; otherwise simulated send  
 - **Twilio** Hindi voice calls (`POST /execute/twilio-call`) when `TWILIO_*` is set  
 - Simulated call scripts when integrations are off  
@@ -68,16 +68,16 @@ This is **not** a passive dashboard. It is an **operating layer** that sits on t
 - Document OCR (Google Vision optional; local Tesseract fallback)  
 - Paytm-style mock feed  
 - Inventory + **khata** sale → stock + ledger movement when you apply a sale  
-- **Bills (POS / OCR)** — `POST /bills/ingest-json`, `POST /bills/ingest-ocr`, `GET /bills/history`, detail + file routes; updates inventory (auto-creates SKUs when names don’t match), ledger credit (`sale` / `bill_ingest`), optional khaata (Customer) link + WhatsApp proof hooks  
-- **Inventory stock %** — `stock_ceiling` high-water field so “Stock level” reflects real depletion (not stuck at 100% when quantity ≫ reorder band)  
-- **Persisted ledger** (`LedgerTransaction` in PostgreSQL) — filtered list, aggregates, and CSV export via `GET /transactions/ledger*`, with the **Transactions** page (`/transactions`) in `financial-control-ui` staying in sync (bookmarkable query string). See **Persisted ledger API** below and `backend/README.md`.  
+- **Bills (POS / OCR)** – `POST /bills/ingest-json`, `POST /bills/ingest-ocr`, `GET /bills/history`, detail + file routes; updates inventory (auto-creates SKUs when names don’t match), ledger credit (`sale` / `bill_ingest`), optional khaata (Customer) link + WhatsApp proof hooks  
+- **Inventory stock %** – `stock_ceiling` high-water field so “Stock level” reflects real depletion (not stuck at 100% when quantity ≫ reorder band)  
+- **Persisted ledger** (`LedgerTransaction` in PostgreSQL) – filtered list, aggregates, and CSV export via `GET /transactions/ledger*`, with the **Transactions** page (`/transactions`) in `financial-control-ui` staying in sync (bookmarkable query string). See **Persisted ledger API** below and `backend/README.md`.  
 
 ### Adaptive UI
 - Onboarding-driven **business profile** → module mix and emphasis  
-- **Today** home (`/`) — action-first; full analytics under `/dashboard`  
-- **Bills** (`/bills`) — POS JSON + PDF/image OCR ingest, guided overlay + voice summary (header speaker); collection toasts show copyable Razorpay links  
-- **Predictions / Andaza** — guided steps + voice aligned with Today  
-- **Voice guidance** — header mute cancels browser TTS and pending Hinglish follow-up; works across Today, Bills, Predictions  
+- **Today** home (`/`) – action-first; full analytics under `/dashboard`  
+- **Bills** (`/bills`) – POS JSON + PDF/image OCR ingest, guided overlay + voice summary (header speaker); collection toasts show copyable Razorpay links  
+- **Predictions / Andaza** – guided steps + voice aligned with Today  
+- **Voice guidance** – header mute cancels browser TTS and pending Hinglish follow-up; works across Today, Bills, Predictions  
 
 ---
 
@@ -169,8 +169,8 @@ flowchart LR
 | `source` | ✓ | ✓ | ✓ | Exact match, case-insensitive (max 32 chars) |
 | `category` | ✓ | ✓ | ✓ | Exact match, case-insensitive (max 32 chars) |
 | `txn_type` | ✓ | ✓ | ✓ | `credit` or `debit` |
-| `sort` | ✓ | — | ✓ | `date_desc` (default), `date_asc`, `amount_desc`, `amount_asc` |
-| `offset`, `limit` | ✓ | — | — | Pagination on list only (export is full filtered set up to server `limit`) |
+| `sort` | ✓ | – | ✓ | `date_desc` (default), `date_asc`, `amount_desc`, `amount_asc` |
+| `offset`, `limit` | ✓ | – | – | Pagination on list only (export is full filtered set up to server `limit`) |
 
 Filters can be combined; the Transactions page mirrors them in the URL for sharing (`?date_from=&date_to=&q=&source=&category=&txn_type=&sort=`).
 
@@ -205,7 +205,7 @@ flowchart LR
 | **Voice / NL** | langdetect, deep-translator, gTTS, optional OpenAI Whisper + chat |
 | **Integrations** | Razorpay SDK, Meta WhatsApp Graph, Twilio Voice |
 | **OCR** | PyMuPDF, Pillow, Google Vision or Tesseract |
-| **DB** | PostgreSQL — users, profiles, inventory, documents, RL state, etc. |
+| **DB** | PostgreSQL – users, profiles, inventory, documents, RL state, etc. |
 
 ---
 
@@ -213,15 +213,15 @@ flowchart LR
 
 Persistent entities (see `backend/prisma/schema.prisma`):
 
-- **Users** — auth identity  
-- **OnboardingProfile / BusinessProfile** — business context for the twin  
-- **LedgerTransaction** (`transactions` table) — persisted movements (ingestion, webhooks, AA); list/summary/export via `GET /transactions/ledger*`  
-- **Predictions / actions / executions** — financial and decision trace  
-- **Customers** — receivable-oriented records; optional **`bill_id`** link to proof for WhatsApp udhar flows  
-- **Documents** — OCR pipeline outputs  
-- **InventoryItem** (incl. **`stock_ceiling`**, **`last_bill_deduct_at`**) / **KhataUpload** — stock and paper khata  
-- **Bill** — POS / OCR ingested bills (lines, totals, status)  
-- **RlState** — learning metadata  
+- **Users** – auth identity  
+- **OnboardingProfile / BusinessProfile** – business context for the twin  
+- **LedgerTransaction** (`transactions` table) – persisted movements (ingestion, webhooks, AA); list/summary/export via `GET /transactions/ledger*`  
+- **Predictions / actions / executions** – financial and decision trace  
+- **Customers** – receivable-oriented records; optional **`bill_id`** link to proof for WhatsApp udhar flows  
+- **Documents** – OCR pipeline outputs  
+- **InventoryItem** (incl. **`stock_ceiling`**, **`last_bill_deduct_at`**) / **KhataUpload** – stock and paper khata  
+- **Bill** – POS / OCR ingested bills (lines, totals, status)  
+- **RlState** – learning metadata  
 
 The **live cash / risk / collection queue** in the demo is also driven by an **in-memory snapshot** updated by the engine (fast path for hackathon demos); Prisma holds durable business state.
 
@@ -241,12 +241,12 @@ The **live cash / risk / collection queue** in the demo is also driven by an **i
 
 ## Demo (2 minutes)
 
-1. **Risk** — Snapshot shows stress horizon (e.g. cash shortage probability over N days).  
-2. **Action** — “Collect from [top of collection queue]” with ₹ amount.  
-3. **Execute** — **Send WhatsApp** runs **`POST /execute/collect`** (Razorpay link embedded in the message); **Copy payment link only** uses **`POST /execute/payment-link`**; **call** via Twilio when configured.  
-4. **Bills** — **`/bills`** — paste POS JSON or upload a bill image/PDF (needs backend with `/bills` routes + DB migrated).  
-5. **Voice** — Open **`/assistant`**, choose **हिंदी**, ask: *“Mujhe kya karna chahiye?”*  
-6. **Today screen** — **`/`** shows one-line risk + one action + WhatsApp / copy link / Call / System buttons.
+1. **Risk** – Snapshot shows stress horizon (e.g. cash shortage probability over N days).  
+2. **Action** – “Collect from [top of collection queue]” with ₹ amount.  
+3. **Execute** – **Send WhatsApp** runs **`POST /execute/collect`** (Razorpay link embedded in the message); **Copy payment link only** uses **`POST /execute/payment-link`**; **call** via Twilio when configured.  
+4. **Bills** – **`/bills`** – paste POS JSON or upload a bill image/PDF (needs backend with `/bills` routes + DB migrated).  
+5. **Voice** – Open **`/assistant`**, choose **हिंदी**, ask: *“Mujhe kya karna chahiye?”*  
+6. **Today screen** – **`/`** shows one-line risk + one action + WhatsApp / copy link / Call / System buttons.
 
 ---
 
@@ -281,7 +281,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** — Vite proxies `/api` → backend (see `vite.config.js`).
+Open **http://localhost:5173** – Vite proxies `/api` → backend (see `vite.config.js`).
 
 **Auth:** sign up → complete **onboarding** → app unlocks.
 
@@ -292,7 +292,7 @@ Open **http://localhost:5173** — Vite proxies `/api` → backend (see `vite.co
 | **Netlify** | Root **`netlify.toml`** (`base = financial-control-ui`) or deploy from **`financial-control-ui/`**; set **`VITE_API_URL=https://&lt;your-api-host&gt;`** (no trailing slash). Example in **`financial-control-ui/.env.example`**. |
 | **Vercel** | Root **`vercel.json`** builds **`financial-control-ui/`**. Set **`VITE_API_URL`** to your HTTPS API origin. |
 
-Backend must be a **long-running** host (Fly, Railway, Render, VPS) + PostgreSQL — not Vercel/Netlify serverless functions for the FastAPI app.
+Backend must be a **long-running** host (Fly, Railway, Render, VPS) + PostgreSQL – not Vercel/Netlify serverless functions for the FastAPI app.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fshrijatewari%2Fsmb-ai-financial-autopilot&root-directory=.)
 
@@ -323,7 +323,7 @@ Copy from each **`.env.example`**. Never commit secrets.
 ## Future work
 
 - Deeper **Paytm / bank** integrations  
-- **Razorpay webhooks** → auto-post settlements into ledger (partial support exists — wire all events)  
+- **Razorpay webhooks** → auto-post settlements into ledger (partial support exists – wire all events)  
 - Richer **RL** policies and evaluation  
 - **Credit / lending** scoring APIs  
 - More **regional languages** end-to-end  
@@ -333,7 +333,7 @@ Copy from each **`.env.example`**. Never commit secrets.
 
 ## Vision
 
-**Build an AI financial operating system so millions of SMBs can make better cash decisions every day — without needing a finance degree or English-first dashboards.**
+**Build an AI financial operating system so millions of SMBs can make better cash decisions every day – without needing a finance degree or English-first dashboards.**
 
 ---
 
@@ -343,7 +343,7 @@ Copy from each **`.env.example`**. Never commit secrets.
 |-------|--------|
 | Backend routes, ledger, Prisma | `backend/README.md` |
 | Frontend routes, `api.js`, Transactions | `financial-control-ui/README.md` |
-| **Bills API** | `GET/POST /bills/*` — see OpenAPI `/docs` |
+| **Bills API** | `GET/POST /bills/*` – see OpenAPI `/docs` |
 | **Execute: payment link, WhatsApp, collect** | `POST /execute/payment-link`, `/execute/whatsapp`, `/execute/collect` |
 | UI deploy | Root **`vercel.json`** · **`netlify.toml`** (monorepo) · **`financial-control-ui/netlify.toml`** |
 | API deploy | **`backend/fly.toml`**, **`backend/Dockerfile`** |

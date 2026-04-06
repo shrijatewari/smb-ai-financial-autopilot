@@ -1,5 +1,5 @@
 """
-Razorpay payment webhooks — verify HMAC, post ledger credit, reduce customer dues, complete collect actions.
+Razorpay payment webhooks – verify HMAC, post ledger credit, reduce customer dues, complete collect actions.
 """
 
 from __future__ import annotations

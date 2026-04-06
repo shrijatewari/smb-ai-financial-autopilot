@@ -27,7 +27,7 @@ export default function Assistant() {
     {
       role: 'assistant',
       text:
-        'Ask about cash risk, balance, what to do next, or collections — in English or Hindi / Hinglish. Use the mic or type.',
+        'Ask about cash risk, balance, what to do next, or collections – in English or Hindi / Hinglish. Use the mic or type.',
     },
   ])
   const [input, setInput] = useState('')
@@ -62,7 +62,7 @@ export default function Assistant() {
     }
   }, [searchParams, user?.conversation_language])
 
-  /** Platform lab — “Explain this” from Today pre-fills a plain-language question. */
+  /** Platform lab – “Explain this” from Today pre-fills a plain-language question. */
   useEffect(() => {
     const ex = searchParams.get('explain')
     if (ex === 'risk') {
@@ -186,7 +186,7 @@ export default function Assistant() {
           <div>
             <h1 className="text-lg font-semibold text-violet-950">AI assistant</h1>
             <p className="text-xs text-violet-950/55">
-              India-first: Hindi, Hinglish, English — voice + text financial guidance
+              India-first: Hindi, Hinglish, English – voice + text financial guidance
             </p>
             <p className="mt-1.5 text-[11px] leading-snug text-violet-950/50">
               Reply language defaults from{' '}

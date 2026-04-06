@@ -23,7 +23,7 @@ class SmsCommandBody(BaseModel):
 
 def _inr(n: float | None) -> str:
     if n is None:
-        return "—"
+        return "–"
     return f"₹{n:,.0f}"
 
 
@@ -67,9 +67,9 @@ async def sms_commands(body: SmsCommandBody, user: User = Depends(get_current_us
     if token in ("RISK", "KHATRA"):
         if risk is not None:
             pct = 100 * float(risk)
-            line = f"Risk score lagbhag {pct:.0f}% — collections par dhyan dein."
+            line = f"Risk score lagbhag {pct:.0f}% – collections par dhyan dein."
         else:
-            line = "Risk abhi estimate nahi ho paya — thodi der baad try karein."
+            line = "Risk abhi estimate nahi ho paya – thodi der baad try karein."
         if days_neg is not None:
             line += f" Paisa khatam hone ka estimate ~{days_neg} din."
         return {"reply": line, "command": "RISK"}
@@ -82,9 +82,9 @@ async def sms_commands(body: SmsCommandBody, user: User = Depends(get_current_us
         name = str(action_meta.get("customer") or top.get("name") or "Customer")
         amt = action_meta.get("suggested_amount") or top.get("amount")
         if amt is not None:
-            line = f"Suggested: {name} se {_inr(float(amt))} collect karein — app mein WhatsApp / call use karein."
+            line = f"Suggested: {name} se {_inr(float(amt))} collect karein – app mein WhatsApp / call use karein."
         else:
-            line = "Pehle app mein customer select karein — phir reminder bhejein."
+            line = "Pehle app mein customer select karein – phir reminder bhejein."
         return {"reply": line, "command": "PAY"}
 
     return {

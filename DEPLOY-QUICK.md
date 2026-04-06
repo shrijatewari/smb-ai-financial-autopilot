@@ -1,10 +1,10 @@
 # Get a public URL in ~5 minutes
 
-The UI is a **static Vite build**. The API must be hosted separately (Railway, Render, Fly, etc.) — set `VITE_API_URL` to that API’s **https** origin (no trailing slash).
+The UI is a **static Vite build**. The API must be hosted separately (Railway, Render, Fly, etc.) – set `VITE_API_URL` to that API’s **https** origin (no trailing slash).
 
 ---
 
-## Option A — Vercel CLI (fastest if GitHub import is broken)
+## Option A – Vercel CLI (fastest if GitHub import is broken)
 
 ```bash
 cd /path/to/smb-ai-system
@@ -22,7 +22,7 @@ Copy the **Production** URL (e.g. `https://something.vercel.app`).
 
 ---
 
-## Option B — Vercel dashboard (subfolder only)
+## Option B – Vercel dashboard (subfolder only)
 
 1. [vercel.com/new](https://vercel.com/new) → Import `smb-ai-financial-autopilot`.
 2. **Root Directory** → `financial-control-ui` (click Edit).
@@ -33,7 +33,7 @@ Copy the **Production** URL (e.g. `https://something.vercel.app`).
 
 ---
 
-## Option C — Netlify (alternative)
+## Option C – Netlify (alternative)
 
 **If you see Netlify’s “Page not found” on the root URL:** the deploy folder was empty, wrong, or missing SPA fallback. This repo now includes `public/_redirects` (copied into `dist/`) and `netlify.toml`.
 
@@ -64,7 +64,7 @@ Root `netlify.toml` also defines `base` + `publish` for monorepo builds from the
 ## If the app loads but API fails
 
 - `VITE_API_URL` must be set **at build time** on Vercel (redeploy after changing it).
-- API must allow **CORS** from your `*.vercel.app` domain (your FastAPI already uses `allow_origins=["*"]` in dev — confirm production).
+- API must allow **CORS** from your `*.vercel.app` domain (your FastAPI already uses `allow_origins=["*"]` in dev – confirm production).
 
 ---
 

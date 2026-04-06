@@ -1,4 +1,4 @@
-"""Async Prisma client singleton — PostgreSQL via Prisma ORM."""
+"""Async Prisma client singleton – PostgreSQL via Prisma ORM."""
 
 from __future__ import annotations
 

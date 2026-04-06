@@ -43,7 +43,7 @@ export function Topbar() {
             onClick={(e) => e.stopPropagation()}
             className="flex shrink-0 items-center gap-1 px-2.5 text-xs font-bold text-[#5B2FE0] transition hover:bg-[#6C3BFF]/12 sm:px-3 sm:text-sm"
             title={t('डेटा निर्यात', 'Export data')}
-            aria-label={t('डेटा निर्यात — CSV और बैकअप', 'Export data — CSV & backup')}
+            aria-label={t('डेटा निर्यात – CSV और बैकअप', 'Export data – CSV & backup')}
           >
             <Download className="h-4 w-4 shrink-0 text-[#6C3BFF] sm:h-[18px] sm:w-[18px]" />
             <span className="hidden whitespace-nowrap sm:inline">{t('निर्यात', 'Export')}</span>
@@ -62,7 +62,7 @@ export function Topbar() {
             streamStatus === 'reconnecting'
               ? t('लाइव फ़ीड दोबारा जोड़ रहे हैं…', 'Reconnecting to live feed…')
               : streamStatus === 'live'
-                ? t('लाइव — सिस्टम स्टेट पुश', 'Live — system state push')
+                ? t('लाइव – सिस्टम स्टेट पुश', 'Live – system state push')
                 : t('स्थिति लोड हो रही है…', 'Loading system state…')
           }
         >

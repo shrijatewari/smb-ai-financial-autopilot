@@ -80,7 +80,7 @@ def main() -> None:
     )
 
     pct = 100 * mc["probability_shortage_any_day"]
-    print("SMB Financial Intelligence — demo run")
+    print("SMB Financial Intelligence – demo run")
     print("-" * 44)
     print(f"Rows loaded: {len(df)}")
     print(f"Ending cash (historical): {balance.iloc[-1]:,.2f}")
@@ -91,7 +91,7 @@ def main() -> None:
     print(
         f"Probability negative cash at horizon: {100 * mc['probability_negative_end']:.1f}%"
     )
-    print(f"Credit default risk (logistic, calibrated): {100 * p_default:.1f}% — {band} band")
+    print(f"Credit default risk (logistic, calibrated): {100 * p_default:.1f}% – {band} band")
     print("Graphs saved:")
     for k, p in paths.items():
         print(f"  {k}: {p}")

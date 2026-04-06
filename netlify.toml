@@ -1,15 +1,32 @@
-# Netlify: monorepo — publish path is relative to repo root
+# Monorepo: Netlify runs install/build with `base` as the app directory.
+# Site settings → Build: base directory can also be set to `financial-control-ui` in the UI.
+#
+# Override VITE_API_URL in Netlify → Site configuration → Environment variables (production / previews).
+
 [build]
   base = "financial-control-ui"
-  command = "npm run build"
-  # Relative to `base` (monorepo); not repo-root/financial-control-ui/dist twice.
+  command = "npm ci && npm run build"
   publish = "dist"
 
-# Baked into the JS bundle at build time (must match your Fly / public API origin, no trailing slash).
 [build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--no-audit --no-fund"
+  # Baked into the bundle at build time (no trailing slash). Override per environment in Netlify UI.
   VITE_API_URL = "https://smb-financial-api.fly.dev"
 
+# SPA (React Router)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# Vite: hashed filenames are safe to cache forever; HTML should revalidate.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

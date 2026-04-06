@@ -1,9 +1,9 @@
 /**
  * Mock data for Platform / capabilities UI when live APIs are unavailable or for demos.
- * Does not replace production APIs — see /platform for status labels (Live vs Mock).
+ * Does not replace production APIs – see /platform for status labels (Live vs Mock).
  */
 
-/** Late payment probability (demo model output) — merged on People when engine has no field. */
+/** Late payment probability (demo model output) – merged on People when engine has no field. */
 export const MOCK_LATE_PAYMENT_SCORES = [
   { name: 'Ramesh Suppliers', payThisWeek: 0.78, note: 'Regular payer, small balance' },
   { name: 'Sharma Traders', payThisWeek: 0.42, note: 'Often stretches to 45d' },
@@ -49,7 +49,7 @@ export function mockScenarioResult({ delayDaysExtra = 0, hireCostMonthly = 0 }) 
 export const MOCK_SEASONAL_CONTEXT = {
   nextEvent: 'Eid / long weekend cluster',
   daysAway: 22,
-  hint: 'Retail uplift + possible supplier prepayments — model bias +4% inflow variance (mock).',
+  hint: 'Retail uplift + possible supplier prepayments – model bias +4% inflow variance (mock).',
 }
 
 /** Expense category trend vs last month (mock). */
@@ -92,12 +92,12 @@ export const MOCK_PWA_INFO = {
 
 /** Multi-business / CA view (mock). */
 export const MOCK_BUSINESSES = [
-  { id: 'b1', name: 'Kirana — Main Road', risk: 0.18 },
-  { id: 'b2', name: 'Wholesale — Mandi', risk: 0.31 },
+  { id: 'b1', name: 'Kirana – Main Road', risk: 0.18 },
+  { id: 'b2', name: 'Wholesale – Mandi', risk: 0.31 },
 ]
 
 /**
- * GET /notifications shape when the API fails (network, 5xx, etc.) — Profile “Briefing & notification log”.
+ * GET /notifications shape when the API fails (network, 5xx, etc.) – Profile “Briefing & notification log”.
  * Matches backend list_notifications items: id, channel, kind, status, detail, created_at, mock.
  */
 export function getMockNotificationsResponse() {
@@ -114,7 +114,7 @@ export function getMockNotificationsResponse() {
         kind: 'daily_briefing',
         status: 'mock',
         detail:
-          'Demo: morning briefing payload — real rows appear after scheduler runs with Meta WhatsApp configured.',
+          'Demo: morning briefing payload – real rows appear after scheduler runs with Meta WhatsApp configured.',
         created_at: iso(3600000 * 5),
         mock: true,
       },
@@ -123,7 +123,7 @@ export function getMockNotificationsResponse() {
         channel: 'whatsapp',
         kind: 'daily_briefing',
         status: 'failed',
-        detail: 'Demo: example failed send (rate limit) — check server logs in production.',
+        detail: 'Demo: example failed send (rate limit) – check server logs in production.',
         created_at: iso(86400000 * 1),
         mock: true,
       },
@@ -145,7 +145,7 @@ export const MOCK_GST_FALLBACK = {
   estimated_liability_inr: 42000,
   next_due_date: '2026-04-20',
   gstin: '29AAAAA0000A1Z5',
-  basis: 'mock forecast — save GSTIN on profile for GET /gst/summary',
+  basis: 'mock forecast – save GSTIN on profile for GET /gst/summary',
   note: 'Demo numbers. Connect GSTIN on onboarding and API keys for live alignment.',
   _source: 'mock',
 }

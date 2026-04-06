@@ -1,4 +1,4 @@
-"""Process Meta WhatsApp Cloud inbound webhooks — user match, rate limit, intents, replies."""
+"""Process Meta WhatsApp Cloud inbound webhooks – user match, rate limit, intents, replies."""
 
 from __future__ import annotations
 
@@ -75,9 +75,9 @@ async def process_whatsapp_webhook_payload(payload: dict[str, Any]) -> dict[str,
 
                     if not allow_reply(user.id):
                         lim = (
-                            "Bahut saare messages — thodi der baad try karein (max 20 / hour)."
+                            "Bahut saare messages – thodi der baad try karein (max 20 / hour)."
                             if (getattr(user, "conversation_language", "hi") or "hi").lower().startswith("hi")
-                            else "Too many messages — try again in a bit (max 20 / hour)."
+                            else "Too many messages – try again in a bit (max 20 / hour)."
                         )
                         send_whatsapp_message(str(from_id), lim)
                         processed.append({"from": from_id, "reply": "rate_limited"})
@@ -88,9 +88,9 @@ async def process_whatsapp_webhook_payload(payload: dict[str, Any]) -> dict[str,
                     except Exception as e:
                         logger.exception("WhatsApp intent route failed: %s", e)
                         reply = (
-                            "Kuch gadbad ho gayi — thodi der baad try karein."
+                            "Kuch gadbad ho gayi – thodi der baad try karein."
                             if not (getattr(user, "conversation_language", "hi") or "hi").lower().startswith("en")
-                            else "Something went wrong — try again shortly."
+                            else "Something went wrong – try again shortly."
                         )
 
                     send_whatsapp_message(str(from_id), reply)

@@ -16,7 +16,7 @@ MIN_SIMULATION_PATHS: int = 500
 MIN_CONFIDENCE_FLOOR: float = 0.15
 MAX_CONFIDENCE_CEILING: float = 0.97
 
-# Lags (days) — operating assumptions when not inferred from data
+# Lags (days) – operating assumptions when not inferred from data
 DEFAULT_RECEIVABLE_LAG_DAYS: float = 7.0
 DEFAULT_PAYABLE_LAG_DAYS: float = 5.0
 

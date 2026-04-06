@@ -6,7 +6,7 @@ import { istDateString } from '../lib/dates'
 import { cn } from '../lib/utils'
 import { useTr } from '../hooks/useTr'
 
-/** 3 quick stats + runway meter — uses snapshot + optional today ledger credit. */
+/** 3 quick stats + runway meter – uses snapshot + optional today ledger credit. */
 export function TodayStatsBar({ snap, loading }) {
   const t = useTr()
   const dc = snap?.daily_control
@@ -87,7 +87,7 @@ export function TodayStatsBar({ snap, loading }) {
                 runwayTone === 'neutral' && 'text-violet-900'
               )}
             >
-              {daysNeg != null ? `${daysNeg} ${dayWord}` : '—'}
+              {daysNeg != null ? `${daysNeg} ${dayWord}` : '–'}
             </span>
             {runwayDelta != null && runwayDelta !== 0 && (
               <span
@@ -118,7 +118,7 @@ export function TodayStatsBar({ snap, loading }) {
             {t('आज का आगमन', "Today's inflow")}
           </p>
           <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-700">
-            {todayInflow != null ? formatInr(todayInflow) : '—'}
+            {todayInflow != null ? formatInr(todayInflow) : '–'}
           </p>
           <p className="mt-0.5 text-xs text-violet-600/80">
             {inflowPayments != null ? `${inflowPayments} ${paymentWord}` : t('लेजर', 'ledger')}

@@ -1,4 +1,4 @@
-"""Simulated AI voice call — script + outcome (no real telephony in demo)."""
+"""Simulated AI voice call – script + outcome (no real telephony in demo)."""
 
 from __future__ import annotations
 

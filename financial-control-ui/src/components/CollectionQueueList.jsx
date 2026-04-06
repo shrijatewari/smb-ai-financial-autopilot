@@ -14,7 +14,7 @@ function initials(name) {
   return (s || '?').toUpperCase().slice(0, 2)
 }
 
-/** Late-payment risk % — inverse of pay-this-week score when present. */
+/** Late-payment risk % – inverse of pay-this-week score when present. */
 export function lateRiskPct(row) {
   const p = row.payThisWeek
   if (p != null && !Number.isNaN(Number(p))) return Math.round(100 * (1 - Math.min(1, Math.max(0, Number(p)))))

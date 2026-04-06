@@ -34,7 +34,7 @@ async def upload_documents(
 
     texts: list[str] = []
     results: list[dict] = []
-    # Aligned (filename, text preview) for DB — do not zip(files, texts) after skips (length mismatch).
+    # Aligned (filename, text preview) for DB – do not zip(files, texts) after skips (length mismatch).
     persist_rows: list[tuple[str, str]] = []
 
     for f in files:
@@ -62,7 +62,7 @@ async def upload_documents(
     await ensure_user_business_context_loaded(user.id)
     apply_document_profile_to_user(user.id, profile)
 
-    # Prisma JSON columns expect Json(...) — plain dict can cause 500 on create.
+    # Prisma JSON columns expect Json(...) – plain dict can cause 500 on create.
     try:
         for fn, preview in persist_rows:
             await prisma.documentrecord.create(

@@ -63,7 +63,9 @@ def validate_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
     if df["amount"].isna().any():
         raise ValueError("Invalid numeric values in amount column")
 
-    df["date"] = pd.to_datetime(df["date"], errors="coerce", dayfirst=True)
+    # Do not use dayfirst=True with ISO YYYY-MM-DD: for a Series, pandas can mis-parse
+    # days > 12 and yield NaT (e.g. 2025-10-13). format="mixed" handles ISO + regional CSVs.
+    df["date"] = pd.to_datetime(df["date"].astype(str).str.strip(), errors="coerce", format="mixed")
     if df["date"].isna().any():
         raise ValueError("Invalid dates in date column")
     df["date"] = df["date"].dt.strftime("%Y-%m-%d")

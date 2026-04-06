@@ -67,7 +67,7 @@ def _normalize(text: str) -> str:
 
 
 def _match_payables(q: str) -> bool:
-    """Money going OUT — suppliers, vendors, whom I pay."""
+    """Money going OUT – suppliers, vendors, whom I pay."""
     patterns = [
         r"who (do|should|must) i (need to )?pay",
         r"whom (should i|to )?pay",
@@ -91,7 +91,7 @@ def _match_payables(q: str) -> bool:
 
 
 def _match_receivables(q: str) -> bool:
-    """Money coming IN — customers who owe you."""
+    """Money coming IN – customers who owe you."""
     patterns = [
         r"who owes",
         r"who should pay me",
@@ -171,7 +171,7 @@ def _queue_summary_lines(queue: list[dict[str, Any]], max_rows: int = 5) -> list
         except (TypeError, ValueError):
             amt_s = str(amt)
         late_s = f"{late} days late" if late is not None else "due"
-        lines.append(f"{i}) {name} — {amt_s}, {late_s} ({pr} priority)".strip())
+        lines.append(f"{i}) {name} – {amt_s}, {late_s} ({pr} priority)".strip())
     return lines
 
 
@@ -204,7 +204,7 @@ def run_assistant(
 
     if intent == "off_topic":
         response = (
-            "I only help with your shop's cash, risk, and dues — who owes you, "
+            "I only help with your shop's cash, risk, and dues – who owes you, "
             "what to collect, and when cash may get tight. Ask in Hindi or English."
         )
         data: dict[str, Any] = {"hint": "finance_scope"}
@@ -216,7 +216,7 @@ def run_assistant(
             response = (
                 "People who owe you (from your collection list right now): "
                 + " ; ".join(lines)
-                + f" Overall cash stress in the next {horizon} days is about {pct}% — chase the top names first."
+                + f" Overall cash stress in the next {horizon} days is about {pct}% – chase the top names first."
             )
         else:
             collect = next((a for a in actions if a.get("action") == "collect_payment"), None)
@@ -230,7 +230,7 @@ def run_assistant(
                 )
             else:
                 response = (
-                    f"No names in the queue snapshot — current cash is about ₹{current:,.0f}. "
+                    f"No names in the queue snapshot – current cash is about ₹{current:,.0f}. "
                     f"Connect ledger / SMS so we can list who owes you."
                 )
         data = {

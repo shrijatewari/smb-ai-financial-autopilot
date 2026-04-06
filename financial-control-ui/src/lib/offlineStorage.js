@@ -1,6 +1,6 @@
 /**
  * IndexedDB persistence for offline-queued API payloads and export helpers.
- * Isolated module — no UI.
+ * Isolated module – no UI.
  */
 
 const DB_NAME = 'smb-offline-first'
@@ -29,7 +29,7 @@ function openDb() {
 
 /**
  * Generic save (e.g. form snapshots, arbitrary payloads).
- * @param {object} data — must include `id` or one will be assigned
+ * @param {object} data – must include `id` or one will be assigned
  */
 export async function saveOfflineData(data) {
   const db = await openDb()

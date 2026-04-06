@@ -1,5 +1,5 @@
 """
-Streamlit dashboard — Business Financial Dashboard (FastAPI backend).
+Streamlit dashboard – Business Financial Dashboard (FastAPI backend).
 
 Run: cd frontend && streamlit run app.py
 Backend: http://127.0.0.1:8000
@@ -107,7 +107,7 @@ def post_ocr_ingest(backend_base: str, file_name: str, file_bytes: bytes, conten
 
 
 def get_onboarding(backend_base: str) -> dict:
-    """GET /onboarding — current stored payload."""
+    """GET /onboarding – current stored payload."""
     try:
         r = requests.get(f"{backend_base}/onboarding", timeout=15)
         if r.status_code == 200:
@@ -118,7 +118,7 @@ def get_onboarding(backend_base: str) -> dict:
 
 
 def post_onboarding(backend_base: str, payload: dict) -> tuple[bool, str, dict | None]:
-    """POST /onboarding — persist intelligence-layer onboarding."""
+    """POST /onboarding – persist intelligence-layer onboarding."""
     try:
         r = requests.post(f"{backend_base}/onboarding", json=payload, timeout=30)
         r.raise_for_status()
@@ -485,7 +485,7 @@ with col_ia:
 with col_ib:
     st.markdown('<div class="intel-strip">', unsafe_allow_html=True)
     st.markdown('<div class="label">Liquidity state</div>', unsafe_allow_html=True)
-    liq = html.escape(str(ss.get("liquidity_state", "—")))
+    liq = html.escape(str(ss.get("liquidity_state", "–")))
     st.markdown(f'<div class="value">{liq}</div>', unsafe_allow_html=True)
     if ss.get("last_balance") is not None:
         st.caption(f"Last balance: {inr(float(ss.get('last_balance', 0)), 2)}")
@@ -500,12 +500,12 @@ with col_ic:
             unsafe_allow_html=True,
         )
     else:
-        st.markdown('<div class="value" style="color:#64748B;">—</div>', unsafe_allow_html=True)
+        st.markdown('<div class="value" style="color:#64748B;">–</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 if bp.get("business_type") or bp.get("revenue_model"):
     st.caption(
-        f"Profile: {bp.get('business_type', '—')} · {bp.get('revenue_model', '—')} · "
+        f"Profile: {bp.get('business_type', '–')} · {bp.get('revenue_model', '–')} · "
         f"GST {'yes' if bp.get('gst_registered') else 'no'}"
     )
 
@@ -534,7 +534,7 @@ if mix and sum(mix.values()) > 0:
         n = int(mix.get(k, 0) or 0)
         if n:
             parts.append(f"{k.upper()} {n}")
-    st.caption("Ledger: " + " · ".join(parts) if parts else "Ledger: —")
+    st.caption("Ledger: " + " · ".join(parts) if parts else "Ledger: –")
 
 st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
 st.divider()
@@ -663,7 +663,7 @@ if "payment_clicked" not in st.session_state:
 for i, act in enumerate(actions):
     atype = (act.get("type") or "").replace("_", " ").strip() or "Action"
     amt = act.get("amount")
-    cust = act.get("customer") or "—"
+    cust = act.get("customer") or "–"
     link = act.get("link")
     detail = act.get("detail") or ""
 

@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-/** Folder with `vite.config.js` + `.env` — not `process.cwd()` (wrong when dev starts from monorepo root). */
+/** Folder with `vite.config.js` + `.env` – not `process.cwd()` (wrong when dev starts from monorepo root). */
 const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 /**
@@ -13,14 +13,20 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url))
  */
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, projectRoot, '')
-  const proxyTarget = (env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+  const rawBase = (env.VITE_API_URL || 'http://localhost:8000').trim()
+  const proxyTarget = (rawBase || 'http://localhost:8000').replace(/\/$/, '')
 
   return {
     root: projectRoot,
     envDir: projectRoot,
     plugins: [react(), tailwindcss()],
     server: {
+      /** Listen on all interfaces; avoids some macOS / Docker hostname quirks. */
+      host: true,
       port: 5173,
+      strictPort: false,
+      /** Vite 8+ host validation – allow any dev hostname (e.g. .local, LAN IP) to avoid 403 on /. */
+      allowedHosts: true,
       proxy: {
         '/api': {
           target: proxyTarget,
@@ -29,6 +35,12 @@ export default defineConfig(({ mode }) => {
           secure: proxyTarget.startsWith('https'),
         },
       },
+    },
+    preview: {
+      host: true,
+      port: 4173,
+      strictPort: false,
+      allowedHosts: true,
     },
   }
 })

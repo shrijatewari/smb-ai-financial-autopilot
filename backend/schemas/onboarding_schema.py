@@ -43,15 +43,15 @@ class OnboardingRequest(BaseModel):
     notes: str | None = Field(None, description="Optional notes or document reference")
     customer_type: str = Field(
         "repeat",
-        description="one_time | repeat | subscription — drives customer insights module",
+        description="one_time | repeat | subscription – drives customer insights module",
     )
     data_sources: list[str] = Field(
         default_factory=list,
-        description="Optional: paytm, bank, sms — used for trust / confidence",
+        description="Optional: paytm, bank, sms – used for trust / confidence",
     )
     literacy_preference: str = Field(
         "standard",
-        description="minimal (icons + voice) | standard — UI density for low-literacy users",
+        description="minimal (icons + voice) | standard – UI density for low-literacy users",
     )
 
 

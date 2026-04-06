@@ -1,5 +1,5 @@
 """
-Razorpay Payment Links — official Python SDK when keys are set; REST fallback; mock otherwise.
+Razorpay Payment Links – official Python SDK when keys are set; REST fallback; mock otherwise.
 
 Docs: https://razorpay.com/docs/api/payment-links/
 """
@@ -17,6 +17,10 @@ try:
     import razorpay
 except ImportError:  # pragma: no cover
     razorpay = None
+
+# Fake `https://rzp.io/i/plink_*` URLs are not created in Razorpay’s system – the resolver returns `{}`.
+# When keys are absent, return a stable public URL so “Open link” still lands on a real page.
+MOCK_PAYMENT_LINK_URL = "https://razorpay.com/docs/payment-links/"
 
 
 def create_payment_link(
@@ -43,7 +47,7 @@ def create_payment_link(
     else:
         contact = "+919004930401"
 
-    desc = (description or "").strip() or f"Payment request — {customer_name[:80]}"
+    desc = (description or "").strip() or f"Payment request – {customer_name[:80]}"
     payload: dict[str, Any] = {
         "amount": paise,
         "currency": "INR",
@@ -101,13 +105,13 @@ def create_payment_link(
 
 
 def _mock_response(amount_inr: float, customer_name: str, contact: str, err: str | None) -> dict[str, Any]:
-    rid = f"plink_{uuid.uuid4().hex[:14]}"
+    rid = f"mock_{uuid.uuid4().hex[:12]}"
     out: dict[str, Any] = {
-        "payment_link": f"https://rzp.io/i/{rid}",
+        "payment_link": MOCK_PAYMENT_LINK_URL,
         "status": "created",
         "id": rid,
         "mock": True,
-        "note": "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET for live payment links.",
+        "note": "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET for real checkout links (rzp.io). This URL is documentation only.",
     }
     if err:
         out["fallback_reason"] = err

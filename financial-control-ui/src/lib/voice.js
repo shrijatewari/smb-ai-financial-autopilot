@@ -95,7 +95,7 @@ export function speakHinglish(hiText, enText, { rate = 0.92 } = {}) {
 }
 
 /**
- * @param {string} text — already in the target language
+ * @param {string} text – already in the target language
  * @param {'hi'|'en'|'both'|'ta'|'te'|'bn'} locale
  */
 export function speakForLocale(text, locale, options = {}) {

@@ -1,4 +1,4 @@
-"""Account Aggregator (Setu) — consent, callback, status."""
+"""Account Aggregator (Setu) – consent, callback, status."""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ async def aa_callback(
 ):
     """
     Browser redirect target after the user approves/rejects consent at the AA app.
-    Public endpoint — identification is by `consent_id` stored at initiate.
+    Public endpoint – identification is by `consent_id` stored at initiate.
     """
     rec = await prisma.aaconsent.find_first(where={"consent_id": consent_id})
     if not rec:

@@ -54,7 +54,7 @@ def _df_to_cash_flow(df: pd.DataFrame) -> list[CashFlowPoint]:
 
 def _customer_label(description: str, fallback: str) -> str:
     if description and str(description).strip():
-        return str(description).split("—")[0].split("|")[0].strip()[:60]
+        return str(description).split("–")[0].split("|")[0].strip()[:60]
     return fallback
 
 

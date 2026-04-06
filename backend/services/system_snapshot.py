@@ -1,4 +1,4 @@
-"""Shared GET /system/state payload — used by HTTP routes, SSE, and scheduled jobs."""
+"""Shared GET /system/state payload – used by HTTP routes, SSE, and scheduled jobs."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from state.global_state import get_snapshot
 
 async def build_system_snapshot(user: User | None) -> dict:
     """
-    Same shape as GET /system/state — global engine mirror plus per-user dashboard context when authenticated.
+    Same shape as GET /system/state – global engine mirror plus per-user dashboard context when authenticated.
     """
     snap = copy.deepcopy(get_snapshot())
     if user is None:

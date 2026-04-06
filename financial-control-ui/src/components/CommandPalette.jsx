@@ -4,7 +4,15 @@ import { Search, ArrowRight, PlusCircle, FileText, MessageCircle, Phone, Link2, 
 import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { useUiStore } from '../store/uiStore'
 import { useTr } from '../hooks/useTr'
-import { formatInr, normalizePhone10, openWhatsAppDraft, buildWhatsappCollectionMessage, openTelDialer, buildHindiPaymentScript } from '../lib/collections'
+import {
+  formatInr,
+  normalizePhone10,
+  buildWhatsappCollectionMessage,
+  openTelDialer,
+  buildHindiPaymentScript,
+  openUserGestureBlankTab,
+  navigateTabOrOpenWhatsApp,
+} from '../lib/collections'
 import { getApiErrorMessage, postExecuteCollect, postPaymentLink, postTwilioVoiceCall } from '../services/api'
 import { attachMockPayScores } from '../lib/platformMocks'
 
@@ -126,25 +134,55 @@ export function CommandPalette() {
   }, [q, gst])
 
   async function wa(row) {
+    const waTab = openUserGestureBlankTab()
     try {
-      await postExecuteCollect({ customer: row.name, phone: phone10, amount: row.amount, tone: 'friendly' })
-      setToast(t('वॉट्सऐप + Razorpay लिंक भेजा', 'WhatsApp + Razorpay link sent'))
+      const res = await postExecuteCollect({
+        customer: row.name,
+        phone: phone10,
+        amount: row.amount,
+        tone: 'friendly',
+      })
+      const msg = buildWhatsappCollectionMessage(
+        row.name,
+        row.amount,
+        'friendly',
+        res?.payment_link || undefined
+      )
+      navigateTabOrOpenWhatsApp(waTab, phone10, msg)
+      setToast({
+        text: t('वॉट्सऐप + Razorpay लिंक भेजा', 'WhatsApp + Razorpay link sent'),
+        link: res?.payment_link || undefined,
+      })
     } catch {
-      openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
-      setToast(t('ड्राफ़्ट खोला', 'Draft opened'))
+      let payUrl = null
+      try {
+        const pay = await postPaymentLink({
+          amount: row.amount,
+          customer_name: row.name,
+          phone: phone10,
+        })
+        payUrl = pay.payment_link
+      } catch {
+        /* demo link in draft */
+      }
+      navigateTabOrOpenWhatsApp(
+        waTab,
+        phone10,
+        buildWhatsappCollectionMessage(row.name, row.amount, 'friendly', payUrl || undefined)
+      )
+      setToast({ text: t('ड्राफ़्ट खोला', 'Draft opened'), link: payUrl || undefined })
     }
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 8000)
   }
 
   async function call(row) {
+    openTelDialer(phone10)
     const script = buildHindiPaymentScript(row.name, row.amount)
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
-      if (res.mock) openTelDialer(phone10)
-      setToast(res.mock ? t('डायलर', 'Dialer') : t('कॉल कतार में', 'Call queued'))
+      setToast({ text: res.mock ? t('डायलर', 'Dialer') : t('कॉल कतार में', 'Call queued') })
     } catch (e) {
-      openTelDialer(phone10)
-      setToast(getApiErrorMessage(e))
+      setToast({ text: getApiErrorMessage(e) })
     }
     setTimeout(() => setToast(null), 3000)
   }
@@ -152,12 +190,20 @@ export function CommandPalette() {
   async function payLink(row) {
     try {
       const res = await postPaymentLink({ amount: row.amount, customer_name: row.name, phone: phone10 })
-      setToast(res?.payment_link ? t('लिंक बना', 'Link created') : t('ठीक', 'OK'))
-      if (res?.payment_link) window.open(res.payment_link, '_blank', 'noopener,noreferrer')
+      const url = res?.payment_link
+      if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+      }
+      setToast({
+        text: url
+          ? t('पेमेंट लिंक कॉपी हो गया।', 'Payment link copied to clipboard.')
+          : t('ठीक', 'OK'),
+        link: url || undefined,
+      })
     } catch (e) {
-      setToast(getApiErrorMessage(e))
+      setToast({ text: getApiErrorMessage(e) })
     }
-    setTimeout(() => setToast(null), 4000)
+    setTimeout(() => setToast(null), 8000)
   }
 
   if (!open) return null
@@ -276,7 +322,36 @@ export function CommandPalette() {
           ))}
         </div>
 
-        {toast && <p className="border-t border-violet-100 px-4 py-2 text-center text-xs text-violet-800">{toast}</p>}
+        {toast && (
+          <div className="border-t border-violet-100 px-4 py-2 text-center text-xs text-violet-800">
+            <p>{typeof toast === 'string' ? toast : toast.text}</p>
+            {typeof toast === 'object' && toast.link && (
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                <a
+                  href={toast.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-blue-700 underline"
+                >
+                  {t('लिंक', 'Link')}
+                </a>
+                <button
+                  type="button"
+                  className="rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-900"
+                  onClick={() => {
+                    try {
+                      void navigator.clipboard.writeText(toast.link)
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >
+                  {t('कॉपी', 'Copy')}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

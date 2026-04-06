@@ -47,7 +47,7 @@ export default function Risk() {
 
   return (
     <div className="w-full max-w-7xl mx-auto">
-      <PageHeader title="Risk" subtitle="Live probability of cash stress — narrated by the engine." />
+      <PageHeader title="Risk" subtitle="Live probability of cash stress – narrated by the engine." />
       <Card className="overflow-hidden">
         <CardHeader>
           <CardTitle>Risk meter</CardTitle>

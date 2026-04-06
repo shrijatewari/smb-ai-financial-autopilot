@@ -1,4 +1,4 @@
-"""SMS parsing — delegates to canonical parser used by ingestion."""
+"""SMS parsing – delegates to canonical parser used by ingestion."""
 
 from __future__ import annotations
 

@@ -7,8 +7,15 @@ Login after seed:
   email:    demo@example.com
   password: DemoPass123!
 
+Mock CSV (same shape as POST /transactions/upload strict format):
+  backend/data/mock_transactions.csv  (~110 rows, Oct 2025–Mar 2026)
+  backend/data/sample_transactions.csv – copy used as default session ledger when no upload
+
+Load only ledger from CSV into Postgres (replaces demo user’s saved transactions):
+  python scripts/load_mock_csv_to_ledger.py
+
 Growth / collections data is per user_id. If the UI calls a remote API (e.g. Fly),
-DATABASE_URL in backend/.env must point at THAT Postgres when you seed — otherwise
+DATABASE_URL in backend/.env must point at THAT Postgres when you seed – otherwise
 you only populate local DB while the app reads an empty production DB. Use the same
 demo login on the environment that was seeded.
 """
@@ -17,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import random
 import sys
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
@@ -38,6 +46,111 @@ from services.benchmark_service import refresh_benchmark_aggregates
 
 DEMO_EMAIL = "demo@example.com"
 DEMO_PASSWORD = "DemoPass123!"
+
+
+def _build_demo_ledger_rows(user_id: int, now: datetime) -> list[dict]:
+    """
+    Rich demo ledger: credits + debits, many sources/categories, ~90-day spread.
+    Keeps category/source under 32 chars (Prisma VarChar).
+    """
+    rng = random.Random(20260331)
+    rows: list[dict] = []
+
+    def add(
+        days_ago: float,
+        amount: str,
+        txn_type: str,
+        category: str,
+        source: str,
+        description: str,
+        confidence: str,
+    ) -> None:
+        rows.append(
+            {
+                "user_id": user_id,
+                "amount": Decimal(amount),
+                "txn_type": txn_type,
+                "category": category,
+                "source": source,
+                "occurred_at": now - timedelta(days=days_ago, hours=rng.randint(0, 20)),
+                "confidence_score": Decimal(confidence),
+                "description": description,
+            }
+        )
+
+    # --- Anchors (same story as before, slightly retimed) ---
+    add(1, "12500.00", "credit", "revenue", "sms", "UPI received from CUSTOMER", "0.8800")
+    add(5, "8800.00", "credit", "revenue", "sms", "UPI received – walk-in", "0.8500")
+    add(0.33, "4200.00", "debit", "supplier", "manual", "Supplier payment – grains", "0.9500")
+    add(2, "3100.00", "debit", "supplier", "manual", "Supplier – oil stock", "0.9100")
+    add(0.08, "500.00", "debit", "personal", "sms", "ATM withdrawal", "0.7200")
+
+    # --- More recent week (dense activity) ---
+    for spec in [
+        (0.2, "3400.00", "credit", "revenue", "paytm", "Paytm QR settlement – counter", "0.9100"),
+        (0.4, "2100.00", "credit", "revenue", "razorpay_webhook", "Razorpay payment captured", "0.9600"),
+        (0.5, "6750.00", "debit", "supplier", "bank_upload", "NEFT to distributor – FMCG", "0.9300"),
+        (0.6, "1200.00", "debit", "utilities", "sms", "Electricity bill – auto debit", "0.8800"),
+        (0.7, "450.00", "debit", "fees", "manual", "Bank SMS charges", "0.8200"),
+        (0.9, "980.00", "credit", "revenue", "sms", "UPI – morning sales", "0.8600"),
+    ]:
+        d, amt, tt, cat, src, desc, conf = spec
+        add(d, amt, tt, cat, src, desc, conf)
+
+    # --- Spread over last ~90 days: recurring + one-offs ---
+    templates: list[tuple[str, str, str, str]] = [
+        ("credit", "revenue", "sms", "UPI sale – afternoon rush"),
+        ("credit", "revenue", "paytm", "Paytm settlement batch"),
+        ("credit", "revenue", "razorpay_webhook", "Online order payment"),
+        ("credit", "transfer", "bank_upload", "IMPS in – family float"),
+        ("debit", "supplier", "csv_upload", "Wholesale invoice – rice"),
+        ("debit", "supplier", "manual", "Cash to delivery van"),
+        ("debit", "inventory", "manual", "Cold drink stock – summer"),
+        ("debit", "rent", "bank_upload", "Shop rent – monthly"),
+        ("debit", "salary", "bank_upload", "Staff salary – helper"),
+        ("debit", "utilities", "sms", "Broadband – annual"),
+        ("debit", "tax", "manual", "GST payment – challan"),
+        ("debit", "fees", "sms", "UPI merchant fee reversal"),
+        ("debit", "personal", "sms", "Petty cash – tea/snacks"),
+        ("credit", "revenue", "sms", "UPI – kirana walk-in"),
+        ("debit", "supplier", "paytm", "Supplier advance via Paytm"),
+    ]
+
+    day = 3
+    while day < 100:
+        amt_base = rng.choice([450, 900, 1200, 1850, 2400, 3200, 4100, 5500, 7200, 8800])
+        jitter = rng.randint(-120, 380)
+        txn_type, category, source, desc = rng.choice(templates)
+        amt = max(120, amt_base + jitter)
+        amt_s = f"{amt}.00"
+        conf = f"{0.55 + rng.random() * 0.42:.4f}"
+        add(
+            float(day),
+            amt_s,
+            txn_type,
+            category,
+            source,
+            f"{desc} (day -{day})",
+            conf,
+        )
+        day += rng.choice([2, 3, 4, 5])
+
+    # --- Extra edge cases (mixed confidence, small amounts) ---
+    extras = [
+        (12, "75.00", "debit", "fees", "sms", "SMS pack recharge", "0.6100"),
+        (18, "199.00", "debit", "personal", "manual", "Stationery – notebooks", "0.7800"),
+        (25, "15000.00", "credit", "revenue", "razorpay_webhook", "Large B2B prepayment", "0.9400"),
+        (33, "890.00", "debit", "utilities", "manual", "LPG cylinder refill", "0.8300"),
+        (41, "220.00", "credit", "revenue", "sms", "UPI – small sale", "0.7000"),
+        (55, "12500.00", "debit", "supplier", "bank_upload", "Stock order – festival load", "0.9200"),
+        (62, "4500.00", "credit", "transfer", "bank_upload", "Loan disbursement – OD limit", "0.8800"),
+        (71, "320.00", "debit", "fees", "sms", "UPI annual maintenance", "0.6600"),
+    ]
+    for day, amt, tt, cat, src, desc, conf in extras:
+        add(float(day), amt, tt, cat, src, desc, conf)
+
+    # Sort by time descending not required for DB; API sorts. Stable row count message:
+    return rows
 
 
 async def main() -> None:
@@ -64,7 +177,7 @@ async def main() -> None:
                     "user_id": uid,
                     "payload": Json(
                         {
-                            "business_type": "Retail (products) — Kirana",
+                            "business_type": "Retail (products) – Kirana",
                             "revenue_model": "product",
                             "monthly_turnover_range": "50k_to_5L",
                             "num_employees": 4,
@@ -96,7 +209,7 @@ async def main() -> None:
                 "update": {
                     "payload": Json(
                         {
-                            "business_type": "Retail (products) — Kirana",
+                            "business_type": "Retail (products) – Kirana",
                             "revenue_model": "product",
                             "monthly_turnover_range": "50k_to_5L",
                             "num_employees": 4,
@@ -228,60 +341,9 @@ async def main() -> None:
             ]
         )
 
-        await prisma.ledgertransaction.create_many(
-            data=[
-                {
-                    "user_id": uid,
-                    "amount": Decimal("12500.00"),
-                    "txn_type": "credit",
-                    "category": "revenue",
-                    "source": "sms",
-                    "occurred_at": now - timedelta(days=1),
-                    "confidence_score": Decimal("0.88"),
-                    "description": "UPI received from CUSTOMER",
-                },
-                {
-                    "user_id": uid,
-                    "amount": Decimal("8800.00"),
-                    "txn_type": "credit",
-                    "category": "revenue",
-                    "source": "sms",
-                    "occurred_at": now - timedelta(days=5),
-                    "confidence_score": Decimal("0.85"),
-                    "description": "UPI received — walk-in",
-                },
-                {
-                    "user_id": uid,
-                    "amount": Decimal("4200.00"),
-                    "txn_type": "debit",
-                    "category": "supplier",
-                    "source": "manual",
-                    "occurred_at": now - timedelta(hours=8),
-                    "confidence_score": Decimal("0.95"),
-                    "description": "Supplier payment — grains",
-                },
-                {
-                    "user_id": uid,
-                    "amount": Decimal("3100.00"),
-                    "txn_type": "debit",
-                    "category": "supplier",
-                    "source": "manual",
-                    "occurred_at": now - timedelta(days=2),
-                    "confidence_score": Decimal("0.91"),
-                    "description": "Supplier — oil stock",
-                },
-                {
-                    "user_id": uid,
-                    "amount": Decimal("500.00"),
-                    "txn_type": "debit",
-                    "category": "personal",
-                    "source": "sms",
-                    "occurred_at": now - timedelta(hours=2),
-                    "confidence_score": Decimal("0.72"),
-                    "description": "ATM withdrawal",
-                },
-            ]
-        )
+        ledger_data = _build_demo_ledger_rows(uid, now)
+        await prisma.ledgertransaction.create_many(data=ledger_data)
+        n_ledger = len(ledger_data)
 
         await prisma.reconstructedfinancial.create(
             data={
@@ -347,11 +409,11 @@ async def main() -> None:
         print("Seed complete.")
         print(f"  User id: {uid}")
         print(f"  Login:   {DEMO_EMAIL} / {DEMO_PASSWORD}")
-        print(f"  Customers: 5 | Benchmark aggregates refreshed: {bm}")
+        print(f"  Ledger rows: {n_ledger} | Customers: 5 | Benchmark aggregates refreshed: {bm}")
         print("  Open UI: http://localhost:5173  |  API: http://127.0.0.1:8000/docs")
         print(
             "  Remote API: seed must use the SAME database as the API (set DATABASE_URL in backend/.env). "
-            "Then log in as demo@example.com — a different account has no seeded rows."
+            "Then log in as demo@example.com – a different account has no seeded rows."
         )
     finally:
         await prisma.disconnect()

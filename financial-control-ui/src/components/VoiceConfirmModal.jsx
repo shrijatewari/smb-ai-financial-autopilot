@@ -76,7 +76,7 @@ export function VoiceConfirmModal({ open, title, message, messageHi, messageEn, 
               )}
             </div>
             <p className="mt-2 text-xs text-violet-600">
-              {t('YES या NO बोलिए — या नीचे दबाएँ।', 'Say YES or NO — or tap below.')}
+              {t('YES या NO बोलिए – या नीचे दबाएँ।', 'Say YES or NO – or tap below.')}
             </p>
             <div className="mt-6 flex gap-3">
               <button

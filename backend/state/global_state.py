@@ -163,7 +163,7 @@ def update_from_pipeline(out: dict, tick: int) -> None:
             pass
         primary = {**primary, "metadata": meta}
     if days_neg is None:
-        runway_line = "Majority of simulated paths stay above zero in the horizon — still chase dues to improve buffer."
+        runway_line = "Majority of simulated paths stay above zero in the horizon – still chase dues to improve buffer."
     else:
         runway_line = (
             f"You may run out of cash in about {days_neg} day{'s' if days_neg != 1 else ''} "

@@ -1,7 +1,7 @@
 """
-Setu Account Aggregator (sandbox / production) — consent + FI data.
+Setu Account Aggregator (sandbox / production) – consent + FI data.
 
-Docs: https://docs.setu.co/data/account-aggregator — paths configurable via env.
+Docs: https://docs.setu.co/data/account-aggregator – paths configurable via env.
 When credentials are missing, returns mock consent + sample FI JSON for local dev.
 """
 
@@ -31,7 +31,7 @@ def _configured() -> bool:
 
 
 def _auth_headers() -> dict[str, str]:
-    """Many Setu deployments use client id/secret as Bearer or Basic — override via SETU_AA_AUTH_HEADER."""
+    """Many Setu deployments use client id/secret as Bearer or Basic – override via SETU_AA_AUTH_HEADER."""
     custom = (os.getenv("SETU_AA_AUTH_HEADER") or "").strip()
     if custom:
         name, _, val = custom.partition(":")
@@ -49,17 +49,17 @@ def _auth_headers() -> dict[str, str]:
 
 def create_consent_request(user_id: int, mobile: str, redirect_url: str) -> dict[str, Any]:
     """
-    Start AA consent — returns consent_id and redirect_url for the user to approve at their bank AA app.
+    Start AA consent – returns consent_id and redirect_url for the user to approve at their bank AA app.
 
     Sandbox without keys: returns mock values so the rest of the flow can be tested.
     """
     digits = "".join(c for c in mobile if c.isdigit())
     if len(digits) < 10:
-        return {"error": "Invalid mobile — need at least 10 digits."}
+        return {"error": "Invalid mobile – need at least 10 digits."}
 
     consent_id = f"cons_{uuid.uuid4().hex[:12]}"
     if not _configured():
-        logger.info("SETU AA not configured — returning mock consent for user %s", user_id)
+        logger.info("SETU AA not configured – returning mock consent for user %s", user_id)
         mock_url = f"{redirect_url}{'&' if '?' in redirect_url else '?'}consent_id={consent_id}&mock=1"
         return {
             "consent_id": consent_id,

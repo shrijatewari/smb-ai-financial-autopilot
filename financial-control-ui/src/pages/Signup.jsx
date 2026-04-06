@@ -58,7 +58,7 @@ export default function Signup() {
           AI Business Twin
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-violet-950">Create account</h1>
-        <p className="mt-1 text-sm text-violet-950/55">Onboarding flow unchanged — unlock your adaptive dashboard</p>
+        <p className="mt-1 text-sm text-violet-950/55">Onboarding flow unchanged – unlock your adaptive dashboard</p>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <label className="block">
             <span className="text-xs font-medium text-violet-800/80">Name</span>

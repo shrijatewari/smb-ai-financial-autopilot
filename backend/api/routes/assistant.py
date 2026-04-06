@@ -1,4 +1,4 @@
-"""Voice/text assistant — multilingual (India-first) + financial engines."""
+"""Voice/text assistant – multilingual (India-first) + financial engines."""
 
 from __future__ import annotations
 

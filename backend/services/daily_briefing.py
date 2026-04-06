@@ -20,11 +20,11 @@ logger = logging.getLogger(__name__)
 
 def _format_inr(amount: float | Decimal | None) -> str:
     if amount is None:
-        return "—"
+        return "–"
     try:
         n = float(amount)
     except (TypeError, ValueError):
-        return "—"
+        return "–"
     return f"₹{n:,.0f}"
 
 
@@ -82,7 +82,7 @@ async def _business_display_name(user: User) -> str:
 
 
 async def send_daily_briefings() -> None:
-    """APScheduler job — runs in UTC; cron set for 8:00 AM IST."""
+    """APScheduler job – runs in UTC; cron set for 8:00 AM IST."""
     if os.getenv("BRIEFING_ENABLED", "true").strip().lower() not in ("1", "true", "yes"):
         logger.info("Daily briefing skipped (BRIEFING_ENABLED=false)")
         return

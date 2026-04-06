@@ -1,4 +1,4 @@
-"""WhatsApp payment reminders — Meta Cloud API when configured, else simulated send."""
+"""WhatsApp payment reminders – Meta Cloud API when configured, else simulated send."""
 
 from __future__ import annotations
 
@@ -24,23 +24,39 @@ def generate_payment_message(
     shop_name: str | None = None,
 ) -> str:
     """
-    Reminder text with Razorpay (or demo) link at the end for HI / Hinglish / EN-style flows.
+    Reminder with Razorpay (or demo) short link on its own line at the end.
+    Friendly: Hindi khaata-style layout; formal: English layout – link always last.
     """
     link = payment_link or default_payment_link(amount)
     tone_norm = (tone or "formal").lower().strip()
     first = customer.split("(")[0].split(",")[0].strip() or customer
     shop = (shop_name or "Dukaan").strip() or "Dukaan"
-    amt_str = f"{amount:,.0f}"
+    total_inr = int(round(float(amount)))
+    amt_comma = f"{amount:,.0f}"
 
     if tone_norm == "friendly":
         return (
-            f"Namaste {first}, aapka {shop} mein ₹{amt_str} baaki hai. "
-            f"Abhi pay karein: {link}"
+            f"Namaste {first} ji,\n\n"
+            f"{shop} se aapka {total_inr} rupaye baaki hai.\n\n"
+            f"Aapki khareedari ki details:\n"
+            f"• Khaate ka kul (jab bill judega, yahan line items dikhenge)\n\n"
+            f"Kul rakam: ₹{amt_comma}\n"
+            f"Tarikh: –\n"
+            f"Bill number: –\n\n"
+            f"Kripya jald se jald bhej dijiye. Shukriya 🙏\n\n"
+            f"{link}"
         )
 
     return (
-        f"Namaste {first}, your outstanding at {shop} is ₹{amt_str}. "
-        f"Pay now: {link}"
+        f"Namaste {first},\n\n"
+        f"Your outstanding at {shop} is ₹{amt_comma}.\n\n"
+        f"Purchase details:\n"
+        f"• Total per ledger (itemized lines when a bill is linked)\n\n"
+        f"Total: ₹{amt_comma}\n"
+        f"Date: –\n"
+        f"Bill number: –\n\n"
+        f"Please pay at your earliest. Thank you.\n\n"
+        f"{link}"
     )
 
 
@@ -174,12 +190,12 @@ def build_khaata_bill_proof_message(
             up = 0.0
         line_amt = qf * up
         if nm:
-            bullet_lines.append(f"• {nm} x {qf:g} — ₹{line_amt:,.0f}")
+            bullet_lines.append(f"• {nm} x {qf:g} – ₹{line_amt:,.0f}")
 
     items_block = "\n".join(bullet_lines) if bullet_lines else "• (details attached / see total below)"
     total = float(bill_parts.get("total_amount") or amount)
-    bnum = str(bill_parts.get("bill_number") or "—")
-    bdate = str(bill_parts.get("created_at") or "")[:10] or "—"
+    bnum = str(bill_parts.get("bill_number") or "–")
+    bdate = str(bill_parts.get("created_at") or "")[:10] or "–"
     shop = shop_name or "Hamari dukaan"
 
     return (
@@ -191,7 +207,7 @@ def build_khaata_bill_proof_message(
         f"Tarikh: {bdate}\n"
         f"Bill number: {bnum}\n\n"
         f"Kripya jald se jald bhej dijiye. Shukriya 🙏\n\n"
-        f"Abhi pay karein: {payment_link}"
+        f"{payment_link}"
     )
 
 
@@ -297,7 +313,7 @@ def send_whatsapp_media_message(phone: str, media_id: str, whatsapp_type: str, c
 def try_send_bill_attachment(phone: str, file_path: str | None, caption: str) -> dict[str, Any]:
     """
     Upload local file and send as WhatsApp media; never raises.
-    Returns {sent: bool, detail?: str} — caller should still send text if False.
+    Returns {sent: bool, detail?: str} – caller should still send text if False.
     """
     if not file_path:
         return {"sent": False, "detail": "no file"}

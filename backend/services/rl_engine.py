@@ -1,7 +1,7 @@
 """
 Tabular Q-learning for treasury action ordering (ε-greedy).
 
-Not for cash prediction — only optimizes *which recommended action to surface first*
+Not for cash prediction – only optimizes *which recommended action to surface first*
 given discretized state (cash band, risk, receivable exposure, credit stress).
 
 Persisted to disk so the policy improves across restarts.

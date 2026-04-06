@@ -70,8 +70,8 @@ export default function Predictions() {
       {
         label: t('चरण १', 'Step 1'),
         text: t(
-          'यह बड़ा प्रतिशत “होराइज़न रिस्क” है — आने वाले दिनों में कम से कम एक बार कैश निगेटिव होने की संभावना।',
-          'This large percentage is horizon risk — the chance cash goes negative at least once in the forecast window.'
+          'यह बड़ा प्रतिशत “होराइज़न रिस्क” है – आने वाले दिनों में कम से कम एक बार कैश निगेटिव होने की संभावना।',
+          'This large percentage is horizon risk – the chance cash goes negative at least once in the forecast window.'
         ),
       },
       {
@@ -84,8 +84,8 @@ export default function Predictions() {
       {
         label: t('चरण ३', 'Step 3'),
         text: t(
-          'ऊपर स्पीकर आइकन से आवाज़ मार्गदर्शन चालू या बंद कर सकते हो — आज वाले पेज जैसा।',
-          'Use the speaker icon in the header to turn voice guidance on or off — same as the Today page.'
+          'ऊपर स्पीकर आइकन से आवाज़ मार्गदर्शन चालू या बंद कर सकते हो – आज वाले पेज जैसा।',
+          'Use the speaker icon in the header to turn voice guidance on or off – same as the Today page.'
         ),
       },
     ],
@@ -99,7 +99,7 @@ export default function Predictions() {
     const end =
       sim?.expected_cash != null
         ? `₹${Math.round(sim.expected_cash).toLocaleString('en-IN')}`
-        : '—'
+        : '–'
     const hi = `अनुमान पेज। होराइज़न जोखिम लगभग ${pct} प्रतिशत। अनुमानित अंत कैश लगभग ${end}।`
     const en = `Predictions page. Horizon risk is about ${pct} percent. Expected ending cash is about ${end}.`
     if (localeDisplay === 'both') speakHinglish(hi, en)
@@ -150,8 +150,8 @@ export default function Predictions() {
       <PageHeader
         title={t('अनुमान', 'Predictions')}
         subtitle={t(
-          'मोंटे कार्लो टर्मिनल कैश और होराइज़न रिस्क — वही इंजन जो लाइव कंट्रोल प्लेन चलाता है।',
-          'Monte Carlo terminal cash distribution and horizon risk — same engine as the live control plane.'
+          'मोंटे कार्लो टर्मिनल कैश और होराइज़न रिस्क – वही इंजन जो लाइव कंट्रोल प्लेन चलाता है।',
+          'Monte Carlo terminal cash distribution and horizon risk – same engine as the live control plane.'
         )}
       />
 
@@ -196,7 +196,7 @@ export default function Predictions() {
                 </p>
                 <p className="text-xs text-violet-950/50">
                   {t('अनुमानित अंत कैश (सिम): ', 'Expected end cash (sim): ')}
-                  {sim?.expected_cash != null ? `₹${Math.round(sim.expected_cash).toLocaleString('en-IN')}` : '—'}
+                  {sim?.expected_cash != null ? `₹${Math.round(sim.expected_cash).toLocaleString('en-IN')}` : '–'}
                 </p>
               </div>
             )}

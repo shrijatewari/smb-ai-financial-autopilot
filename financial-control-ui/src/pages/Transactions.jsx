@@ -27,7 +27,7 @@ import { mockTransactionsFromState } from '../lib/mockData'
 import { cn } from '../lib/utils'
 
 function formatInr(n) {
-  if (n == null || Number.isNaN(n)) return '—'
+  if (n == null || Number.isNaN(n)) return '–'
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 }
 
@@ -60,8 +60,8 @@ function mapLedgerRow(tx) {
   const amt = Number(tx.amount)
   return {
     id: `ledger-${tx.id}`,
-    date: tx.date || '—',
-    description: tx.description || '—',
+    date: tx.date || '–',
+    description: tx.description || '–',
     amount: amt,
     type: typ === 'credit' ? 'credit' : 'debit',
     confidence: tx.confidence != null && !Number.isNaN(Number(tx.confidence)) ? Number(tx.confidence) : 0.9,
@@ -147,7 +147,7 @@ export default function Transactions() {
   )
 
   const formatSource = (src) => {
-    if (!src) return '—'
+    if (!src) return '–'
     const map = {
       razorpay_webhook: t('रेज़रपे', 'Razorpay'),
       account_aggregator: t('बैंक (AA)', 'Bank (AA)'),
@@ -155,14 +155,14 @@ export default function Transactions() {
       paytm: t('Paytm', 'Paytm'),
       api: t('API', 'API'),
       ocr: t('OCR', 'OCR'),
-      unknown: '—',
+      unknown: '–',
       ingestion: t('इन्जेस्शन', 'Ingestion'),
     }
     return map[src] || String(src).replace(/_/g, ' ')
   }
 
   const formatCategory = (cat) => {
-    if (!cat) return '—'
+    if (!cat) return '–'
     const lower = String(cat).toLowerCase()
     const map = {
       collection: t('वसूली', 'collection'),
@@ -268,6 +268,7 @@ export default function Transactions() {
 
   const { rows: mockRows } = mockTransactionsFromState(snap || {})
   const ledgerRows = (ledger?.transactions || []).map(mapLedgerRow)
+  /** Ledger API responded – use real rows even when count is 0 (do not mix mock rows with summary). */
   const ledgerOk = ledger?.status === 'ok'
   const hasPersistedLedger =
     ledgerOk &&
@@ -302,7 +303,7 @@ export default function Transactions() {
     .filter((r) => rowMatchesTxnType(r, appliedTxnType))
     .filter((r) => rowMatchesCategory(r, appliedCategory))
 
-  const coreRows = hasPersistedLedger
+  const coreRows = ledgerOk
     ? paytmRowsFiltered.length
       ? [...paytmRowsFiltered, ...ledgerRows]
       : ledgerRows
@@ -319,11 +320,12 @@ export default function Transactions() {
       appliedCategory.trim()
   )
 
-  const rows = coreRows.length === 0 && !filtersActive ? mockRowsFiltered : coreRows
+  const rows = coreRows.length === 0 && !filtersActive && !ledgerOk ? mockRowsFiltered : coreRows
 
   const noSavedTransactions = ledgerSummary?.status === 'ok' && (ledgerSummary?.count ?? 0) === 0
-  const showDemoExplainer =
-    noSavedTransactions || (coreRows.length === 0 && !filtersActive && rows.length > 0)
+  const showingMockInTable = !ledgerOk && rows.length > 0
+  /** Orange banner: empty ledger (summary) or API unreachable so we show mock rows. */
+  const showDemoExplainer = noSavedTransactions || showingMockInTable
   const spark = rows.slice(0, 8).map((r, i) => ({ i, v: Math.abs(r.amount) }))
 
   async function onExportLedger() {
@@ -398,11 +400,15 @@ export default function Transactions() {
 
   const ledgerTotal = ledger?.total
   const persistedRangeStart =
-    ledgerTotal && ledgerTotal > 0 ? ledgerOffset + 1 : ledgerRows.length > 0 ? ledgerOffset + 1 : 0
+    ledgerTotal != null && ledgerTotal > 0
+      ? ledgerOffset + 1
+      : ledgerRows.length > 0
+        ? ledgerOffset + 1
+        : 0
   const persistedRangeEnd = ledgerOffset + ledgerRows.length
-  const canLedgerPrev = hasPersistedLedger && ledgerOffset > 0
+  const canLedgerPrev = ledgerOk && ledgerOffset > 0
   const canLedgerNext =
-    hasPersistedLedger &&
+    ledgerOk &&
     ledgerTotal != null &&
     ledgerOffset + (ledger?.transactions?.length ?? 0) < ledgerTotal
 
@@ -429,8 +435,8 @@ export default function Transactions() {
       <PageHeader
         title={t('लेन-देन', 'Transactions')}
         subtitle={t(
-          'SMS, बैंक, रेज़रपे और अपलोड से आपका लेजर — हर पंक्ति पर AI विश्वास स्तर। तारीख, स्रोत या विवरण से फ़िल्टर करें; निर्यात वही दिखाता है जो आप देखते हैं।',
-          'Your ledger from SMS, bank, Razorpay, and uploads — with AI confidence on each line. Use filters to narrow by date, source, or description; export matches what you see (with the same filters).'
+          'SMS, बैंक, रेज़रपे और अपलोड से आपका लेजर – हर पंक्ति पर AI विश्वास स्तर। तारीख, स्रोत या विवरण से फ़िल्टर करें; निर्यात वही दिखाता है जो आप देखते हैं।',
+          'Your ledger from SMS, bank, Razorpay, and uploads – with AI confidence on each line. Use filters to narrow by date, source, or description; export matches what you see (with the same filters).'
         )}
       >
         <div className="flex w-full min-w-0 flex-col items-stretch gap-3 sm:items-end">
@@ -576,7 +582,7 @@ export default function Transactions() {
           )}
         </p>
       </details>
-      {!loading && hasPersistedLedger && (
+      {!loading && ledgerOk && (
         <p className="mb-4 text-sm text-emerald-800/90">
           {t('दिखा रहे हैं', 'Showing')} {ledgerRows.length}{' '}
           {ledgerRows.length === 1 ? t('पंक्ति', 'row') : t('पंक्तियाँ', 'rows')}
@@ -588,7 +594,7 @@ export default function Transactions() {
                 ? t('फ़िल्टर मेल', 'matching filters')
                 : t('कुल डेटाबेस में', 'total in database')}
               {ledger.total > ledgerRows.length
-                ? ` — ${t('पेज', 'page')} ${persistedRangeStart}–${persistedRangeEnd} (${t('ऑफ़सेट', 'offset')} ${ledgerOffset})`
+                ? ` – ${t('पेज', 'page')} ${persistedRangeStart}–${persistedRangeEnd} (${t('ऑफ़सेट', 'offset')} ${ledgerOffset})`
                 : ''})
             </>
           )}
@@ -631,12 +637,21 @@ export default function Transactions() {
       )}
       {showDemoExplainer && (
         <div className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 shadow-sm">
-          <p className="font-medium text-amber-950">{t('उदाहरण लेन-देन (डेमो)', 'Example transactions (demo)')}</p>
+          <p className="font-medium text-amber-950">
+            {noSavedTransactions
+              ? t('डेटाबेस में अभी कोई लेन-देन नहीं', 'No transactions in your database yet')
+              : t('उदाहरण लेन-देन (डेमो)', 'Example transactions (demo)')}
+          </p>
           <p className="mt-1 text-xs leading-relaxed text-amber-950/85">
-            {t(
-              'अभी डेटाबेस में कोई पंक्ति नहीं है (या API लोड नहीं हो सका)। नीचे की तालिका में नमूना UPI, रेज़रपे और आपूर्तिकर्ता पंक्तियाँ हैं ताकि आप लेआउट देख सकें। Paytm, CSV अपलोड, या आज से SMS जोड़कर असली लेजर बनाएँ।',
-              'No rows are stored in your database yet (or the API could not load them). The table below shows sample UPI, Razorpay, and supplier lines so you can explore filters and layout. Connect Paytm, upload a CSV, or add SMS under Today to build your real ledger.'
-            )}
+            {noSavedTransactions
+              ? t(
+                  'अपना लेजर भरने के लिए: `backend` में `python scripts/seed_mock_data.py` चलाएँ, या सिर्फ़ CSV से `python scripts/load_mock_csv_to_ledger.py` (फिर demo@example.com से लॉग इन)। मॉक फ़ाइल: `backend/data/mock_transactions.csv`।',
+                  'To populate your ledger: run `python scripts/seed_mock_data.py` from `backend`, or load mock CSV only with `python scripts/load_mock_csv_to_ledger.py`, then log in as demo@example.com. Sample file: `backend/data/mock_transactions.csv`.'
+                )
+              : t(
+                  'API लोड नहीं हो सका या आप लॉग इन नहीं हैं – नीचे नमूना पंक्तियाँ दिख रही हैं। लाइव डेटा के लिए API कनेक्ट करें।',
+                  'The API could not load or you are not logged in – the table below shows sample rows. Connect the API for live data.'
+                )}
           </p>
         </div>
       )}
@@ -733,16 +748,16 @@ export default function Transactions() {
                 {t('मॉडल अनुमान', 'Model estimates')}{' '}
                 <span className="font-semibold text-violet-900">{(100 * snap.risk).toFixed(1)}%</span>{' '}
                 {t(
-                  'नकद तनाव — अनिश्चित टैग मिलाएँ ताकि विश्वास बढ़े।',
-                  'cash stress in horizon — reconcile uncertain tags to improve confidence.'
+                  'नकद तनाव – अनिश्चित टैग मिलाएँ ताकि विश्वास बढ़े।',
+                  'cash stress in horizon – reconcile uncertain tags to improve confidence.'
                 )}
               </p>
             )}
             {!snap && !loading && (
               <p>
                 {t(
-                  'Paytm (डैशबोर्ड), प्रोफ़ाइल से बैंक लिंक, या Razorpay — वेबहुक से भुगतान लेजर में आते हैं जब कॉन्फ़िगर हो।',
-                  'Connect Paytm (dashboard), link your bank under Profile, or collect via Razorpay — webhook payments post to the ledger automatically when configured.'
+                  'Paytm (डैशबोर्ड), प्रोफ़ाइल से बैंक लिंक, या Razorpay – वेबहुक से भुगतान लेजर में आते हैं जब कॉन्फ़िगर हो।',
+                  'Connect Paytm (dashboard), link your bank under Profile, or collect via Razorpay – webhook payments post to the ledger automatically when configured.'
                 )}
               </p>
             )}
@@ -754,13 +769,13 @@ export default function Transactions() {
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div>
             <CardTitle>{t('हाल की पंक्तियाँ', 'Recent lines')}</CardTitle>
-            {showDemoExplainer && (
+            {showingMockInTable && (
               <p className="mt-1 text-xs font-medium text-amber-800/90">
-                {t('डेमो डेटा दिख रहा है — लाइव बैंक फ़ीड नहीं', 'Showing demo data — not your live bank feed')}
+                {t('डेमो डेटा दिख रहा है – लाइव बैंक फ़ीड नहीं', 'Showing demo data – not your live bank feed')}
               </p>
             )}
           </div>
-          {hasPersistedLedger && ledgerTotal != null && ledgerTotal > 0 && (
+          {ledgerOk && ledgerTotal != null && ledgerTotal > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs tabular-nums text-violet-600">
                 {t('सहेजी पंक्तियाँ', 'Persisted rows')} {persistedRangeStart}–{persistedRangeEnd} {t('का', 'of')}{' '}
@@ -814,10 +829,20 @@ export default function Transactions() {
                 : rows.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-sm text-violet-600">
-                        {t(
-                          'इन फ़िल्टर से कोई लेन-देन नहीं मिला। फ़िल्टर साफ़ करें या तारीख बढ़ाएँ।',
-                          'No transactions match these filters. Clear filters or widen the date range.'
-                        )}
+                        {filtersActive
+                          ? t(
+                              'इन फ़िल्टर से कोई लेन-देन नहीं मिला। फ़िल्टर साफ़ करें या तारीख बढ़ाएँ।',
+                              'No transactions match these filters. Clear filters or widen the date range.'
+                            )
+                          : ledgerOk
+                            ? t(
+                                'अभी कोई सहेजी पंक्ति नहीं। डेमो: `python scripts/seed_mock_data.py` या `python scripts/load_mock_csv_to_ledger.py` – `backend/data/mock_transactions.csv`।',
+                                'No saved rows yet. Run `python scripts/seed_mock_data.py` or `python scripts/load_mock_csv_to_ledger.py` using `backend/data/mock_transactions.csv`.'
+                              )
+                            : t(
+                                'लेजर लोड नहीं हो सका। लॉग इन करें और API कनेक्ट करें।',
+                                'Could not load ledger. Log in and ensure the API is reachable.'
+                              )}
                       </td>
                     </tr>
                   ) : (

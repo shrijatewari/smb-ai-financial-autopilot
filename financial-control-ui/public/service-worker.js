@@ -3,7 +3,7 @@
  * Cache-first for static assets; API traffic is not intercepted (always network when online).
  * Precaches shell so SPA can load offline after first visit.
  */
-const CACHE_NAME = 'smb-financial-ui-v1'
+const CACHE_NAME = 'smb-financial-ui-v2'
 const SHELL = ['/', '/index.html', '/favicon.svg']
 
 self.addEventListener('install', (event) => {

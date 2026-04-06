@@ -45,7 +45,7 @@ async def upsert_normalized_business_profile(
     formality_score: float,
     trust_score: float,
 ) -> None:
-    """Persist columns on `business_profiles` (dashboard / judges — not only JSON blobs)."""
+    """Persist columns on `business_profiles` (dashboard / judges – not only JSON blobs)."""
     pm = onboarding.get("payment_mix") or {}
     cash = float(pm.get("cash", 0.5))
     dig = float(pm.get("digital", 0.5))

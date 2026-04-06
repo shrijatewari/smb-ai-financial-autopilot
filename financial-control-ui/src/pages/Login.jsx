@@ -54,7 +54,7 @@ export default function Login() {
           AI Business Twin
         </div>
         <h1 className="text-2xl font-semibold tracking-tight text-violet-950">Sign in</h1>
-        <p className="mt-1 text-sm text-violet-950/55">SMB Financial OS — same account as before</p>
+        <p className="mt-1 text-sm text-violet-950/55">SMB Financial OS – same account as before</p>
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <label className="block">
             <span className="text-xs font-medium text-violet-800/80">Email</span>

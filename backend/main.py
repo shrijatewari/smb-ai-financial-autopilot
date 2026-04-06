@@ -1,5 +1,5 @@
 """
-Self-Learning Financial Control System for SMBs — FastAPI entrypoint.
+Self-Learning Financial Control System for SMBs – FastAPI entrypoint.
 
 Run: uvicorn main:app --reload --host 0.0.0.0 --port 8000
 """
@@ -35,7 +35,7 @@ def _prepend_to_path(bin_dir: str) -> None:
 _backend_dir = Path(__file__).resolve().parent
 load_dotenv(_backend_dir / ".env")
 
-# macOS: uvicorn/Cursor often starts without Homebrew on PATH — Tesseract lives in /opt/homebrew/bin.
+# macOS: uvicorn/Cursor often starts without Homebrew on PATH – Tesseract lives in /opt/homebrew/bin.
 if sys.platform == "darwin":
     _prepend_to_path("/opt/homebrew/bin")
     _prepend_to_path("/usr/local/bin")
@@ -269,19 +269,19 @@ def root():
             "transactions_sms": "POST /transactions/sms",
             "dashboard": "GET /dashboard",
             "compliance_gst": "GET /compliance/gst",
-            "gst_summary": "GET /gst/summary (auth — GSTIN, liability, filing warning)",
+            "gst_summary": "GET /gst/summary (auth – GSTIN, liability, filing warning)",
             "transactions_ledger": "GET /transactions/ledger (persisted Prisma ledger; optional date_from, date_to, q, source, category, txn_type, sort, offset, limit)",
             "transactions_ledger_summary": "GET /transactions/ledger/summary (count + credit/debit/net; optional date range + q + source + category + txn_type)",
             "transactions_ledger_export": "GET /transactions/ledger/export (CSV download, auth; optional date range + q + source + category + txn_type + sort)",
-            "notifications": "GET /notifications (auth — briefing & outbound notification log)",
+            "notifications": "GET /notifications (auth – briefing & outbound notification log)",
             "alerts_fraud": "GET /alerts/fraud",
             "assistant": "POST /assistant/query | POST /assistant/query/audio",
             "assistant_media": "GET /media/assistant_tts/*.mp3 (TTS output)",
-            "webhooks_whatsapp": "GET|POST /webhooks/whatsapp (Meta Cloud API — bot intents + assistant)",
+            "webhooks_whatsapp": "GET|POST /webhooks/whatsapp (Meta Cloud API – bot intents + assistant)",
             "webhooks_razorpay": "POST /webhooks/razorpay (payment.captured → ledger)",
             "system_state": "GET /system/state",
             "system_stream": "GET /system/stream (SSE, ~3s snapshot push)",
-            "sms_commands": "POST /sms/commands (auth) — BAL, RISK, PAY",
+            "sms_commands": "POST /sms/commands (auth) – BAL, RISK, PAY",
             "documents_upload": "POST /documents/upload",
             "user_interaction": "POST /user/interaction (RL + module personalization)",
             "rl_feedback": "POST /rl/feedback",

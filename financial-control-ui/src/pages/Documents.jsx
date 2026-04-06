@@ -4,12 +4,12 @@ import { fetchDocumentProfile, getApiErrorMessage, uploadDocuments } from '../se
 import { MOCK_ANOMALY_FLAGS } from '../lib/platformMocks'
 
 function formatPct(p) {
-  if (p == null || Number.isNaN(p)) return '—'
+  if (p == null || Number.isNaN(p)) return '–'
   return `${(100 * p).toFixed(1)}%`
 }
 
 function formatInr(n) {
-  if (n == null || Number.isNaN(n)) return '—'
+  if (n == null || Number.isNaN(n)) return '–'
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -84,7 +84,7 @@ export default function Documents() {
             Document intelligence
           </h1>
           <p className="mt-1 text-sm text-violet-950/60">
-            Upload bank / account statements, GST invoices, bills, or scans (PDF or images) — we infer
+            Upload bank / account statements, GST invoices, bills, or scans (PDF or images) – we infer
             business context for the control plane. Scanned PDFs are rasterized and OCR’d when you set
             Vision credentials or Tesseract.
           </p>
@@ -163,7 +163,7 @@ export default function Documents() {
         {result?.status === 'success' && (
           <div className="mt-4 space-y-3 rounded-2xl border border-emerald-200/80 bg-emerald-50/60 px-4 py-4 text-left">
             <p className="text-sm font-semibold text-emerald-900">
-              Processed {result.documents_processed} file(s) — profile merged for the next engine tick.
+              Processed {result.documents_processed} file(s) – profile merged for the next engine tick.
             </p>
             {result?.profile && (
               <div className="flex flex-wrap gap-2">
@@ -188,7 +188,7 @@ export default function Documents() {
               <div className="rounded-xl bg-white/80 px-3 py-2 shadow-sm">
                 <p className="font-semibold text-emerald-900">Amounts parsed</p>
                 <p className="tabular-nums text-lg font-bold">
-                  {result.profile?.amount_samples != null ? result.profile.amount_samples : '—'}
+                  {result.profile?.amount_samples != null ? result.profile.amount_samples : '–'}
                 </p>
               </div>
               <div className="rounded-xl bg-white/80 px-3 py-2 shadow-sm">
@@ -219,7 +219,7 @@ export default function Documents() {
               >
                 <p className="font-medium text-violet-950">{row.filename}</p>
                 <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words font-mono text-violet-800/80">
-                  {row.extracted_text || '—'}
+                  {row.extracted_text || '–'}
                 </pre>
               </div>
             ))}
@@ -238,7 +238,7 @@ export default function Documents() {
             <div>
               <dt className="text-xs font-medium uppercase text-violet-400">Business type</dt>
               <dd className="mt-0.5 text-sm font-medium capitalize text-violet-950">
-                {String(profile.business_type || '—').replace(/_/g, ' ')}
+                {String(profile.business_type || '–').replace(/_/g, ' ')}
               </dd>
             </div>
             <div>
@@ -246,7 +246,7 @@ export default function Documents() {
               <dd className="mt-0.5 text-sm text-violet-950">{formatInr(profile.avg_ticket_size)}</dd>
               <dd className="mt-1 text-[11px] leading-snug text-violet-950/55">
                 Middle value of ₹ amounts parsed from your documents (not a daily average). Small values
-                usually mean noisy OCR — upload clearer totals or line items.
+                usually mean noisy OCR – upload clearer totals or line items.
                 {profile.amount_samples != null ? ` · ${profile.amount_samples} amount(s) detected` : ''}
               </dd>
             </div>
@@ -259,29 +259,29 @@ export default function Documents() {
             <div>
               <dt className="text-xs font-medium uppercase text-violet-400">Confidence</dt>
               <dd className="mt-0.5 text-sm text-violet-950">
-                {profile.confidence != null ? `${(profile.confidence * 100).toFixed(1)}%` : '—'}
+                {profile.confidence != null ? `${(profile.confidence * 100).toFixed(1)}%` : '–'}
               </dd>
             </div>
             <div>
               <dt className="text-xs font-medium uppercase text-violet-400">Vendors (estimate)</dt>
-              <dd className="mt-0.5 text-sm text-violet-950">{profile.vendor_count ?? '—'}</dd>
+              <dd className="mt-0.5 text-sm text-violet-950">{profile.vendor_count ?? '–'}</dd>
             </div>
             <div>
               <dt className="text-xs font-medium uppercase text-violet-400">Transaction frequency</dt>
               <dd className="mt-0.5 text-sm capitalize text-violet-950">
-                {profile.transaction_frequency ?? '—'}
+                {profile.transaction_frequency ?? '–'}
               </dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-xs font-medium uppercase text-violet-400">Seasonality</dt>
               <dd className="mt-0.5 text-sm text-violet-900/90">
-                {profile.seasonality_hint ?? '—'}
+                {profile.seasonality_hint ?? '–'}
               </dd>
             </div>
             <div className="sm:col-span-2">
               <dt className="text-xs font-medium uppercase text-violet-400">Supplier structure</dt>
               <dd className="mt-0.5 text-sm capitalize text-violet-900/90">
-                {profile.supplier_structure ?? '—'}
+                {profile.supplier_structure ?? '–'}
               </dd>
             </div>
           </dl>

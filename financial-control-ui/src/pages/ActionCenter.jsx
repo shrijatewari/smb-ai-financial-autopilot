@@ -32,7 +32,7 @@ export default function ActionCenter() {
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
         title="Action center"
-        subtitle="Prioritized treasury moves from the decision engine — execute on the Twin home."
+        subtitle="Prioritized treasury moves from the decision engine – execute on the Twin home."
       />
       <div className="grid gap-4">
         {loading
@@ -58,20 +58,20 @@ export default function ActionCenter() {
                     <div className="text-right text-xs text-violet-600">
                       <p>Impact score</p>
                       <p className="text-lg font-semibold text-emerald-600">
-                        {a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}
+                        {a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '–'}
                       </p>
                     </div>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-2">
                     <Button asChild variant="success" size="sm">
-                      <Link to="/">Open Twin — execute</Link>
+                      <Link to="/">Open Twin – execute</Link>
                     </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
         {!loading && actions.length === 0 && (
-          <p className="text-sm text-violet-950/55">No queued actions — risk is within tolerance.</p>
+          <p className="text-sm text-violet-950/55">No queued actions – risk is within tolerance.</p>
         )}
       </div>
     </div>

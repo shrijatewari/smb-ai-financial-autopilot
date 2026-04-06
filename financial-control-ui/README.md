@@ -8,7 +8,7 @@ React + Vite + Tailwind single-page app for the **SMB AI Financial Autopilot** p
 
 - **Node.js** 18+ (20+ recommended)
 - **npm** (ships with Node)
-- Running **backend** API (default `http://localhost:8000`) — see repository root `README.md` and `../backend/README.md`
+- Running **backend** API (default `http://localhost:8000`) – see repository root `README.md` and `../backend/README.md`
 
 ---
 
@@ -51,9 +51,9 @@ See repository **`../README.md`** → **Deploy UI** and **Deploy API**.
 
 ## Collections, bills, and execute helpers
 
-- **Today** (`/`) — **Send WhatsApp** uses **`postExecuteCollect()`** → `POST /execute/collect` (Razorpay link inside the message); toast shows a copyable **`payment_link`**. **Copy payment link only** uses **`postPaymentLink()`** → `POST /execute/payment-link`.  
-- **People** / **⌘K palette** — same collect endpoint for queue rows where applicable.  
-- **Bills** (`/bills`) — **`getBillHistory`**, **`ingestBillJson`**, **`ingestBillOcr`** in **`api.js`**; requires backend **`/bills`** routes and DB migrated.  
+- **Today** (`/`) – **Send WhatsApp** uses **`postExecuteCollect()`** → `POST /execute/collect` (Razorpay link inside the message); toast shows a copyable **`payment_link`**. **Copy payment link only** uses **`postPaymentLink()`** → `POST /execute/payment-link`.  
+- **People** / **⌘K palette** – same collect endpoint for queue rows where applicable.  
+- **Bills** (`/bills`) – **`getBillHistory`**, **`ingestBillJson`**, **`ingestBillOcr`** in **`api.js`**; requires backend **`/bills`** routes and DB migrated.  
 
 Voice mute in the header cancels browser TTS (see **`src/lib/voice.js`**).
 
@@ -72,7 +72,7 @@ Voice mute in the header cancels browser TTS (see **`src/lib/voice.js`**).
 ## Authentication
 
 - Token stored in **`localStorage`** under key `financial_control_token` (see `src/services/api.js`).
-- **`AuthProvider`** (`src/context/AuthContext.jsx`) loads `GET /auth/me` on startup; user must have **`onboarding_completed: true`** before protected routes (except `/onboarding`) — enforced in `src/layout/ProtectedLayout.jsx`.
+- **`AuthProvider`** (`src/context/AuthContext.jsx`) loads `GET /auth/me` on startup; user must have **`onboarding_completed: true`** before protected routes (except `/onboarding`) – enforced in `src/layout/ProtectedLayout.jsx`.
 - Logout clears token and user state.
 
 ---
@@ -95,16 +95,16 @@ src/
 
 The **Transactions** page (`/transactions`) loads:
 
-- **`GET /transactions/paytm`** — mock Paytm feed when connected (optional).
-- **`GET /transactions/ledger`** — persisted `LedgerTransaction` rows with filters, sort, and pagination.
-- **`GET /transactions/ledger/summary`** — aggregates for the same **shared** filters (no `sort` / pagination).
-- **`GET /transactions/ledger/export`** — CSV download with the same filters plus optional `sort`.
+- **`GET /transactions/paytm`** – mock Paytm feed when connected (optional).
+- **`GET /transactions/ledger`** – persisted `LedgerTransaction` rows with filters, sort, and pagination.
+- **`GET /transactions/ledger/summary`** – aggregates for the same **shared** filters (no `sort` / pagination).
+- **`GET /transactions/ledger/export`** – CSV download with the same filters plus optional `sort`.
 
 **`fetchNotifications`** (Profile → briefing log): if **`GET /notifications`** errors or returns an invalid payload, **`getMockNotificationsResponse()`** in **`src/lib/platformMocks.js`** supplies demo rows (`_mockFallback: true`).
 
 **`src/services/api.js`** keeps summary and export aligned with the backend:
 
-- **`LEDGER_SHARED_FILTER_KEYS`** — `date_from`, `date_to`, `q`, `source`, `txn_type`, `category`, passed to **`pickLedgerSharedFilters()`** for **`fetchLedgerSummary`** and **`downloadLedgerCsv`**.
+- **`LEDGER_SHARED_FILTER_KEYS`** – `date_from`, `date_to`, `q`, `source`, `txn_type`, `category`, passed to **`pickLedgerSharedFilters()`** for **`fetchLedgerSummary`** and **`downloadLedgerCsv`**.
 - **`fetchLedgerTransactions`** forwards all params; default **`sort=date_desc`** is omitted so URLs stay minimal.
 
 Filters sync to the **URL query string** (bookmarkable):  

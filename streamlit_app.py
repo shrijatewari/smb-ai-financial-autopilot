@@ -82,7 +82,7 @@ p_default = credit.default_probability(feats)
 band = credit.risk_band(p_default)
 
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Ending cash (INR)", f"₹{balance.iloc[-1]:,.0f}" if len(balance) else "—")
+c1.metric("Ending cash (INR)", f"₹{balance.iloc[-1]:,.0f}" if len(balance) else "–")
 c2.metric(
     "Shortage risk (any day)",
     f"{100 * mc['probability_shortage_any_day']:.1f}%",

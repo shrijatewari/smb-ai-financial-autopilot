@@ -1,4 +1,4 @@
-"""OCR / invoice extraction — delegates to document + OCR services."""
+"""OCR / invoice extraction – delegates to document + OCR services."""
 
 from __future__ import annotations
 

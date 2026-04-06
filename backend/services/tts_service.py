@@ -13,7 +13,7 @@ from gtts import gTTS
 
 logger = logging.getLogger(__name__)
 
-# gTTS lang codes — subset aligned with our output languages
+# gTTS lang codes – subset aligned with our output languages
 _GTTS_LANG = {
     "en": "en",
     "hi": "hi",

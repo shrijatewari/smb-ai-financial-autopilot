@@ -1,4 +1,4 @@
-"""External webhooks — Meta WhatsApp Cloud API, Razorpay payments."""
+"""External webhooks – Meta WhatsApp Cloud API, Razorpay payments."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def whatsapp_verify_get(
     hub_verify_token: str | None = Query(None, alias="hub.verify_token"),
     hub_challenge: str | None = Query(None, alias="hub.challenge"),
 ):
-    """Meta webhook verification (subscribe) — must return challenge as plain text."""
+    """Meta webhook verification (subscribe) – must return challenge as plain text."""
     token = (os.getenv("WHATSAPP_VERIFY_TOKEN") or "").strip()
     if not token:
         raise HTTPException(
@@ -42,7 +42,7 @@ def whatsapp_verify_get(
 @router.post("/whatsapp")
 async def whatsapp_inbound_post(request: Request):
     """
-    Meta WhatsApp Cloud webhook — inbound text: intent router (balance, today, reminder, HELP),
+    Meta WhatsApp Cloud webhook – inbound text: intent router (balance, today, reminder, HELP),
     else assistant pipeline; unknown numbers get signup link. Rate limit 20 replies/user/hour.
     """
     try:
@@ -56,7 +56,7 @@ async def whatsapp_inbound_post(request: Request):
 async def razorpay_webhook(request: Request):
     """
     Razorpay webhook: verify `X-Razorpay-Signature` (HMAC-SHA256 of raw body) when
-    `RAZORPAY_WEBHOOK_SECRET` is set. Handles `payment.captured` — ledger credit, dues update, action complete.
+    `RAZORPAY_WEBHOOK_SECRET` is set. Handles `payment.captured` – ledger credit, dues update, action complete.
     """
     body_bytes = await request.body()
     secret = (os.getenv("RAZORPAY_WEBHOOK_SECRET") or "").strip()
@@ -66,7 +66,7 @@ async def razorpay_webhook(request: Request):
         if not sig or not verify_razorpay_signature(body_bytes, sig, secret):
             raise HTTPException(status_code=400, detail="Invalid Razorpay signature")
     else:
-        logger.warning("RAZORPAY_WEBHOOK_SECRET not set — accepting webhook without signature (dev only)")
+        logger.warning("RAZORPAY_WEBHOOK_SECRET not set – accepting webhook without signature (dev only)")
 
     try:
         payload = json.loads(body_bytes.decode("utf-8"))

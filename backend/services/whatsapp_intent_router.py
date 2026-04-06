@@ -1,5 +1,5 @@
 """
-WhatsApp text commands — balance, today action, reminder, help, report placeholder, else assistant.
+WhatsApp text commands – balance, today action, reminder, help, report placeholder, else assistant.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def _format_inr(n: Any) -> str:
     try:
         v = float(n)
     except (TypeError, ValueError):
-        return "—"
+        return "–"
     return f"₹{v:,.0f}"
 
 
@@ -32,20 +32,20 @@ def help_menu(lang: str) -> str:
     if (lang or "hi").lower().startswith("en"):
         return (
             "Commands:\n"
-            "• balance / cash — your cash position\n"
-            "• today / action — top priority today\n"
-            "• reminder <name> — send payment reminder (needs customer phone in People)\n"
-            "• report — PDF summary (coming soon)\n"
-            "• Anything else — ask the AI assistant\n"
+            "• balance / cash – your cash position\n"
+            "• today / action – top priority today\n"
+            "• reminder <name> – send payment reminder (needs customer phone in People)\n"
+            "• report – PDF summary (coming soon)\n"
+            "• Anything else – ask the AI assistant\n"
             "Reply HELP anytime."
         )
     return (
         "Commands:\n"
-        "• kitna aaya / balance / cash — cash position\n"
-        "• kya karna / today / action — aaj ka main kaam\n"
-        "• reminder <naam> — payment reminder (customer ka number People mein hona chahiye)\n"
-        "• report — PDF summary (jald)\n"
-        "• Baaki kuch bhi — AI assistant\n"
+        "• kitna aaya / balance / cash – cash position\n"
+        "• kya karna / today / action – aaj ka main kaam\n"
+        "• reminder <naam> – payment reminder (customer ka number People mein hona chahiye)\n"
+        "• report – PDF summary (jald)\n"
+        "• Baaki kuch bhi – AI assistant\n"
         "HELP kabhi bhi bhejein."
     )
 
@@ -113,9 +113,9 @@ async def _handle_reminder(user: User, text: str, lang: str) -> str:
 
     if not phone:
         return (
-            f"{display_name} ka WhatsApp number People / Log mein save karein — tab reminder ja sakta hai."
+            f"{display_name} ka WhatsApp number People / Log mein save karein – tab reminder ja sakta hai."
             if not lang.startswith("en")
-            else f"Save {display_name}'s phone under People — then I can send a reminder."
+            else f"Save {display_name}'s phone under People – then I can send a reminder."
         )
 
     notes = None

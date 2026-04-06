@@ -57,7 +57,7 @@ async def get_gst_compliance(user: User | None = Depends(get_current_user_option
     note = (
         "Estimated from onboarding turnover; connect bank and invoices for filing-grade numbers."
         if registered
-        else "GST not indicated — enable GST in onboarding for estimates."
+        else "GST not indicated – enable GST in onboarding for estimates."
     )
     return GstComplianceOut(
         gst_due=gst_due,

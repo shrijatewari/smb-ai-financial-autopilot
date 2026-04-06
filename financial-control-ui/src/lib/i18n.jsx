@@ -25,10 +25,10 @@ export function normalizeLocaleMode(mode) {
 
 /**
  * @param {LocaleDisplay | string | undefined | null} mode
- * @param {string} hi — Devanagari Hindi
- * @param {string} en — English
+ * @param {string} hi – Devanagari Hindi
+ * @param {string} en – English
  * @param {{ ta?: string, te?: string, bn?: string, hinglish?: string }} [regional]
- *   `hinglish` — Hindi in Roman script for `both` mode (first segment before middle dot + English).
+ *   `hinglish` – Hindi in Roman script for `both` mode (first segment before middle dot + English).
  */
 export function tr(mode, hi, en, regional = {}) {
   const m = normalizeLocaleMode(mode)

@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Copy, Mic, Phone, Sparkles, Users, MessageCircle, Wallet, ListTodo, Play } from 'lucide-react'
+import { Copy, Link2, Mic, Phone, Sparkles, Users, MessageCircle, Wallet, ListTodo, Play } from 'lucide-react'
 import {
   buildHindiPaymentScript,
   buildWhatsappCollectionMessage,
   formatInr,
   normalizePhone10,
   openTelDialer,
-  openWhatsAppDraft,
+  openUserGestureBlankTab,
+  navigateTabOrOpenWhatsApp,
 } from '../lib/collections'
 import {
   executeAction,
+  fetchCollectionCustomers,
   getApiErrorMessage,
   postExecuteCollect,
   postPaymentLink,
@@ -59,9 +61,25 @@ export default function Today() {
   const [confirm, setConfirm] = useState(null)
   const [videoOpen, setVideoOpen] = useState(null)
   const [timelineRow, setTimelineRow] = useState(null)
+  const [customersByName, setCustomersByName] = useState({})
+  /** Last Razorpay short URL for the current primary target – shown beside WhatsApp / Call. */
+  const [dashboardPaymentLink, setDashboardPaymentLink] = useState(null)
   const actionRef = useRef(null)
+  const paymentLinkPrimeKey = useRef('')
   const headlineSpoken = useRef(false)
   const autoGuidedApplied = useRef(false)
+
+  useEffect(() => {
+    fetchCollectionCustomers()
+      .then((d) => {
+        const m = {}
+        for (const c of d.items || []) {
+          m[String(c.name || '').trim().toLowerCase()] = c
+        }
+        setCustomersByName(m)
+      })
+      .catch(() => {})
+  }, [])
 
   const loading = snap == null && !error
   const dc = snap?.daily_control
@@ -104,7 +122,7 @@ export default function Today() {
     setGuidedHand(true, 0)
   }, [snap?.dashboard_context?.flags?.auto_guided_voice, setVoiceGuidanceEnabled, setGuidedHand])
 
-  /** First visit, or once per session when risk is high — guided hand (user can dismiss). */
+  /** First visit, or once per session when risk is high – guided hand (user can dismiss). */
   useEffect(() => {
     if (loading || !snap) return
     if (snap.dashboard_context?.flags?.auto_guided_voice) return
@@ -131,6 +149,35 @@ export default function Today() {
     }
   }, [loading, snap, line, voiceOn, localeDisplay])
 
+  /** Prime a payment link for the engine’s top target so the dashboard row can show it without sending WhatsApp first. */
+  useEffect(() => {
+    if (loading || snap == null) return
+    const ck = String(collectName || '')
+      .trim()
+      .toLowerCase()
+    const cust = customersByName[ck]
+    const key = `${collectName}|${collectAmount}|${phone10}|${cust?.id ?? 'no-id'}`
+    if (paymentLinkPrimeKey.current === key) return
+    paymentLinkPrimeKey.current = key
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await postPaymentLink({
+          amount: collectAmount,
+          customer_name: collectName,
+          phone: phone10,
+          ...(cust?.id ? { customer_id: cust.id } : {}),
+        })
+        if (!cancelled && res.payment_link) setDashboardPaymentLink(res.payment_link)
+      } catch {
+        /* offline / no API – link stays empty until user taps Get link */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [loading, snap, collectName, collectAmount, phone10, customersByName])
+
   function finishGuided() {
     if (typeof localStorage !== 'undefined') localStorage.setItem(GUIDED_DONE_KEY, '1')
     dismissGuidedHand()
@@ -150,25 +197,32 @@ export default function Today() {
   async function runWhatsApp() {
     if (helperBlocks()) {
       const hi =
-        'Helper approval अभी डेमो में बंद है। प्रोफ़ाइल से हेल्पर नंबर सेव करें — OTP जल्द।'
-      const en = 'Helper approval is off in this demo. Save a helper number in Profile — OTP soon.'
+        'Helper approval अभी डेमो में बंद है। प्रोफ़ाइल से हेल्पर नंबर सेव करें – OTP जल्द।'
+      const en = 'Helper approval is off in this demo. Save a helper number in Profile – OTP soon.'
       const msg = t(hi, en)
       setToast({ type: 'warn', text: msg })
       receiptVoice(hi, en)
       return
     }
+    const waTab = openUserGestureBlankTab()
     setBusy('wa')
     setToast(null)
     try {
+      const ck = String(collectName || '')
+        .trim()
+        .toLowerCase()
+      const cust = customersByName[ck]
       const res = await postExecuteCollect({
         customer: collectName,
         phone: phone10,
         amount: collectAmount,
         tone: 'friendly',
+        ...(cust?.id ? { customer_id: cust.id } : {}),
       })
       const short = collectName.split('(')[0].trim()
       const okHi = `${formatInr(collectAmount)} का रिमाइंडर ${short} को भेज दिया गया है।`
       const okEn = `Reminder of ${formatInr(collectAmount)} sent to ${short}.`
+      if (res.payment_link) setDashboardPaymentLink(res.payment_link)
       setToast({
         type: 'ok',
         text: t(
@@ -180,15 +234,33 @@ export default function Today() {
       receiptVoice(okHi, okEn)
     } catch (e) {
       const msg = getApiErrorMessage(e)
-      const draft = buildWhatsappCollectionMessage(collectName, collectAmount, 'friendly')
-      openWhatsAppDraft(phone10, draft)
+      let payUrl = null
+      try {
+        const ck2 = String(collectName || '')
+          .trim()
+          .toLowerCase()
+        const cust2 = customersByName[ck2]
+        const pay = await postPaymentLink({
+          amount: collectAmount,
+          customer_name: collectName,
+          phone: phone10,
+          ...(cust2?.id ? { customer_id: cust2.id } : {}),
+        })
+        payUrl = pay.payment_link
+        if (payUrl) setDashboardPaymentLink(payUrl)
+      } catch {
+        /* draft uses DEMO_PAYMENT_LINK_FALLBACK from collections when no link */
+      }
+      const draft = buildWhatsappCollectionMessage(collectName, collectAmount, 'friendly', payUrl || undefined)
+      navigateTabOrOpenWhatsApp(waTab, phone10, draft)
       setToast({
         type: 'warn',
-        text: `${msg} — ${t('वॉट्सऐप ड्राफ्ट खोला।', 'WhatsApp draft opened.')}`,
+        text: `${msg} – ${t('वॉट्सऐप ड्राफ़्ट खोला (Razorpay लिंक जोड़ा)।', 'WhatsApp draft opened (with Razorpay link).')}`,
+        link: payUrl || undefined,
       })
       receiptVoice(
-        'WhatsApp ड्राफ्ट खुल गया — आप वहाँ से भेज सकते हैं।',
-        'WhatsApp draft opened — you can send from there.'
+        'WhatsApp ड्राफ़्ट खुल गया – आप वहाँ से भेज सकते हैं।',
+        'WhatsApp draft opened – you can send from there.'
       )
     } finally {
       setBusy(null)
@@ -198,8 +270,8 @@ export default function Today() {
 
   async function runCall() {
     if (helperBlocks()) {
-      const hi = 'Helper approval डेमो: अभी सीधा कॉल करेंगे — OTP फ्लो जल्द।'
-      const en = 'Helper approval demo: calling directly for now — OTP flow soon.'
+      const hi = 'Helper approval डेमो: अभी सीधा कॉल करेंगे – OTP फ्लो जल्द।'
+      const en = 'Helper approval demo: calling directly for now – OTP flow soon.'
       const msg = t(hi, en)
       setToast({ type: 'warn', text: msg })
       receiptVoice(hi, en)
@@ -207,23 +279,23 @@ export default function Today() {
     }
     setBusy('call')
     setToast(null)
+    openTelDialer(phone10)
     const script = buildHindiPaymentScript(collectName, collectAmount)
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
       if (res.mock) {
-        openTelDialer(phone10)
         setToast({
           type: 'warn',
           text:
             res.detail ||
             t(
-              'Twilio set nahi hai — phone dialer khola. Script: ',
-              'Twilio not set — phone dialer opened. Script: '
+              'Twilio set nahi hai – phone dialer khola. Script: ',
+              'Twilio not set – phone dialer opened. Script: '
             ) +
               script.slice(0, 80) +
               '…',
         })
-        receiptVoice('डायलर खुल गया — आप कॉल कर सकते हैं।', 'Dialer opened — you can place the call.')
+        receiptVoice('डायलर खुल गया – आप कॉल कर सकते हैं।', 'Dialer opened – you can place the call.')
       } else {
         setToast({
           type: 'ok',
@@ -232,10 +304,9 @@ export default function Today() {
         receiptVoice('कॉल कतार में लग गई।', 'Call queued.')
       }
     } catch (e) {
-      openTelDialer(phone10)
       setToast({
         type: 'warn',
-        text: `${getApiErrorMessage(e)} — ${t('डायलर खोला।', 'dialer opened.')}`,
+        text: `${getApiErrorMessage(e)} – ${t('डायलर खोला।', 'dialer opened.')}`,
       })
       receiptVoice('डायलर खुल गया।', 'Dialer opened.')
     } finally {
@@ -256,10 +327,15 @@ export default function Today() {
     setBusy('sys')
     setToast(null)
     try {
+      const ck = String(collectName || '')
+        .trim()
+        .toLowerCase()
+      const cust = customersByName[ck]
       const payRes = await postPaymentLink({
         amount: collectAmount,
         customer_name: collectName,
         phone: phone10,
+        ...(cust?.id ? { customer_id: cust.id } : {}),
       })
       const execPayload = { action: act, reference: `today-${Date.now()}` }
       if (act === 'collect_payment') {
@@ -267,6 +343,7 @@ export default function Today() {
         execPayload.customer = collectName
       }
       await executeAction(execPayload)
+      if (payRes.payment_link) setDashboardPaymentLink(payRes.payment_link)
       setToast({
         type: 'ok',
         text: t(
@@ -282,8 +359,8 @@ export default function Today() {
     } catch (e) {
       setToast({ type: 'err', text: getApiErrorMessage(e) })
       receiptVoice(
-        'कुछ गड़बड़ हो गई — स्क्रीन पर मैसेज देखें।',
-        'Something went wrong — see message on screen.'
+        'कुछ गड़बड़ हो गई – स्क्रीन पर मैसेज देखें।',
+        'Something went wrong – see message on screen.'
       )
     } finally {
       setBusy(null)
@@ -299,12 +376,18 @@ export default function Today() {
     setBusy('link')
     setToast(null)
     try {
+      const ck = String(collectName || '')
+        .trim()
+        .toLowerCase()
+      const cust = customersByName[ck]
       const res = await postPaymentLink({
         amount: collectAmount,
         customer_name: collectName,
         phone: phone10,
+        ...(cust?.id ? { customer_id: cust.id } : {}),
       })
       const url = res.payment_link
+      if (url) setDashboardPaymentLink(url)
       if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url)
         setToast({
@@ -332,22 +415,53 @@ export default function Today() {
       setToast({ type: 'warn', text: t('हेल्पर अनुमोदन डेमो…', 'Helper approval demo…') })
       return
     }
+    const waTab = openUserGestureBlankTab()
     setBusy('wa')
     setToast(null)
+    const rowKey = String(row.name || '')
+      .trim()
+      .toLowerCase()
+    const rowCust = customersByName[rowKey]
     try {
       const res = await postExecuteCollect({
         customer: row.name,
         phone: phone10,
         amount: Number(row.amount),
         tone: 'friendly',
+        ...(rowCust?.id ? { customer_id: rowCust.id } : {}),
       })
+      if (res.payment_link) setDashboardPaymentLink(res.payment_link)
+      const msg = buildWhatsappCollectionMessage(
+        row.name,
+        row.amount,
+        'friendly',
+        res.payment_link || undefined
+      )
+      navigateTabOrOpenWhatsApp(waTab, phone10, msg)
       setToast({
         type: 'ok',
         text: t('रिमाइंडर + लिंक भेजा गया।', 'Reminder + link sent.'),
         link: res.payment_link || undefined,
       })
     } catch (e) {
-      openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
+      let payUrl = null
+      try {
+        const pay = await postPaymentLink({
+          amount: Number(row.amount),
+          customer_name: row.name,
+          phone: phone10,
+          ...(rowCust?.id ? { customer_id: rowCust.id } : {}),
+        })
+        payUrl = pay.payment_link
+        if (payUrl) setDashboardPaymentLink(payUrl)
+      } catch {
+        /* demo URL in draft */
+      }
+      navigateTabOrOpenWhatsApp(
+        waTab,
+        phone10,
+        buildWhatsappCollectionMessage(row.name, row.amount, 'friendly', payUrl || undefined)
+      )
       setToast({ type: 'warn', text: getApiErrorMessage(e) })
     } finally {
       setBusy(null)
@@ -362,16 +476,15 @@ export default function Today() {
     }
     setBusy('call')
     setToast(null)
+    openTelDialer(phone10)
     const script = buildHindiPaymentScript(row.name, row.amount)
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
-      if (res.mock) openTelDialer(phone10)
       setToast({
         type: res.mock ? 'warn' : 'ok',
         text: res.mock ? t('डायलर', 'Dialer') : t('कॉल कतार में', 'Call queued'),
       })
     } catch (e) {
-      openTelDialer(phone10)
       setToast({ type: 'warn', text: getApiErrorMessage(e) })
     } finally {
       setBusy(null)
@@ -467,6 +580,7 @@ export default function Today() {
       {timelineRow && (
         <CustomerCollectionTimeline
           row={timelineRow}
+          customerInfo={customersByName[String(timelineRow.name || '').trim().toLowerCase()]}
           busy={!!busy}
           onClose={() => setTimelineRow(null)}
           onWhatsApp={() => {
@@ -476,10 +590,15 @@ export default function Today() {
           onPaymentLink={async () => {
             setBusy('sys')
             try {
+              const tk = String(timelineRow.name || '')
+                .trim()
+                .toLowerCase()
+              const tc = customersByName[tk]
               const res = await postPaymentLink({
                 amount: Number(timelineRow.amount),
                 customer_name: timelineRow.name,
                 phone: phone10,
+                ...(tc?.id ? { customer_id: tc.id } : {}),
               })
               const url = res.payment_link
               if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -505,13 +624,13 @@ export default function Today() {
         <div className="text-center text-[11px] font-semibold tracking-[0.2em] text-violet-500">
           <Bilingual
             mode={localeDisplay}
-            hi="आज — स्थिति"
-            en="Today — status"
-            hinglish="Aaj — sthiti"
+            hi="आज – स्थिति"
+            en="Today – status"
+            hinglish="Aaj – sthiti"
             regional={{
-              ta: 'இன்று — நிலை',
-              te: 'ఇవాల్టి — స్థితి',
-              bn: 'আজ — অবস্থা',
+              ta: 'இன்று – நிலை',
+              te: 'ఇవాల్టి – స్థితి',
+              bn: 'আজ – অবস্থা',
             }}
             className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500"
             subClassName="text-[10px] normal-case tracking-normal text-violet-500/90"
@@ -619,12 +738,12 @@ export default function Today() {
         {gstCtx?.show_warning && gstCtx.gst_registered && (
           <div className="mt-4 rounded-2xl border border-amber-300/80 bg-amber-50/95 px-4 py-3 text-left shadow-sm">
             <p className="text-sm font-bold text-amber-950">
-              {t('GST जल्दी फ़ाइल करें — ड्यू पास है', 'GST filing due within 2 weeks')}
+              {t('GST जल्दी फ़ाइल करें – ड्यू पास है', 'GST filing due within 2 weeks')}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-amber-950/90">
               {t(
-                `लगभग ${formatInr(gstCtx.estimated_liability_inr)} — देय ${gstCtx.next_due_date ?? '—'}`,
-                `Estimated ${formatInr(gstCtx.estimated_liability_inr)} · due ${gstCtx.next_due_date ?? '—'}`,
+                `लगभग ${formatInr(gstCtx.estimated_liability_inr)} – देय ${gstCtx.next_due_date ?? '–'}`,
+                `Estimated ${formatInr(gstCtx.estimated_liability_inr)} · due ${gstCtx.next_due_date ?? '–'}`,
               )}
             </p>
             {gstCtx.gstin && (
@@ -736,7 +855,7 @@ export default function Today() {
             <CollectionQueueList
               rows={queueRows}
               title={t('आज वसूली करें', 'Collect today')}
-              subtitle={t('पूरी रैंक सूची — पंक्ति पर टैप करके टाइमलाइन देखो', 'Full ranked list — tap a row for timeline')}
+              subtitle={t('पूरी रैंक सूची – पंक्ति पर टैप करके टाइमलाइन देखो', 'Full ranked list – tap a row for timeline')}
               totalDueLabel={t('कुल', 'Total')}
               busyKey={() => busy}
               onMessage={(row) => void queueMessage(row)}
@@ -747,11 +866,11 @@ export default function Today() {
 
           <div className="rounded-2xl border border-violet-200/80 bg-white/90 px-4 py-3 text-center shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500">
-              {literacyMinimal ? t('सबसे ज़रूरी', 'Top priority') : t('इंजन — पहला लक्ष्य', 'Engine top target')}
+              {literacyMinimal ? t('सबसे ज़रूरी', 'Top priority') : t('इंजन – पहला लक्ष्य', 'Engine top target')}
             </p>
             <p className="mt-1 text-sm font-semibold text-violet-950">
               {loading
-                ? '—'
+                ? '–'
                 : literacyMinimal
                   ? (
                       <span className="tabular-nums">{formatInr(collectAmount)}</span>
@@ -766,7 +885,7 @@ export default function Today() {
         </div>
 
         <p className="mt-10 text-center text-[10px] font-semibold tracking-[0.25em] text-violet-400 normal-case">
-          {t('अब करो — वॉट्सऐप / कॉल / सिस्टम', 'Do it — WhatsApp / call / auto')}
+          {t('अब करो – वॉट्सऐप · Razorpay लिंक · कॉल', 'Do it – WhatsApp · Razorpay link · call')}
         </p>
         <div ref={actionRef} className="mt-3 flex flex-col gap-3">
           <div className="flex justify-end gap-2">
@@ -783,42 +902,77 @@ export default function Today() {
               <Play className="h-3.5 w-3.5" /> {t('दिखाओ', 'Show me')}
             </button>
           </div>
-          <button
-            type="button"
-            disabled={!!busy || loading}
-            onClick={() => openConfirm('wa')}
-            className={cn(
-              'flex w-full items-center justify-center gap-2 rounded-2xl bg-[#22C55E] py-4 text-lg font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600 disabled:opacity-50',
-              guidedHandActive && guidedStep === 1 && 'ring-4 ring-[#6C3BFF]/60 ring-offset-2 animate-pulse'
-            )}
-          >
-            <MessageCircle className="h-6 w-6" />
-            {busy === 'wa'
-              ? t('भेज रहे हैं…', 'Sending…')
-              : t('वॉट्सऐप भेजो', 'Send WhatsApp')}
-          </button>
-          <button
-            type="button"
-            disabled={!!busy || loading}
-            onClick={() => void copyPaymentLinkOnly()}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-200 bg-white py-3 text-sm font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-50 disabled:opacity-50"
-          >
-            <Copy className="h-4 w-4" />
-            {busy === 'link'
-              ? t('लिंक कॉपी…', 'Copying…')
-              : t('सिर्फ़ पेमेंट लिंक कॉपी करें', 'Copy payment link only')}
-          </button>
-          <button
-            type="button"
-            disabled={!!busy || loading}
-            onClick={() => openConfirm('call')}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-violet-300 bg-white py-4 text-lg font-bold text-violet-950 shadow-md transition hover:bg-violet-50 disabled:opacity-50"
-          >
-            <Phone className="h-6 w-6" />
-            {busy === 'call'
-              ? t('कॉल…', 'Calling…')
-              : t('कॉल करो (हिंदी आवाज़)', 'Call (Hindi voice)')}
-          </button>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-stretch">
+            <button
+              type="button"
+              disabled={!!busy || loading}
+              onClick={() => openConfirm('wa')}
+              className={cn(
+                'flex min-h-[4.5rem] w-full items-center justify-center gap-2 rounded-2xl bg-[#22C55E] px-3 py-4 text-base font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:bg-emerald-600 disabled:opacity-50 sm:text-lg',
+                guidedHandActive && guidedStep === 1 && 'ring-4 ring-[#6C3BFF]/60 ring-offset-2 animate-pulse'
+              )}
+            >
+              <MessageCircle className="h-6 w-6 shrink-0" />
+              <span className="text-center leading-tight">
+                {busy === 'wa'
+                  ? t('भेज रहे हैं…', 'Sending…')
+                  : t('वॉट्सऐप भेजो', 'Send WhatsApp')}
+              </span>
+            </button>
+            <div className="flex min-h-[4.5rem] flex-col justify-center gap-2 rounded-2xl border-2 border-emerald-200 bg-emerald-50/90 px-3 py-3 shadow-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link2 className="h-4 w-4 shrink-0 text-emerald-800" aria-hidden />
+                <span className="text-xs font-bold uppercase tracking-wide text-emerald-900">
+                  {t('Razorpay लिंक', 'Razorpay link')}
+                </span>
+              </div>
+              {dashboardPaymentLink ? (
+                <p className="break-all font-mono text-[10px] leading-snug text-emerald-950" title={dashboardPaymentLink}>
+                  {dashboardPaymentLink}
+                </p>
+              ) : (
+                <p className="text-[11px] leading-snug text-emerald-800/90">
+                  {t('लोड हो रहा है या API ऑफ़लाइन – नीचे बटन से लिंक बनाएँ।', 'Loading or API offline – use the button below.')}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={!!busy || loading}
+                  onClick={() => void copyPaymentLinkOnly()}
+                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  {busy === 'link'
+                    ? t('लिंक…', 'Link…')
+                    : t('कॉपी / नया लिंक', 'Copy / refresh link')}
+                </button>
+                {dashboardPaymentLink && (
+                  <a
+                    href={dashboardPaymentLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-100"
+                  >
+                    {t('खोलो', 'Open')}
+                  </a>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={!!busy || loading}
+              onClick={() => openConfirm('call')}
+              className="flex min-h-[4.5rem] w-full items-center justify-center gap-2 rounded-2xl border-2 border-violet-300 bg-white px-3 py-4 text-base font-bold text-violet-950 shadow-md transition hover:bg-violet-50 disabled:opacity-50 sm:text-lg"
+            >
+              <Phone className="h-6 w-6 shrink-0" />
+              <span className="text-center leading-tight">
+                {busy === 'call'
+                  ? t('कॉल…', 'Calling…')
+                  : t('कॉल करो (हिंदी आवाज़)', 'Call (Hindi voice)')}
+              </span>
+            </button>
+          </div>
           <button
             type="button"
             disabled={!!busy || loading}
@@ -840,7 +994,7 @@ export default function Today() {
           className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 py-4 text-base font-semibold text-violet-900 transition hover:bg-violet-100"
         >
           <Mic className="h-6 w-6" />
-          {t('आवाज़ से पूछो — माइक', 'Ask by voice — mic')}
+          {t('आवाज़ से पूछो – माइक', 'Ask by voice – mic')}
         </Link>
 
         <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
@@ -866,8 +1020,8 @@ export default function Today() {
         {user?.helper_approval_required && (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-center text-sm text-amber-950">
             {t(
-              'विश्वसनीय हेल्पर मोड: संवेदनशील क्रियाओं के लिए अनुमोदन फ्लो जल्द। अभी डेमो में क्रियाएँ रुक सकती हैं — प्रोफ़ाइल से बंद करें।',
-              'Trusted helper mode: approval flow for sensitive actions soon. In demo, actions may be blocked — turn off in Profile.'
+              'विश्वसनीय हेल्पर मोड: संवेदनशील क्रियाओं के लिए अनुमोदन फ्लो जल्द। अभी डेमो में क्रियाएँ रुक सकती हैं – प्रोफ़ाइल से बंद करें।',
+              'Trusted helper mode: approval flow for sensitive actions soon. In demo, actions may be blocked – turn off in Profile.'
             )}
           </p>
         )}
@@ -882,8 +1036,8 @@ export default function Today() {
           <div className="fixed bottom-20 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-center justify-between gap-3 rounded-xl border border-violet-200/80 bg-violet-950/95 px-4 py-2.5 text-xs font-medium text-white shadow-xl md:bottom-8">
             <span className="leading-snug">
               {t(
-                'फ़्री टियर: बाहरी संदेश सीमित — पूर्ण ऑटोमेशन के लिए अपग्रेड करें।',
-                'Free tier: outbound messages are limited — upgrade for full automation.'
+                'फ़्री टियर: बाहरी संदेश सीमित – पूर्ण ऑटोमेशन के लिए अपग्रेड करें।',
+                'Free tier: outbound messages are limited – upgrade for full automation.'
               )}
             </span>
             <Link to="/growth" className="shrink-0 font-bold text-amber-300 underline-offset-2 hover:underline">

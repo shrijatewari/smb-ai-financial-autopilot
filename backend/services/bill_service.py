@@ -1,4 +1,4 @@
-"""Bill ingest — inventory deduction, ledger credit, optional khaata (Customer) link."""
+"""Bill ingest – inventory deduction, ledger credit, optional khaata (Customer) link."""
 
 from __future__ import annotations
 

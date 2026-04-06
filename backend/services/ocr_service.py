@@ -335,7 +335,7 @@ def extract_text(
         except Exception:
             return ""
 
-    # Unknown binary — try UTF-8 then empty
+    # Unknown binary – try UTF-8 then empty
     try:
         s = file_bytes.decode("utf-8", errors="ignore")
         if len(s) > 40 and sum(c.isprintable() or c in "\n\r\t" for c in s) / max(len(s), 1) > 0.85:

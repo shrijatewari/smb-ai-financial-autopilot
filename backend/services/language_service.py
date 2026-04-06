@@ -18,7 +18,7 @@ def has_devanagari(text: str) -> bool:
     return bool(re.search(r"[\u0900-\u097F]", text or ""))
 
 
-# Latin-script Hindi / Hinglish — common in spoken queries (judges' demo path)
+# Latin-script Hindi / Hinglish – common in spoken queries (judges' demo path)
 _HINGLISH_LATIN = re.compile(
     r"\b(mera|mere|meri|mujhe|hum|aap|kya|kaise|kab|kitna|kitni|hai|ho|hain|hoga|"
     r"bhai|yaar|paisa|paise|din|dinon|abhi|kal|aaj|"

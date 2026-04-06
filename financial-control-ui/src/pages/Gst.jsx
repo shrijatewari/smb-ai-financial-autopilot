@@ -7,7 +7,7 @@ import { fetchGstCompliance, fetchGstSummary } from '../services/api'
 import { MOCK_GST_FALLBACK } from '../lib/platformMocks'
 
 function formatInr(n) {
-  if (n == null || Number.isNaN(n)) return '—'
+  if (n == null || Number.isNaN(n)) return '–'
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 }
 
@@ -41,7 +41,7 @@ export default function Gst() {
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
         title="GST & compliance"
-        subtitle="GST liability forecast from your BusinessProfile (GSTIN), return history, and turnover — aligned with Monte Carlo cash simulation on GET /dashboard. If APIs are unreachable, a demo card is shown from the platform mocks."
+        subtitle="GST liability forecast from your BusinessProfile (GSTIN), return history, and turnover – aligned with Monte Carlo cash simulation on GET /dashboard. If APIs are unreachable, a demo card is shown from the platform mocks."
       />
       <div className="grid gap-6 md:grid-cols-2">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -72,7 +72,7 @@ export default function Gst() {
                 <>
                   <p>
                     <span className="font-medium text-violet-900">Due by:</span>{' '}
-                    {gst?.next_due_date || gst?.due_date || '—'}
+                    {gst?.next_due_date || gst?.due_date || '–'}
                   </p>
                   {gst?.gstin && (
                     <p className="mt-1 font-mono text-xs text-violet-800">
@@ -84,10 +84,10 @@ export default function Gst() {
                   )}
                   {gst?._source === 'mock' && (
                     <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900">
-                      Demo data — connect backend and save GSTIN for live GET /gst/summary.
+                      Demo data – connect backend and save GSTIN for live GET /gst/summary.
                     </p>
                   )}
-                  <p className="mt-2">{gst?.note ?? '—'}</p>
+                  <p className="mt-2">{gst?.note ?? '–'}</p>
                 </>
               )}
             </CardContent>

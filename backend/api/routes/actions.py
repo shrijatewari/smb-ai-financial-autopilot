@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -65,7 +67,7 @@ class WhatsappExecuteBody(BaseModel):
         description="With JWT auth: load linked bill proof from Customer row when set.",
     )
     shop_name: str | None = Field(None, max_length=200, description="Override shop label in message + Razorpay description.")
-    customer_email: str | None = Field(None, max_length=120, description="Optional — Razorpay customer email + notify.")
+    customer_email: str | None = Field(None, max_length=120, description="Optional – Razorpay customer email + notify.")
 
 
 class WhatsappExecuteResponse(BaseModel):
@@ -264,7 +266,7 @@ async def post_whatsapp_reminder(
 ):
     """
     Generate a payment reminder (friendly or formal) and send via WhatsApp (Meta or mock).
-    Embeds a Razorpay payment link (live when keys are set; else mock `rzp.io` short URL).
+    Embeds a Razorpay payment link (live when keys are set; else docs URL – fake rzp.io IDs are invalid).
     When `customer_id` + JWT: optional bill proof + attachment.
     """
     text, rzp, sent, _bill = await _run_whatsapp_reminder_with_payment_link(body, user)

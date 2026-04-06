@@ -26,15 +26,15 @@ export function GuidedHandOverlay({
     {
       label: t('चरण २', 'Step 2'),
       text: t(
-        'एक काम चुनो — वॉट्सऐप, कॉल, या सिस्टम।',
-        'Pick one action — WhatsApp, call, or system.'
+        'एक काम चुनो – वॉट्सऐप, कॉल, या सिस्टम।',
+        'Pick one action – WhatsApp, call, or system.'
       ),
     },
     {
       label: t('चरण ३', 'Step 3'),
       text: t(
-        'हाँ / नहीं से पुष्टि करो — फिर परिणाम सुनोगे।',
-        'Confirm with Yes / No — then you will hear the result.'
+        'हाँ / नहीं से पुष्टि करो – फिर परिणाम सुनोगे।',
+        'Confirm with Yes / No – then you will hear the result.'
       ),
     },
   ]

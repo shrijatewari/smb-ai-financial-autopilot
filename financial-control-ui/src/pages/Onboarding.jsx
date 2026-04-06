@@ -19,7 +19,7 @@ const ARCHETYPE = [
   {
     id: 'hybrid',
     title: 'Hybrid',
-    purpose: 'Mixed product + service — balanced module mix.',
+    purpose: 'Mixed product + service – balanced module mix.',
   },
 ]
 
@@ -42,7 +42,7 @@ const TURNOVER = [
   {
     value: '50L_plus',
     label: '₹50L+',
-    purpose: 'Higher scale — stronger compliance & cash emphasis.',
+    purpose: 'Higher scale – stronger compliance & cash emphasis.',
   },
 ]
 
@@ -62,7 +62,7 @@ function QuestionBlock({ n, title, purpose, children }) {
 export default function Onboarding() {
   const navigate = useNavigate()
   const { user, loadMe } = useAuth()
-  /** True when user finished both document + business steps — allow return to this page to edit (no redirect to Today). */
+  /** True when user finished both document + business steps – allow return to this page to edit (no redirect to Today). */
   const reviewMode = !!(user?.documents_uploaded && user?.onboarding_completed)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -97,7 +97,7 @@ export default function Onboarding() {
         if (ob && typeof ob === 'object' && ob.revenue_model) {
         setRevenueModel(String(ob.revenue_model))
         const bt = String(ob.business_type || '')
-        const sep = ' — '
+        const sep = ' – '
         if (bt.includes(sep)) {
           setIndustryDetail(bt.split(sep).slice(1).join(sep).trim())
         }
@@ -164,7 +164,7 @@ export default function Onboarding() {
     }
   }, [reviewMode])
 
-  /* Local draft while Step 2 is in progress — survives refresh until you save or sign out device. */
+  /* Local draft while Step 2 is in progress – survives refresh until you save or sign out device. */
   useEffect(() => {
     if (reviewMode) return
     const id = window.setTimeout(() => {
@@ -249,7 +249,7 @@ export default function Onboarding() {
       const archetype = ARCHETYPE.find((a) => a.id === revenueModel)
       const label = archetype?.title ?? revenueModel
       const business_type = industryDetail.trim()
-        ? `${label} — ${industryDetail.trim()}`
+        ? `${label} – ${industryDetail.trim()}`
         : label
 
       let data_sources = []
@@ -311,7 +311,7 @@ export default function Onboarding() {
             ) : (
               <>
                 Ye answers aapka <strong className="font-medium text-violet-950">daily action screen</strong> banate hain:
-                kya dikhna hai, kya chhupana hai — generic dashboard nahi.
+                kya dikhna hai, kya chhupana hai – generic dashboard nahi.
               </>
             )}
           </p>
@@ -321,7 +321,7 @@ export default function Onboarding() {
           <QuestionBlock
             n={1}
             title="Screen kaise chahiye? (padhai / comfort)"
-            purpose="Kam text + zyada awaz + icons — low literacy ke liye. Standard = normal labels."
+            purpose="Kam text + zyada awaz + icons – low literacy ke liye. Standard = normal labels."
           >
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
@@ -358,7 +358,7 @@ export default function Onboarding() {
           <QuestionBlock
             n={3}
             title="What type of business do you run?"
-            purpose="Core signal — sets retail vs service mix and inventory vs customer emphasis."
+            purpose="Core signal – sets retail vs service mix and inventory vs customer emphasis."
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {ARCHETYPE.map((a) => (
@@ -579,18 +579,18 @@ export default function Onboarding() {
               <span className="font-semibold text-violet-950">Where you actually connect (after login):</span>
               <br />
               <span className="text-violet-900/80">
-                <strong>Paytm</strong> — main <strong>Dashboard</strong> → “Connect Paytm” (demo merchant link + mock
+                <strong>Paytm</strong> – main <strong>Dashboard</strong> → “Connect Paytm” (demo merchant link + mock
                 feed).
               </span>
               <br />
               <span className="text-violet-900/80">
-                <strong>Bank / statements</strong> — <strong>Document intelligence</strong> (<code className="rounded bg-violet-200/80 px-1">/documents</code>
+                <strong>Bank / statements</strong> – <strong>Document intelligence</strong> (<code className="rounded bg-violet-200/80 px-1">/documents</code>
                 ): upload PDF or image exports; text feeds business context (CSV ledger upload via API/Swagger if
                 enabled).
               </span>
               <br />
               <span className="text-violet-900/80">
-                <strong>SMS / UPI</strong> —{' '}
+                <strong>SMS / UPI</strong> –{' '}
                 <Link to="/#sms-ingest" className="font-medium text-[#6C3BFF] underline underline-offset-2">
                   Dashboard → SMS ingest
                 </Link>

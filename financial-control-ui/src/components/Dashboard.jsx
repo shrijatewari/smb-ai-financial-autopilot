@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ChevronRight,
   IndianRupee,
+  Link2,
   Sparkles,
   TrendingUp,
   Wallet,
@@ -23,6 +24,7 @@ import {
 import { Card, CardContent } from './ui/card'
 import { useAuth } from '../context/AuthContext'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
+import { useTr } from '../hooks/useTr'
 import {
   connectPaytm,
   executeAction,
@@ -34,13 +36,23 @@ import {
   postSmsIngest,
   postUserInteraction,
 } from '../services/api'
+import {
+  buildWhatsappCollectionMessage,
+  firstNameFromCustomer,
+  formatInr,
+  mockLineItemsForCustomer,
+  normalizePhone10,
+  openTelDialer,
+  openUserGestureBlankTab,
+  navigateTabOrOpenWhatsApp,
+} from '../lib/collections'
 
 function formatAlertLine(a, formatInrFn) {
   if (typeof a === 'string') return a
   if (a && typeof a === 'object' && a.type === 'suspicious_txn') {
     const z =
-      a.z_score != null && typeof a.z_score === 'number' ? a.z_score.toFixed(2) : '—'
-    return `${a.date || '—'} · ${formatInrFn(a.amount)} · z=${z}`
+      a.z_score != null && typeof a.z_score === 'number' ? a.z_score.toFixed(2) : '–'
+    return `${a.date || '–'} · ${formatInrFn(a.amount)} · z=${z}`
   }
   try {
     return JSON.stringify(a)
@@ -49,57 +61,9 @@ function formatAlertLine(a, formatInrFn) {
   }
 }
 
-function formatInr(n) {
-  if (n == null || Number.isNaN(n)) return '—'
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(n)
-}
-
 function formatPct(p) {
-  if (p == null || Number.isNaN(p)) return '—'
+  if (p == null || Number.isNaN(p)) return '–'
   return `${(100 * p).toFixed(1)}%`
-}
-
-/** Last 10 digits for IN mobile; wa.me uses country code without + */
-function normalizePhone10(phone) {
-  const d = String(phone || '').replace(/\D/g, '')
-  if (d.length >= 10) return d.slice(-10)
-  return ''
-}
-
-const MOCK_LINE_ITEMS = [
-  'milk and eggs',
-  'rice, dal and oil',
-  'kirana supplies',
-  "last week's stock",
-  'daily essentials',
-  'pending bill items',
-]
-
-function mockLineItemsForCustomer(name) {
-  const key = name.split('(')[0].trim() || 'x'
-  let h = 0
-  for (let i = 0; i < key.length; i++) h = (h + key.charCodeAt(i) * (i + 1)) % 997
-  const i = h % MOCK_LINE_ITEMS.length
-  const j = (h + 3) % MOCK_LINE_ITEMS.length
-  return h % 2 === 0 ? MOCK_LINE_ITEMS[i] : `${MOCK_LINE_ITEMS[i]} and ${MOCK_LINE_ITEMS[j]}`
-}
-
-function firstNameFromCustomer(customer) {
-  return customer.split('(')[0].trim().split(/\s+/)[0] || 'Customer'
-}
-
-function buildWhatsappCollectionMessage(customer, amount, tone) {
-  const first = firstNameFromCustomer(customer)
-  const items = mockLineItemsForCustomer(customer)
-  const rs = Math.round(Number(amount) || 0)
-  if (tone === 'friendly') {
-    return `Hi ${first}, ₹${rs} pending hai — ${items}. Jab bhi ho clear kar dena. Thanks!`
-  }
-  return `Namaste ${first}, please clear ₹${rs} towards ${items} on your account. Thank you.`
 }
 
 function buildCallScript(customer, amount) {
@@ -109,21 +73,8 @@ function buildCallScript(customer, amount) {
   return `Hi ${first}, I'm calling about ₹${rs} still due for ${items}. When can you settle this?`
 }
 
-function openWhatsAppDraft(phone10, message) {
-  const url = `https://wa.me/91${phone10}?text=${encodeURIComponent(message)}`
-  window.open(url, '_blank', 'noopener,noreferrer')
-}
-
-function openTelDialer(phone10) {
-  const a = document.createElement('a')
-  a.href = `tel:+91${phone10}`
-  a.setAttribute('rel', 'noopener')
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-}
-
 export default function Dashboard() {
+  const t = useTr()
   const { user, logout } = useAuth()
   const { snapshot: snap, error: streamError, refreshSnapshot } = useSystemSnapshot()
   const [gst, setGst] = useState(null)
@@ -307,25 +258,71 @@ export default function Dashboard() {
     }
   }
 
-  function sendWhatsappReminder(customer, amount) {
+  async function sendWhatsappReminder(customer, amount) {
     const phone = normalizePhone10(collectPhone) || '9004930401'
     if (phone.length < 10) {
       setToast({ type: 'error', text: 'Enter a valid 10-digit phone number above.' })
       setTimeout(() => setToast(null), 6000)
       return
     }
+    const waTab = openUserGestureBlankTab()
     setWaBusy(true)
     setToast(null)
     try {
-      const msg = buildWhatsappCollectionMessage(customer, amount, waTone)
-      openWhatsAppDraft(phone, msg)
+      const res = await postPaymentLink({
+        amount: Number(amount),
+        customer_name: customer,
+        phone: phone.replace(/\D/g, '').slice(-10) || '9004930401',
+      })
+      const msg = buildWhatsappCollectionMessage(customer, amount, waTone, res.payment_link)
+      navigateTabOrOpenWhatsApp(waTab, phone, msg)
       setToast({
         type: 'success',
-        text: `Opened WhatsApp (new tab) with a draft for ${firstNameFromCustomer(customer)} — demo, no API.`,
+        text: `Opened WhatsApp draft for ${firstNameFromCustomer(customer)} – khaata message + Razorpay link.`,
+        link: res.payment_link || undefined,
+      })
+    } catch (e) {
+      const msg = buildWhatsappCollectionMessage(customer, amount, waTone)
+      navigateTabOrOpenWhatsApp(waTab, phone, msg)
+      setToast({
+        type: 'success',
+        text: `Opened WhatsApp draft (demo link in text). ${getApiErrorMessage(e)}`,
       })
     } finally {
       setWaBusy(false)
       setTimeout(() => setToast(null), 14000)
+    }
+  }
+
+  async function copyRowPaymentLink(name, amount) {
+    const phone = normalizePhone10(collectPhone) || '9004930401'
+    if (phone.length < 10) {
+      setToast({ type: 'error', text: 'Enter a valid 10-digit phone number above.' })
+      setTimeout(() => setToast(null), 6000)
+      return
+    }
+    setRzpBusy(true)
+    try {
+      const res = await postPaymentLink({
+        amount: Number(amount),
+        customer_name: name,
+        phone: phone.replace(/\D/g, '').slice(-10) || '9004930401',
+      })
+      const url = res.payment_link
+      if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+      }
+      setRzpResult(res)
+      setToast({
+        type: 'success',
+        text: url ? 'Payment link copied – share or paste in WhatsApp.' : 'Payment link created.',
+        link: url || undefined,
+      })
+    } catch (err) {
+      setToast({ type: 'error', text: getApiErrorMessage(err) })
+    } finally {
+      setRzpBusy(false)
+      setTimeout(() => setToast(null), 12000)
     }
   }
 
@@ -363,10 +360,15 @@ export default function Dashboard() {
       >
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-medium text-white/80">AI Business Twin</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">Your Business Twin is Active</h2>
+            <p className="text-sm font-medium text-white/80">{t('AI बिज़नेस ट्विन', 'AI Business Twin')}</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
+              {t('आपका बिज़नेस ट्विन सक्रिय है', 'Your Business Twin is Active')}
+            </h2>
             <p className="mt-2 max-w-xl text-sm text-white/85">
-              Live signals from your control plane — cash, risk, and collections in one place.
+              {t(
+                'नियंत्रण तल से लाइव संकेत – नकद, जोखिम और वसूली एक ही जगह।',
+                'Live signals from your control plane – cash, risk, and collections in one place.'
+              )}
             </p>
           </div>
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur">
@@ -377,20 +379,20 @@ export default function Dashboard() {
 
       <div className="mb-10 grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
         {[
-          { id: 'cash', label: 'Cash', value: formatInr(snap?.cash), sub: 'Live', icon: Wallet },
+          { id: 'cash', label: t('नकद', 'Cash'), value: formatInr(snap?.cash), sub: t('लाइव', 'Live'), icon: Wallet },
           {
             id: 'revenue',
-            label: 'Revenue pulse',
+            label: t('राजस्व नाड़ी', 'Revenue pulse'),
             value: formatInr(snap?.cash != null ? snap.cash * 0.08 : null),
-            sub: 'Proxy',
+            sub: t('प्रॉक्सी', 'Proxy'),
             icon: TrendingUp,
           },
-          { id: 'risk', label: 'Risk', value: formatPct(risk), sub: 'Horizon', icon: AlertTriangle },
+          { id: 'risk', label: t('जोखिम', 'Risk'), value: formatPct(risk), sub: t('क्षितिज', 'Horizon'), icon: AlertTriangle },
           {
             id: 'receivables',
-            label: 'Receivables',
+            label: t('प्राप्य', 'Receivables'),
             value: formatInr(collectionQueue.reduce((s, r) => s + (r.amount || 0), 0)),
-            sub: 'Queue',
+            sub: t('क़तार', 'Queue'),
             icon: IndianRupee,
           },
         ].map((k, i) => (
@@ -418,9 +420,11 @@ export default function Dashboard() {
                   </div>
                   <p className="mt-3 text-sm font-medium text-violet-950/60">{k.label}</p>
                   <p className="mt-1 text-2xl font-semibold tabular-nums text-violet-950">
-                    {loading && !snap ? '—' : k.value}
+                    {loading && !snap ? '–' : k.value}
                   </p>
-                  <p className="mt-2 text-[11px] text-violet-600/80">Tap for source &amp; how to change</p>
+                  <p className="mt-2 text-[11px] text-violet-600/80">
+                    {t('स्रोत और बदलाव के लिए टैप करें', 'Tap for source & how to change')}
+                  </p>
                 </CardContent>
               </button>
             </Card>
@@ -431,24 +435,35 @@ export default function Dashboard() {
       <div className="mb-10 grid gap-4 md:grid-cols-3">
         {[
           {
-            t: 'Cash shortage risk',
+            t: t('नकद की कमी का जोखिम', 'Cash shortage risk'),
             d:
               daysToNeg != null
-                ? `Stress timing ~${daysToNeg} day${daysToNeg === 1 ? '' : 's'} in simulation`
-                : 'Majority paths positive — still chase dues',
+                ? t(
+                    `सिमुलेशन में ~${daysToNeg} दिन में तनाव`,
+                    `Stress timing ~${daysToNeg} day${daysToNeg === 1 ? '' : 's'} in simulation`,
+                  )
+                : t('अधिकतर रास्ते सकारात्मक – फिर भी बकाया वसूलें', 'Majority paths positive – still chase dues'),
             i: '⚠️',
           },
-          { t: 'Demand signal', d: 'Module mix adapts from your business profile', i: '📈' },
           {
-            t: 'Collectible',
-            d: collectionQueue[0]
-              ? `${formatInr(collectionQueue[0].amount)} — ${collectionQueue[0].name}`
-              : 'Queue fills from receivable exposure',
+            t: t('मांग संकेत', 'Demand signal'),
+            d: t('मॉड्यूल मिक्स आपके बिज़नेस प्रोफ़ाइल से अनुकूलित होता है', 'Module mix adapts from your business profile'),
+            i: '📈',
+          },
+          {
+            t: t('वसूली योग्य', 'Collectible'),
+            d:
+              collectionQueue.length > 0
+                ? collectionQueue
+                    .slice(0, 4)
+                    .map((r) => `${formatInr(r.amount)} – ${r.name}`)
+                    .join(' · ')
+                : t('क़तार प्राप्य एक्सपोज़र से भरती है', 'Queue fills from receivable exposure'),
             i: '💰',
           },
         ].map((x, i) => (
           <motion.div
-            key={x.t}
+            key={['insight-cash-risk', 'insight-demand', 'insight-collect'][i]}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 + i * 0.05 }}
@@ -462,7 +477,7 @@ export default function Dashboard() {
               href="#sms-ingest"
               className="mt-4 inline-block rounded-full bg-gradient-to-r from-[#6C3BFF] to-violet-500 px-4 py-2 text-xs font-semibold text-white shadow-md transition hover:opacity-95"
             >
-              Act on Twin
+              {t('ट्विन पर काम करें', 'Act on Twin')}
             </a>
           </motion.div>
         ))}
@@ -471,10 +486,11 @@ export default function Dashboard() {
       <header className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-            Daily Financial Control
+            {t('दैनिक वित्तीय नियंत्रण', 'Daily Financial Control')}
           </h1>
           <p className="mt-1 text-sm text-neutral-500">
-            {user?.name ? `${user.name} · ` : ''}today&apos;s risk, one clear action, execution
+            {user?.name ? `${user.name} · ` : ''}
+            {t('आज का जोखिम, एक स्पष्ट क्रिया, निष्पादन', "today's risk, one clear action, execution")}
             {profileType ? (
               <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">
                 {profileType.replace(/_/g, ' ')}
@@ -483,9 +499,9 @@ export default function Dashboard() {
           </p>
           {engineMeta.updated_at && (
             <p className="mt-1 text-[11px] text-neutral-400">
-              Live control plane · tick {engineMeta.tick ?? '—'} · updated{' '}
-              {new Date(engineMeta.updated_at).toLocaleTimeString()}{' '}
-              <span className="text-emerald-700">· polling 3s</span>
+              {t('लाइव नियंत्रण तल', 'Live control plane')} · tick {engineMeta.tick ?? '–'} ·{' '}
+              {t('अपडेट', 'updated')} {new Date(engineMeta.updated_at).toLocaleTimeString()}{' '}
+              <span className="text-emerald-700">· {t('३ सेकंड पोलिंग', 'polling 3s')}</span>
             </p>
           )}
         </div>
@@ -494,25 +510,25 @@ export default function Dashboard() {
             href="#sms-ingest"
             className="text-sm font-medium text-neutral-900 underline-offset-2 hover:underline"
           >
-            SMS / UPI ingest
+            {t('SMS / UPI इन्जेस्ट', 'SMS / UPI ingest')}
           </a>
           <Link
             to="/documents"
             className="text-sm font-medium text-neutral-900 underline-offset-2 hover:underline"
           >
-            Document intelligence
+            {t('दस्तावेज़ बुद्धिमत्ता', 'Document intelligence')}
           </Link>
           <Link
             to="/assistant"
             className="text-sm font-medium text-neutral-600 underline-offset-2 hover:underline"
           >
-            Voice assistant
+            {t('आवाज़ सहायक', 'Voice assistant')}
           </Link>
           <Link
             to="/onboarding"
             className="text-sm font-medium text-neutral-600 underline-offset-2 hover:underline"
           >
-            Edit business profile
+            {t('बिज़नेस प्रोफ़ाइल संपादित करें', 'Edit business profile')}
           </Link>
           <button
             type="button"
@@ -520,14 +536,14 @@ export default function Dashboard() {
             disabled={loading}
             className="rounded-md border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-800 shadow-sm transition hover:bg-neutral-50 disabled:opacity-50"
           >
-            {loading ? 'Loading…' : 'Refresh now'}
+            {loading ? t('लोड हो रहा है…', 'Loading…') : t('अभी रिफ़्रेश करें', 'Refresh now')}
           </button>
           <button
             type="button"
             onClick={() => logout()}
             className="rounded-md border border-neutral-200 px-4 py-2 text-sm text-neutral-600 hover:bg-neutral-50"
           >
-            Log out
+            {t('लॉग आउट', 'Log out')}
           </button>
         </div>
       </header>
@@ -537,10 +553,13 @@ export default function Dashboard() {
           className="mb-8 rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-950"
           role="status"
         >
-          <span className="font-medium">Complete onboarding</span> for a personalized module layout
-          and trust scores.{' '}
+          <span className="font-medium">{t('ऑनबोर्डिंग पूरी करें', 'Complete onboarding')}</span>{' '}
+          {t(
+            'व्यक्तिगत मॉड्यूल लेआउट और ट्रस्ट स्कोर के लिए।',
+            'for a personalized module layout and trust scores.'
+          )}{' '}
           <Link to="/onboarding" className="font-medium underline">
-            Go to onboarding
+            {t('ऑनबोर्डिंग पर जाएँ', 'Go to onboarding')}
           </Link>
         </div>
       )}
@@ -564,7 +583,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Daily control — primary WOW */}
+      {/* Daily control – primary WOW */}
       <section
         className={`mb-8 rounded-2xl border p-6 shadow-sm ${
           riskUrgent
@@ -580,13 +599,13 @@ export default function Dashboard() {
             <p className="text-xs font-medium text-neutral-500">Today&apos;s risk</p>
             <p className="mt-2 text-lg font-semibold text-neutral-900">Cash shortage probability</p>
             <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
-              {loading ? '—' : formatPct(risk)}
+              {loading ? '–' : formatPct(risk)}
             </p>
             <p className="mt-3 text-sm leading-snug text-neutral-700">
               {runwaySummary ||
                 (daysToNeg != null
                   ? `You may run out of cash in about ${daysToNeg} day${daysToNeg === 1 ? '' : 's'}.`
-                  : 'Stress timing is within the simulated horizon — still chase dues to improve buffer.')}
+                  : 'Stress timing is within the simulated horizon – still chase dues to improve buffer.')}
             </p>
           </div>
           <div className="lg:col-span-1 border-l border-neutral-100 pl-0 lg:pl-6">
@@ -612,24 +631,24 @@ export default function Dashboard() {
               </>
             ) : (
               <p className="mt-2 text-sm text-neutral-600">
-                No urgent action — keep monitoring inflows.
+                No urgent action – keep monitoring inflows.
               </p>
             )}
           </div>
           <div className="lg:col-span-1 border-l border-neutral-100 pl-0 lg:pl-6">
             <p className="text-xs font-medium text-neutral-500">Cash on hand</p>
             <p className="mt-2 text-3xl font-semibold tabular-nums text-neutral-900">
-              {loading ? '—' : formatInr(snap?.cash)}
+              {loading ? '–' : formatInr(snap?.cash)}
             </p>
             <p className="mt-2 text-xs text-neutral-500">
-              Model confidence {confidence != null ? `${(confidence * 100).toFixed(0)}%` : '—'} · updates every few
+              Model confidence {confidence != null ? `${(confidence * 100).toFixed(0)}%` : '–'} · updates every few
               seconds
             </p>
           </div>
         </div>
       </section>
 
-      {/* Collection engine — phone + tone feed Recover money + row actions */}
+      {/* Collection engine – phone + tone feed Recover money + row actions */}
       <section className="mb-8 rounded-2xl border border-violet-200/50 bg-white/75 p-6 shadow-lg shadow-violet-500/5 backdrop-blur-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-violet-400">
@@ -672,8 +691,8 @@ export default function Dashboard() {
         </div>
         <p className="mt-2 text-[11px] text-violet-950/50">
           Queue is built server-side from receivable exposure (demo names/amounts). Same phone &amp; tone apply to Recover
-          money below. WhatsApp opens a prefilled draft (wa.me); Call opens your device dialer — both are local mocks, no
-          backend messaging.
+          money below. WhatsApp opens wa.me with a khaata-style message and a Razorpay payment link from{' '}
+          <code className="rounded bg-violet-100 px-1">POST /execute/payment-link</code>. Call opens your device dialer.
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -690,7 +709,7 @@ export default function Dashboard() {
               {collectionQueue.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={5} className="py-4 text-violet-950/55">
-                    Connect ledger data — collection queue fills from receivable exposure.
+                    Connect ledger data – collection queue fills from receivable exposure.
                   </td>
                 </tr>
               ) : (
@@ -715,10 +734,20 @@ export default function Dashboard() {
                         <button
                           type="button"
                           onClick={() => void sendWhatsappReminder(row.name, row.amount)}
-                          disabled={waBusy}
+                          disabled={waBusy || rzpBusy}
                           className="rounded-full border-2 border-[#22C55E] bg-[#22C55E]/10 px-2.5 py-1 text-xs font-semibold text-emerald-900 hover:bg-[#22C55E]/20 disabled:opacity-50"
                         >
                           WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void copyRowPaymentLink(row.name, row.amount)}
+                          disabled={rzpBusy || waBusy}
+                          className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50/80 px-2.5 py-1 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 disabled:opacity-50"
+                          title="Copy Razorpay payment link"
+                        >
+                          <Link2 className="h-3.5 w-3.5" aria-hidden />
+                          Link
                         </button>
                         <button
                           type="button"
@@ -770,7 +799,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* Primary execution — uses collectPhone + waTone from Collection priority */}
+      {/* Primary execution – uses collectPhone + waTone from Collection priority */}
       {(primaryAction || collectionQueue.length > 0) && (
         <section className="mb-8 rounded-2xl border border-violet-950/20 bg-gradient-to-br from-violet-950 via-violet-900 to-neutral-900 p-6 text-white shadow-[0_24px_50px_-12px_rgba(76,29,149,0.45)]">
           <h2 className="text-[11px] font-semibold uppercase tracking-wider text-violet-300/90">Recover money</h2>
@@ -783,7 +812,7 @@ export default function Dashboard() {
                   : primaryAction.action.replace(/_/g, ' ')}
               </p>
               <p className="mt-2 text-xs text-violet-300/80">
-                Phone &amp; tone: <span className="font-mono text-white/90">{collectPhone.replace(/\D/g, '').slice(-10) || '—'}</span> ·{' '}
+                Phone &amp; tone: <span className="font-mono text-white/90">{collectPhone.replace(/\D/g, '').slice(-10) || '–'}</span> ·{' '}
                 {waTone === 'friendly' ? 'Friendly (Hinglish)' : 'Formal'}
               </p>
             </div>
@@ -966,7 +995,7 @@ export default function Dashboard() {
               </p>
             </>
           ) : (
-            <p className="text-sm text-neutral-500">—</p>
+            <p className="text-sm text-neutral-500">–</p>
           )}
         </div>
         <div className="rounded-xl border border-neutral-200/80 bg-white p-6 shadow-sm">
@@ -1103,7 +1132,7 @@ export default function Dashboard() {
                 <>
                   <p>
                     <strong className="text-neutral-900">Source:</strong> <code className="text-xs">snap.cash</code>{' '}
-                    from <code className="text-xs">GET /system/state</code> — your reconciled cash position in the
+                    from <code className="text-xs">GET /system/state</code> – your reconciled cash position in the
                     ledger (refreshes every few seconds).
                   </p>
                   <p>
@@ -1138,7 +1167,7 @@ export default function Dashboard() {
               {kpiModal === 'revenue' && (
                 <>
                   <p>
-                    <strong className="text-neutral-900">Source:</strong> a <em>demo proxy</em> —{' '}
+                    <strong className="text-neutral-900">Source:</strong> a <em>demo proxy</em> –{' '}
                     <code className="text-xs">cash × 8%</code>. It is not a real revenue time series yet.
                   </p>
                   <p>
@@ -1196,7 +1225,7 @@ export default function Dashboard() {
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-xs text-neutral-500">Queue is empty — nothing due in the current snapshot.</p>
+                    <p className="text-xs text-neutral-500">Queue is empty – nothing due in the current snapshot.</p>
                   )}
                   <p>
                     <strong className="text-neutral-900">Change it:</strong> when you log collections or the twin
@@ -1249,11 +1278,11 @@ export default function Dashboard() {
                 <p className="mt-4 text-sm text-neutral-700">
                   Payment likelihood (demo):{' '}
                   <span className="font-bold uppercase tracking-wide text-emerald-600">
-                    {String(callModal.likelihood || '—').toUpperCase()}
+                    {String(callModal.likelihood || '–').toUpperCase()}
                   </span>
                 </p>
                 <p className="mt-2 text-xs text-neutral-500">
-                  No backend telephony — this is a local mock. On desktop, <code className="rounded bg-neutral-100 px-1">tel:</code>{' '}
+                  No backend telephony – this is a local mock. On desktop, <code className="rounded bg-neutral-100 px-1">tel:</code>{' '}
                   may do nothing unless a phone app is linked.
                 </p>
               </>

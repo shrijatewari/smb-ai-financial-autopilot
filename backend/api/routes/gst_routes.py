@@ -1,4 +1,4 @@
-"""GST liability forecasting — summary for UI and Monte Carlo alignment."""
+"""GST liability forecasting – summary for UI and Monte Carlo alignment."""
 
 from __future__ import annotations
 

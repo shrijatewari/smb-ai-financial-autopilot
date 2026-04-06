@@ -48,7 +48,7 @@ export default function Bills() {
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(true)
   const [lastResult, setLastResult] = useState(null)
-  /** Hard errors only (e.g. bad JSON) — not 404 “API not deployed”. */
+  /** Hard errors only (e.g. bad JSON) – not 404 “API not deployed”. */
   const [error, setError] = useState(null)
   /** Amber: missing /bills on server (GET history or POST ingest). */
   const [apiNotice, setApiNotice] = useState(null)
@@ -62,7 +62,7 @@ export default function Bills() {
       {
         label: t('चरण १', 'Step 1'),
         text: t(
-          'POS / API — JSON yahan paste karke test bhejo. Upload — PDF ya photo se OCR.',
+          'POS / API – JSON yahan paste karke test bhejo. Upload – PDF ya photo se OCR.',
           'Use POS / API to paste JSON and test. Use Upload for a PDF or photo (OCR).'
         ),
       },
@@ -76,8 +76,8 @@ export default function Bills() {
       {
         label: t('चरण ३', 'Step 3'),
         text: t(
-          'Header mein speaker se aawaz guidance chalu band — Aaj page jaisa.',
-          'Use the speaker in the header to turn voice guidance on or off — same as Today.'
+          'Header mein speaker se aawaz guidance chalu band – Aaj page jaisa.',
+          'Use the speaker in the header to turn voice guidance on or off – same as Today.'
         ),
       },
     ],
@@ -149,7 +149,7 @@ export default function Bills() {
       await loadHistory()
     } catch (e) {
       if (e instanceof SyntaxError) {
-        setError(t('JSON गलत है — ब्रैकेट और कॉमा चेक करें।', 'Invalid JSON — check brackets and commas.'))
+        setError(t('JSON गलत है – ब्रैकेट और कॉमा चेक करें।', 'Invalid JSON – check brackets and commas.'))
         return
       }
       if (isNotFoundError(e)) {
@@ -199,7 +199,7 @@ export default function Bills() {
       <div className="mx-auto max-w-3xl">
         <PageHeader
           title="Smart bills"
-          subtitle="POS JSON ya bill scan — stock update + ledger + khaata proof (WhatsApp)."
+          subtitle="POS JSON ya bill scan – stock update + ledger + khaata proof (WhatsApp)."
         />
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -310,7 +310,7 @@ export default function Bills() {
                   checked={udharOcr}
                   onChange={(e) => setUdharOcr(e.target.checked)}
                 />
-                Udhar — match phone par balance jodein
+                Udhar – match phone par balance jodein
               </label>
               <div
                 onDragOver={(e) => {
@@ -381,7 +381,7 @@ export default function Bills() {
               {lastResult.parsed_preview?.customer_phone && (
                 <p className="text-emerald-800">
                   {lastResult.khaata_linked
-                    ? `Khaata link ho gaya — ${lastResult.parsed_preview.customer_name || 'customer'}`
+                    ? `Khaata link ho gaya – ${lastResult.parsed_preview.customer_name || 'customer'}`
                     : 'Koi matching customer nahi mila (phone se)'}
                 </p>
               )}
@@ -422,7 +422,7 @@ export default function Bills() {
                     {history.map((h) => (
                       <tr key={h.id} className="border-b border-violet-50">
                         <td className="py-2 pr-2 font-mono text-xs text-violet-800">
-                          {h.timestamp?.slice(0, 19)?.replace('T', ' ') || '—'}
+                          {h.timestamp?.slice(0, 19)?.replace('T', ' ') || '–'}
                         </td>
                         <td className="py-2 pr-2">{h.source}</td>
                         <td className="py-2 pr-2">₹{Number(h.total_amount).toLocaleString('en-IN')}</td>

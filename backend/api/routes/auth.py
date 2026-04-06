@@ -38,7 +38,7 @@ class UserOut(BaseModel):
     name: str
     email: str
     onboarding_completed: bool = False
-    """At least one document uploaded (invoice/GST/bank export) — required before business form."""
+    """At least one document uploaded (invoice/GST/bank export) – required before business form."""
     documents_uploaded: bool = False
     trusted_helper_phone: str | None = None
     helper_approval_required: bool = False
@@ -57,9 +57,9 @@ class UserPatchBody(BaseModel):
     helper_approval_required: bool | None = None
     conversation_language: str | None = Field(
         None,
-        description="hi | en — assistant and voice conversation language",
+        description="hi | en – assistant and voice conversation language",
     )
-    whatsapp_number: str | None = Field(None, description="10-digit India or international — for WhatsApp briefings")
+    whatsapp_number: str | None = Field(None, description="10-digit India or international – for WhatsApp briefings")
     morning_briefing_enabled: bool | None = None
 
 

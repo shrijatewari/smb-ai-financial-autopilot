@@ -29,23 +29,47 @@ export default function Growth() {
 
   const load = useCallback(async () => {
     setErr(null)
-    try {
-      const [g, cr, ld, cu, sup, bm] = await Promise.all([
-        fetchGrowthSummary(),
-        fetchCreditScore(false),
-        fetchCollectionLadders(),
-        fetchCollectionCustomers(),
-        fetchSupplierInsights(),
-        fetchGrowthBenchmarks(),
-      ])
-      setSummary(g)
-      setCredit(cr)
-      setLadders(ld.items || [])
-      setCustomers(cu.items || [])
-      setSuppliers(sup)
-      setBenchmarks(bm)
-    } catch (e) {
-      setErr(getApiErrorMessage(e))
+    const jobs = [
+      ['growth/summary', fetchGrowthSummary],
+      ['credit/score', () => fetchCreditScore(false)],
+      ['collections/ladder', fetchCollectionLadders],
+      ['collections/customers', fetchCollectionCustomers],
+      ['insights/suppliers', fetchSupplierInsights],
+      ['growth/benchmarks', fetchGrowthBenchmarks],
+    ]
+    const settled = await Promise.allSettled(jobs.map(([, fn]) => fn()))
+    const failed = []
+    settled.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        failed.push(`${jobs[i][0]}: ${getApiErrorMessage(r.reason)}`)
+        return
+      }
+      const v = r.value
+      switch (i) {
+        case 0:
+          setSummary(v)
+          break
+        case 1:
+          setCredit(v)
+          break
+        case 2:
+          setLadders(v.items || [])
+          break
+        case 3:
+          setCustomers(v.items || [])
+          break
+        case 4:
+          setSuppliers(v)
+          break
+        case 5:
+          setBenchmarks(v)
+          break
+        default:
+          break
+      }
+    })
+    if (failed.length) {
+      setErr(failed.join(' · '))
     }
   }, [])
 
@@ -141,7 +165,7 @@ export default function Growth() {
             'No customer rows for this account. Run the backend seed against the same database your API uses, then sign in as demo@example.com (seed creates 5 customers for that user).',
             {
               hinglish:
-                'No customer rows for this account. Seed the same DB as the API, then login as demo@example.com — seed adds 5 customers.',
+                'No customer rows for this account. Seed the same DB as the API, then login as demo@example.com – seed adds 5 customers.',
             },
           )}
         </p>
@@ -152,7 +176,7 @@ export default function Growth() {
           <div>
             <h2 className="text-sm font-semibold text-violet-950">{t('क्रेडिट स्कोर', 'Credit score')}</h2>
             <p className="text-xs text-violet-800/60">
-              {t('लेजर + GST + प्राप्य + RL — ० से १०००', 'Ledger + GST + receivables + RL — 0–1000')}
+              {t('लेजर + GST + प्राप्य + RL – ० से १०००', 'Ledger + GST + receivables + RL – 0–1000')}
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onRefreshCredit}>
@@ -218,8 +242,8 @@ export default function Growth() {
         </div>
         <p className="mt-1 text-xs text-violet-800/60">
           {t(
-            'हर दिन एक रिमाइंडर — सूचना लॉग + वॉट्सऐप जब API लगा हो',
-            'One touch per day — notification log + WhatsApp when API is set'
+            'हर दिन एक रिमाइंडर – सूचना लॉग + वॉट्सऐप जब API लगा हो',
+            'One touch per day – notification log + WhatsApp when API is set'
           )}
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -233,7 +257,7 @@ export default function Growth() {
               <option value="">{t('चुनो…', 'Select…')}</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} (#{c.id}) — ₹{Number(c.total_due).toFixed(0)}
+                  {c.name} (#{c.id}) – ₹{Number(c.total_due).toFixed(0)}
                 </option>
               ))}
             </select>
@@ -248,7 +272,7 @@ export default function Growth() {
               <span className="font-medium">{x.customer_name}</span>
               <span className="text-violet-800/70">
                 {' '}
-                — step {x.step_index}/14 — {x.status}
+                – step {x.step_index}/14 – {x.status}
               </span>
             </li>
           ))}
@@ -304,13 +328,13 @@ export default function Growth() {
               <span className="font-medium">{b.metric}</span>
               <span className="text-violet-800/80">
                 {' '}
-                — p50 ₹{b.p50 != null ? Math.round(b.p50).toLocaleString('en-IN') : '—'} · p90 ₹
-                {b.p90 != null ? Math.round(b.p90).toLocaleString('en-IN') : '—'} · n={b.sample_count}
+                – p50 ₹{b.p50 != null ? Math.round(b.p50).toLocaleString('en-IN') : '–'} · p90 ₹
+                {b.p90 != null ? Math.round(b.p90).toLocaleString('en-IN') : '–'} · n={b.sample_count}
               </span>
             </li>
           ))}
           {!(benchmarks?.items || []).length && (
-            <li className="text-violet-800/50">{t('अभी डेटा कम — रिफ़्रेश या ज़्यादा उपयोगकर्ता', 'Sparse data — refresh or more users')}</li>
+            <li className="text-violet-800/50">{t('अभी डेटा कम – रिफ़्रेश या ज़्यादा उपयोगकर्ता', 'Sparse data – refresh or more users')}</li>
           )}
         </ul>
       </section>

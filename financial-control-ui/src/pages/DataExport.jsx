@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { clearOfflineData, downloadCsv, getOfflineData, rowsToCsv } from '../lib/offlineStorage'
 
-/** Minimal export-only page — does not alter other screens. */
+/** Minimal export-only page – does not alter other screens. */
 export default function DataExport() {
   const [status, setStatus] = useState('')
 

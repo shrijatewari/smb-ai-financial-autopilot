@@ -1,4 +1,4 @@
-"""Payables-side insight — debit concentration by category (supplier / COGS proxies)."""
+"""Payables-side insight – debit concentration by category (supplier / COGS proxies)."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ async def supplier_payables_summary(user_id: int, limit: int = 12) -> dict[str, 
     suggestions: list[str] = []
     if total_debit > 0 and supplier_like / total_debit > 0.35:
         suggestions.append(
-            "A large share of outflows looks supplier or COGS-like — negotiate staggered terms on the top categories."
+            "A large share of outflows looks supplier or COGS-like – negotiate staggered terms on the top categories."
         )
     if ranked:
         top_name, top_amt = ranked[0]

@@ -7,7 +7,7 @@ import { enqueueRequest } from './offlineStorage'
 import { isOnline } from './networkStatus'
 
 /**
- * @param {string} url — absolute or relative
+ * @param {string} url – absolute or relative
  * @param {RequestInit} [options]
  * @returns {Promise<Response>}
  */

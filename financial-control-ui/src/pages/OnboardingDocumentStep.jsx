@@ -38,7 +38,7 @@ export function OnboardingDocumentStep({ onSuccess }) {
           Pehle documents upload karo
         </h1>
         <p className="mt-3 text-center text-sm leading-relaxed text-violet-900/80">
-          Invoice, GST, bank statement ya khata — PDF ya photo. Isse system aapka business type aur size samajhta hai;
+          Invoice, GST, bank statement ya khata – PDF ya photo. Isse system aapka business type aur size samajhta hai;
           phir aapko <strong>sirf wahi dikhega</strong> jo aapke liye useful hai.
         </p>
 

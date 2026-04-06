@@ -21,7 +21,7 @@ export default function ProtectedLayout() {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  /* Mandatory flow: (1) upload documents (2) business profile — then home / contextual screen. */
+  /* Mandatory flow: (1) upload documents (2) business profile – then home / contextual screen. */
   if (user && !user.documents_uploaded && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />
   }
@@ -29,7 +29,7 @@ export default function ProtectedLayout() {
     return <Navigate to="/onboarding" replace />
   }
 
-  /* Full-screen onboarding (documents → business) — no sidebar/top chrome. */
+  /* Full-screen onboarding (documents → business) – no sidebar/top chrome. */
   if (location.pathname === '/onboarding') {
     return <Outlet />
   }

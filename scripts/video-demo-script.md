@@ -1,4 +1,4 @@
-# Video demo script — SMB AI / Financial Control Twin
+# Video demo script – SMB AI / Financial Control Twin
 
 Use this as a **spoken narration + click plan** while screen-recording. Adjust timing to your pace (~8–15 minutes full tour; ~4 minutes “hero” cut).
 
@@ -55,7 +55,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Login (`/login`)
 
 **Say:**  
-“This is the login for the SMB financial control twin — one place for cash, collections, GST, and automation.”
+“This is the login for the SMB financial control twin – one place for cash, collections, GST, and automation.”
 
 **Do:** Enter email/password → Login.
 
@@ -63,25 +63,25 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 
 ---
 
-### Today — Aaj (`/`)
+### Today – Aaj (`/`)
 
 **Say:**  
-“This is **Aaj** — the owner’s daily home. At a glance: **runway**, **receivables**, and **today’s inflow** from the ledger; the runway meter shows how safe the cash position is.”
+“This is **Aaj** – the owner’s daily home. At a glance: **runway**, **receivables**, and **today’s inflow** from the ledger; the runway meter shows how safe the cash position is.”
 
 **Do:** Scroll slightly. Point at the three stat chips and the gradient meter.
 
 **Say:**  
-“Below that is the **full collection queue** — ranked customers with late-payment risk and WhatsApp or call on every row.”
+“Below that is the **full collection queue** – ranked customers with late-payment risk and WhatsApp or call on every row.”
 
 **Do:** Tap one row to open the **timeline** (past touch, today’s step, future ladder). Close modal.
 
 **Say:**  
-“The big buttons still drive the **top engine priority** — WhatsApp, Hindi voice call, or a system payment link.”
+“The big buttons still drive the **top engine priority** – WhatsApp, Hindi voice call, or a system payment link.”
 
 **Do:** Press **⌘K** (Mac) or **Ctrl+K** (Windows). Type “GST” or a customer name.
 
 **Say:**  
-“**Command palette** — jump to any page or message a customer without hunting through menus.”
+“**Command palette** – jump to any page or message a customer without hunting through menus.”
 
 **Do:** Close palette (Esc). Optionally point at the **Upgrade** strip if on free tier.
 
@@ -92,7 +92,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### People / dues (`/people`)
 
 **Say:**  
-“**Log / Dues** is the same collection queue in a focused view — good for follow-up day.”
+“**Log / Dues** is the same collection queue in a focused view – good for follow-up day.”
 
 **Do:** Scroll list; show WA/Call; open timeline once.
 
@@ -103,7 +103,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Full dashboard (`/dashboard`)
 
 **Say:**  
-“**Advanced** mode unlocks the full dashboard — live simulation, charts, and the same control-plane snapshot the engine updates.”
+“**Advanced** mode unlocks the full dashboard – live simulation, charts, and the same control-plane snapshot the engine updates.”
 
 **Do:** Pan slowly; mention one chart or widget.
 
@@ -114,7 +114,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Transactions (`/transactions`)
 
 **Say:**  
-“Ledger view — everything ingested: SMS, UPI, Razorpay, bank exports — with filters and CSV export.”
+“Ledger view – everything ingested: SMS, UPI, Razorpay, bank exports – with filters and CSV export.”
 
 **Do:** Apply a filter or scroll; optional export if safe.
 
@@ -125,7 +125,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Cash flow (`/cash-flow`)
 
 **Say:**  
-“Cash flow view — how money moves over time, aligned with the twin’s forecast.”
+“Cash flow view – how money moves over time, aligned with the twin’s forecast.”
 
 **Do:** Scroll or highlight one period.
 
@@ -136,7 +136,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Inventory (`/inventory`)
 
 **Say:**  
-“SKU inventory and khata-style photo capture — ties stock to collections when you sell.”
+“SKU inventory and khata-style photo capture – ties stock to collections when you sell.”
 
 **Do:** Show list or one upload flow briefly.
 
@@ -147,7 +147,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Predictions (`/predictions`)
 
 **Say:**  
-“**Andaza** — predictions and scenarios on top of the reconstructed books.”
+“**Andaza** – predictions and scenarios on top of the reconstructed books.”
 
 **Do:** Point at one metric.
 
@@ -158,7 +158,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Risk (`/risk`)
 
 **Say:**  
-“Risk page — Monte Carlo and stress-style view of cash paths; complements the runway on Today.”
+“Risk page – Monte Carlo and stress-style view of cash paths; complements the runway on Today.”
 
 **Do:** Scroll once.
 
@@ -169,7 +169,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### GST (`/gst`)
 
 **Say:**  
-“GST summary — GSTIN, next due date, estimated liability when connected; filing warnings surface on **Today** too.”
+“GST summary – GSTIN, next due date, estimated liability when connected; filing warnings surface on **Today** too.”
 
 **Do:** Show summary card.
 
@@ -180,7 +180,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Action center (`/actions`)
 
 **Say:**  
-“Action center — suggested actions and execution history — collect, defer, pay.”
+“Action center – suggested actions and execution history – collect, defer, pay.”
 
 **Do:** Show list or empty state.
 
@@ -191,7 +191,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Profile (`/profile`)
 
 **Say:**  
-“Profile — business identity, **WhatsApp** number for briefings, trusted helper, **notification log** for briefing sends.”
+“Profile – business identity, **WhatsApp** number for briefings, trusted helper, **notification log** for briefing sends.”
 
 **Do:** Scroll; open briefing log anchor if present (`#profile-notifications`).
 
@@ -202,7 +202,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Growth (`/growth`)
 
 **Say:**  
-“**Growth** — credit score for lenders, subscription tier, referral code, **14-day collection ladder**, payables insight, and peer benchmarks.”
+“**Growth** – credit score for lenders, subscription tier, referral code, **14-day collection ladder**, payables insight, and peer benchmarks.”
 
 **Do:** Show credit band; copy referral code; optional tier button.
 
@@ -213,9 +213,9 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Documents (`/documents`)
 
 **Say:**  
-“**Documents** — drop bank statements, GST invoices, or bills; OCR fills profile tags and summary stats after analyze.”
+“**Documents** – drop bank statements, GST invoices, or bills; OCR fills profile tags and summary stats after analyze.”
 
-**Do:** Drag a **demo PDF** or skip if already processed — show **success** panel with tags and anomaly hint count.
+**Do:** Drag a **demo PDF** or skip if already processed – show **success** panel with tags and anomaly hint count.
 
 **Time:** ~40 s
 
@@ -235,7 +235,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Assistant (`/assistant`)
 
 **Say:**  
-“AI assistant — natural language in Hindi or English; can tie into balances and next actions.”
+“AI assistant – natural language in Hindi or English; can tie into balances and next actions.”
 
 **Do:** Send one short question; optional voice.
 
@@ -246,7 +246,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ### Platform lab (`/platform`)
 
 **Say:**  
-“Platform lab — capability map and integration status for demos and technical buyers.”
+“Platform lab – capability map and integration status for demos and technical buyers.”
 
 **Do:** Scroll module list.
 
@@ -257,7 +257,7 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 ## One-line “elevator” close
 
 **Say:**  
-“That’s the SMB financial twin — daily cash and collections first, full ledger and GST, with AI and growth tools when you’re ready to scale.”
+“That’s the SMB financial twin – daily cash and collections first, full ledger and GST, with AI and growth tools when you’re ready to scale.”
 
 **Do:** Land on **Today** or **Growth**; fade or stop recording.
 
@@ -265,13 +265,13 @@ Use this as a **spoken narration + click plan** while screen-recording. Adjust t
 
 ## Optional “short” cut (4 minutes)
 
-1. Login → **Today** (stats + queue + ⌘K) — 90 s  
-2. **People** — 20 s  
-3. **Transactions** — 20 s  
-4. **GST** — 20 s  
-5. **Growth** — 40 s  
-6. **Assistant** — 30 s  
-7. Close on **Today** — 10 s  
+1. Login → **Today** (stats + queue + ⌘K) – 90 s  
+2. **People** – 20 s  
+3. **Transactions** – 20 s  
+4. **GST** – 20 s  
+5. **Growth** – 40 s  
+6. **Assistant** – 30 s  
+7. Close on **Today** – 10 s  
 
 ---
 

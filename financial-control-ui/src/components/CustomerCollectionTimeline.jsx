@@ -6,8 +6,8 @@ import { cn } from '../lib/utils'
 import { getApiErrorMessage, getBillDetail } from '../services/api'
 
 /**
- * Per-customer collections timeline — past touch, today suggestion, future ladder (demo + product).
- * @param {object} [customerInfo] — from GET /collections/customers (bill_id, bill, phone).
+ * Per-customer collections timeline – past touch, today suggestion, future ladder (demo + product).
+ * @param {object} [customerInfo] – from GET /collections/customers (bill_id, bill, phone).
  */
 export function CustomerCollectionTimeline({
   row,
@@ -143,10 +143,10 @@ export function CustomerCollectionTimeline({
                   Aapki khareedari ki details:{'\n'}
                   {billDetail?.parsed_items?.lines
                     ?.filter((l) => l?.name)
-                    .map((l) => `• ${l.name} x ${l.qty} — ₹…`)
+                    .map((l) => `• ${l.name} x ${l.qty} – ₹…`)
                     .join('\n') || '• (item lines from linked bill)'}
                   {'\n\n'}
-                  Kul rakam / Tarikh / Bill number — backend jodega jab aap WhatsApp bhejenge (customer_id
+                  Kul rakam / Tarikh / Bill number – backend jodega jab aap WhatsApp bhejenge (customer_id
                   ke saath).
                 </p>
               </div>
@@ -157,7 +157,7 @@ export function CustomerCollectionTimeline({
               onClick={onWhatsApp}
               className="rounded-xl bg-[#22C55E] py-3 text-sm font-bold text-white shadow-md disabled:opacity-50"
             >
-              PDF ke saath WhatsApp karo
+              WhatsApp reminder + Razorpay link
             </button>
             <button
               type="button"
@@ -165,7 +165,7 @@ export function CustomerCollectionTimeline({
               onClick={onPaymentLink}
               className="rounded-xl border border-violet-200 py-2.5 text-sm font-semibold text-violet-800 hover:bg-violet-50 disabled:opacity-50"
             >
-              Payment link
+              Copy payment link only
             </button>
             <button type="button" onClick={onClose} className="py-2 text-sm text-violet-600 hover:underline">
               Skip

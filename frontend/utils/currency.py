@@ -1,4 +1,4 @@
-"""Display helpers — all ledger amounts are Indian Rupees (INR)."""
+"""Display helpers – all ledger amounts are Indian Rupees (INR)."""
 
 
 def inr(amount: float | int, decimals: int = 0) -> str:

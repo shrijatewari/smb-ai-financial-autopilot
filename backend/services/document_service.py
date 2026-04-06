@@ -131,7 +131,7 @@ def analyze_texts(texts: list[str]) -> dict[str, Any]:
     avg_ticket = None
     if amounts:
         s = sorted(amounts)
-        # Median of "plausible" line amounts only — bare digits in OCR often include
+        # Median of "plausible" line amounts only – bare digits in OCR often include
         # GST %, page numbers, or fragments that pull the median down to ₹1–₹10.
         plausible = [a for a in s if a >= 25.0]
         basis = plausible if plausible else s

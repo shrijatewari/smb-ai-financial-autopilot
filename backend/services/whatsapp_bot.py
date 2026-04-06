@@ -1,5 +1,5 @@
 """
-WhatsApp bot layer — outbound reminders + Meta Cloud webhook handling.
+WhatsApp bot layer – outbound reminders + Meta Cloud webhook handling.
 
 Outbound uses the same Graph API as `whatsapp_service.send_whatsapp_message`.
 Inbound messages are handled in `whatsapp_inbound` (intents, rate limit, replies).

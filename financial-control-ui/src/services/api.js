@@ -3,7 +3,7 @@ import { getMockNotificationsResponse } from '../lib/platformMocks'
 
 /**
  * Base URL for the Financial Control backend.
- * - Dev (`npm run dev`): always same-origin `/api` — Vite proxies to `VITE_API_URL` or localhost:8000
+ * - Dev (`npm run dev`): always same-origin `/api` – Vite proxies to `VITE_API_URL` or localhost:8000
  *   (see vite.config.js `loadEnv`). Avoids CORS and flaky client-side env injection.
  * - Prod build: `VITE_API_URL` (e.g. Netlify), or fallback localhost for broken previews.
  */
@@ -14,7 +14,7 @@ export function resolveApiBaseUrl() {
   return 'http://localhost:8000'
 }
 
-/** EventSource URL for GET /system/stream (JWT in query — browsers cannot set SSE headers). */
+/** EventSource URL for GET /system/stream (JWT in query – browsers cannot set SSE headers). */
 export function getSystemStreamUrl(token) {
   const base = resolveApiBaseUrl().replace(/\/$/, '')
   return `${base}/system/stream?token=${encodeURIComponent(token)}`
@@ -67,8 +67,9 @@ export function getApiErrorMessage(err) {
   if (code === 'ERR_NETWORK' || msg === 'Network Error') {
     if (import.meta.env.DEV) {
       return (
-        'Cannot reach the API. In dev, requests go to `/api` and Vite proxies using VITE_API_URL in financial-control-ui/.env. ' +
-        'Restart the dev server after editing .env. Remote example: VITE_API_URL=https://smb-financial-api.fly.dev'
+        'Cannot reach the API. Start the backend (e.g. port 8000), or set VITE_API_URL in financial-control-ui/.env ' +
+        '(Vite proxies `/api` to that URL). Restart `npm run dev` after changing .env. ' +
+        'Remote example: VITE_API_URL=https://smb-financial-api.fly.dev'
       )
     }
     return (
@@ -123,14 +124,14 @@ export async function fetchGstCompliance() {
   return data
 }
 
-/** GET /gst/summary — GSTIN, next due date, estimated liability, Monte Carlo alignment fields. */
+/** GET /gst/summary – GSTIN, next due date, estimated liability, Monte Carlo alignment fields. */
 export async function fetchGstSummary() {
   const { data } = await api.get('/gst/summary')
   return data
 }
 
 /**
- * GET /notifications — NotificationLog rows (morning briefing sends, etc.).
+ * GET /notifications – NotificationLog rows (morning briefing sends, etc.).
  * On network/API failure, returns demo rows from `getMockNotificationsResponse()` so Profile still shows a table.
  */
 export async function fetchNotifications(params = {}) {
@@ -168,8 +169,8 @@ function pickLedgerSharedFilters(params = {}) {
 }
 
 /**
- * GET /transactions/ledger — persisted Prisma rows (webhooks, AA, SMS, etc.).
- * Pass-through params: date_from, date_to, q, source, category, txn_type, sort (date_desc default — omitted when default),
+ * GET /transactions/ledger – persisted Prisma rows (webhooks, AA, SMS, etc.).
+ * Pass-through params: date_from, date_to, q, source, category, txn_type, sort (date_desc default – omitted when default),
  * offset, limit.
  */
 export async function fetchLedgerTransactions(params = {}) {
@@ -179,14 +180,14 @@ export async function fetchLedgerTransactions(params = {}) {
   return data
 }
 
-/** GET /transactions/ledger/summary — count + credit/debit totals + net (same shared filters as ledger; no sort/offset/limit). */
+/** GET /transactions/ledger/summary – count + credit/debit totals + net (same shared filters as ledger; no sort/offset/limit). */
 export async function fetchLedgerSummary(params = {}) {
   const clean = pickLedgerSharedFilters(params)
   const { data } = await api.get('/transactions/ledger/summary', { params: clean })
   return data
 }
 
-/** GET /transactions/ledger/export — CSV download (auth). Shared filters + optional sort (non-default). */
+/** GET /transactions/ledger/export – CSV download (auth). Shared filters + optional sort (non-default). */
 export async function downloadLedgerCsv(params = {}) {
   const clean = pickLedgerSharedFilters(params)
   if (params.sort && params.sort !== 'date_desc') clean.sort = params.sort
@@ -213,44 +214,44 @@ export async function downloadLedgerCsv(params = {}) {
 }
 
 /**
- * POST /execute/action — simulated Paytm-style execution.
+ * POST /execute/action – simulated Paytm-style execution.
  */
 export async function executeAction(body) {
   const { data } = await api.post('/execute/action', body)
   return data
 }
 
-/** POST /execute/payment-link — Razorpay payment link (live if keys set). */
+/** POST /execute/payment-link – Razorpay payment link (live if keys set). */
 export async function postPaymentLink(body) {
   const { data } = await api.post('/execute/payment-link', body)
   return data
 }
 
-/** POST /execute/whatsapp — payment reminder + Razorpay link in body; Meta or mock send (tone: friendly|formal). */
+/** POST /execute/whatsapp – payment reminder + Razorpay link in body; Meta or mock send (tone: friendly|formal). */
 export async function postWhatsappReminder(body) {
   const { data } = await api.post('/execute/whatsapp', body)
   return data
 }
 
-/** POST /execute/collect — payment link + WhatsApp in one call; response includes payment_link + preview. */
+/** POST /execute/collect – payment link + WhatsApp in one call; response includes payment_link + preview. */
 export async function postExecuteCollect(body) {
   const { data } = await api.post('/execute/collect', body)
   return data
 }
 
-/** POST /execute/call — simulated AI call script + likelihood. */
+/** POST /execute/call – simulated AI call script + likelihood. */
 export async function postCallSimulation(body) {
   const { data } = await api.post('/execute/call', body)
   return data
 }
 
-/** POST /execute/twilio-call — real Hindi TTS call when TWILIO_* env is set. */
+/** POST /execute/twilio-call – real Hindi TTS call when TWILIO_* env is set. */
 export async function postTwilioVoiceCall(body) {
   const { data } = await api.post('/execute/twilio-call', body)
   return data
 }
 
-/** POST /transactions/sms — parse UPI/bank SMS text into the ledger. */
+/** POST /transactions/sms – parse UPI/bank SMS text into the ledger. */
 export async function postSmsIngest(message) {
   const { data } = await api.post('/transactions/sms', { message })
   return data
@@ -275,25 +276,25 @@ export async function fetchMe() {
   return data
 }
 
-/** PATCH /auth/me — trusted helper phone + optional approval gate (demo). */
+/** PATCH /auth/me – trusted helper phone + optional approval gate (demo). */
 export async function patchMe(body) {
   const { data } = await api.patch('/auth/me', body)
   return data
 }
 
-/** GET /aa/status — latest Account Aggregator consent for the signed-in user. */
+/** GET /aa/status – latest Account Aggregator consent for the signed-in user. */
 export async function getAaStatus() {
   const { data } = await api.get('/aa/status')
   return data
 }
 
-/** POST /aa/initiate — start AA consent; open `redirect_url` in a new tab. */
+/** POST /aa/initiate – start AA consent; open `redirect_url` in a new tab. */
 export async function postAaInitiate(body = {}) {
   const { data } = await api.post('/aa/initiate', body)
   return data
 }
 
-/** POST /sms/commands — SMS-style BAL / RISK / PAY (authenticated; Twilio can proxy here). */
+/** POST /sms/commands – SMS-style BAL / RISK / PAY (authenticated; Twilio can proxy here). */
 export async function postSmsCommand(text) {
   const { data } = await api.post('/sms/commands', { text })
   return data
@@ -309,7 +310,7 @@ export async function getOnboardingState() {
   return data
 }
 
-/** POST /documents/upload — PDF/images → OCR → business profile (updates engine context). */
+/** POST /documents/upload – PDF/images → OCR → business profile (updates engine context). */
 export async function uploadDocuments(files) {
   const form = new FormData()
   for (const f of files) {
@@ -321,20 +322,20 @@ export async function uploadDocuments(files) {
   return data
 }
 
-/** GET /documents/profile — latest OCR-derived profile for the signed-in user. */
+/** GET /documents/profile – latest OCR-derived profile for the signed-in user. */
 export async function fetchDocumentProfile() {
   const { data } = await api.get('/documents/profile')
   return data
 }
 
-/** POST /user/interaction — RL rewards / module personalization (dismiss, module_click, alert_view). */
+/** POST /user/interaction – RL rewards / module personalization (dismiss, module_click, alert_view). */
 export async function postUserInteraction(payload) {
   const { data } = await api.post('/user/interaction', payload)
   return data
 }
 
 /**
- * POST /assistant/query — intent + NL response; multilingual when `language` is set (hi, ta, …).
+ * POST /assistant/query – intent + NL response; multilingual when `language` is set (hi, ta, …).
  * Options: language, tone (formal|friendly), include_audio (MP3 URL in response).
  */
 export async function postAssistantQuery(textOrPayload, options = {}) {
@@ -352,7 +353,7 @@ export async function postAssistantQuery(textOrPayload, options = {}) {
   return data
 }
 
-/** GET /inventory/items — per-user stock (SKU). */
+/** GET /inventory/items – per-user stock (SKU). */
 export async function fetchInventoryItems() {
   const { data } = await api.get('/inventory/items')
   return data
@@ -364,13 +365,13 @@ export async function createInventoryItem(body) {
   return data
 }
 
-/** PATCH /inventory/items/:id — adjust quantity or reorder threshold. */
+/** PATCH /inventory/items/:id – adjust quantity or reorder threshold. */
 export async function patchInventoryItem(itemId, body) {
   const { data } = await api.patch(`/inventory/items/${itemId}`, body)
   return data
 }
 
-/** POST /inventory/khata/upload — save khata page photo. */
+/** POST /inventory/khata/upload – save khata page photo. */
 export async function uploadKhataPhoto(file) {
   const form = new FormData()
   form.append('file', file)
@@ -378,61 +379,67 @@ export async function uploadKhataPhoto(file) {
   return data
 }
 
-/** POST /inventory/khata/apply — deduct stock + credit cash ledger. */
+/** POST /inventory/khata/apply – deduct stock + credit cash ledger. */
 export async function applyKhataSale(payload) {
   const { data } = await api.post('/inventory/khata/apply', payload)
   return data
 }
 
-/** GET /credit/score — SMB credit signal (0–1000). */
+/** GET /credit/score – SMB credit signal (0–1000). */
 export async function fetchCreditScore(refresh = false) {
   const { data } = await api.get('/credit/score', { params: { refresh } })
   return data
 }
 
-/** GET /growth/summary — subscription tier, referral code, counts. */
+/** GET /rl/debug – last Q-learning transition + ε (policy + Q-table live on the server). */
+export async function fetchRlDebug() {
+  const { data } = await api.get('/rl/debug')
+  return data
+}
+
+/** GET /growth/summary – subscription tier, referral code, counts. */
 export async function fetchGrowthSummary() {
   const { data } = await api.get('/growth/summary')
   return data
 }
 
-/** POST /growth/subscription — demo tier switch when GROWTH_ALLOW_TIER_OVERRIDE is on. */
+/** POST /growth/subscription – demo tier switch when GROWTH_ALLOW_TIER_OVERRIDE is on. */
 export async function postGrowthSubscription(tier) {
   const { data } = await api.post('/growth/subscription', { tier })
   return data
 }
 
-/** GET /growth/benchmarks — peer percentiles for your industry. */
+/** GET /growth/benchmarks – peer percentiles for your industry. */
 export async function fetchGrowthBenchmarks() {
   const { data } = await api.get('/growth/benchmarks')
   return data
 }
 
-/** POST /growth/benchmarks/refresh — recompute aggregates (ops / demo). */
+/** POST /growth/benchmarks/refresh – recompute aggregates (ops / demo). */
 export async function postGrowthBenchmarksRefresh() {
   const { data } = await api.post('/growth/benchmarks/refresh')
   return data
 }
 
-/** GET /collections/ladder — active 14-day collection campaigns. */
+/** GET /collections/ladder – active 14-day collection campaigns. */
 export async function fetchCollectionLadders() {
   const { data } = await api.get('/collections/ladder')
   return data
 }
 
-/** GET /collections/customers — receivable rows for ladder start. */
+/** GET /collections/customers – receivable rows for ladder start. */
 export async function fetchCollectionCustomers() {
   const { data } = await api.get('/collections/customers')
   return data
 }
 
-/** POST /bills/ingest-json — POS JSON bill → inventory + ledger + optional khaata. */
+/** POST /bills/ingest-json – POS JSON bill → inventory + ledger + optional khaata. */
 export async function ingestBillJson(payload) {
   const { data } = await api.post('/bills/ingest-json', payload)
   return data
 }
 
-/** POST /bills/ingest-ocr — multipart PDF/image → OCR + same ingest pipeline. */
+/** POST /bills/ingest-ocr – multipart PDF/image → OCR + same ingest pipeline. */
 export async function ingestBillOcr(file, udhar = false) {
   const form = new FormData()
   form.append('file', file)
@@ -441,13 +448,13 @@ export async function ingestBillOcr(file, udhar = false) {
   return data
 }
 
-/** GET /bills/history — last 20 bills. */
+/** GET /bills/history – last 20 bills. */
 export async function getBillHistory() {
   const { data } = await api.get('/bills/history')
   return data
 }
 
-/** GET /bills/:id/detail — itemized bill for UI proof. */
+/** GET /bills/:id/detail – itemized bill for UI proof. */
 export async function getBillDetail(billId) {
   const { data } = await api.get(`/bills/${billId}/detail`)
   return data
@@ -459,13 +466,13 @@ export async function postCollectionLadderStart(customerId) {
   return data
 }
 
-/** GET /insights/suppliers — payables concentration. */
+/** GET /insights/suppliers – payables concentration. */
 export async function fetchSupplierInsights() {
   const { data } = await api.get('/insights/suppliers')
   return data
 }
 
-/** GET /inventory/khata/:id/image — blob for preview (auth header). */
+/** GET /inventory/khata/:id/image – blob for preview (auth header). */
 export async function fetchKhataImageBlob(uploadId) {
   const res = await api.get(`/inventory/khata/${uploadId}/image`, { responseType: 'blob' })
   return res.data

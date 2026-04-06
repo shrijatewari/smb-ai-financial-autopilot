@@ -42,7 +42,7 @@ def _safe_sync_path(path: str) -> bool:
 
 
 async def _user_from_sse_token(token: str | None) -> User | None:
-    """JWT from query string — EventSource in browsers cannot send Authorization headers."""
+    """JWT from query string – EventSource in browsers cannot send Authorization headers."""
     if not token or not token.strip():
         return None
     payload = decode_token(token.strip())
@@ -61,7 +61,7 @@ async def get_system_state(user: User | None = Depends(get_current_user_optional
     Live system snapshot (updated every few seconds by the background engine).
 
     When authenticated, **modules**, **profile_type**, and **document_profile** come from **this user's**
-    onboarding + document intelligence — not the global engine-only mirror. Cash/risk/forecast still come
+    onboarding + document intelligence – not the global engine-only mirror. Cash/risk/forecast still come
     from the shared control-plane tick.
     """
     return await build_system_snapshot(user)

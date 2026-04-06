@@ -7,7 +7,7 @@ const SystemStreamContext = createContext(null)
 /** @typedef {'live' | 'reconnecting' | 'idle'} StreamStatus */
 
 /**
- * SSE subscription to GET /system/stream — replaces polling /system/state.
+ * SSE subscription to GET /system/stream – replaces polling /system/state.
  * Children use `useSystemSnapshot()`.
  */
 export function SystemStreamProvider({ children }) {

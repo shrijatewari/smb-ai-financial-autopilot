@@ -6,7 +6,8 @@ import {
   buildWhatsappCollectionMessage,
   normalizePhone10,
   openTelDialer,
-  openWhatsAppDraft,
+  navigateTabOrOpenWhatsApp,
+  openUserGestureBlankTab,
 } from '../lib/collections'
 import {
   fetchCollectionCustomers,
@@ -63,31 +64,56 @@ export default function People() {
   const phone10 = normalizePhone10(phone) || DEFAULT_PHONE
 
   async function queueMessage(row) {
+    const waTab = openUserGestureBlankTab()
     setBusy('wa')
+    const rowKey = String(row.name || '').trim().toLowerCase()
+    const rowCust = customersByName[rowKey]
     try {
-      const key = String(row.name || '').trim().toLowerCase()
-      const cust = customersByName[key]
       const res = await postExecuteCollect({
         customer: row.name,
         phone: phone10,
         amount: row.amount,
         tone: 'friendly',
-        ...(cust?.id ? { customer_id: cust.id } : {}),
+        ...(rowCust?.id ? { customer_id: rowCust.id } : {}),
       })
+      const msg = buildWhatsappCollectionMessage(
+        row.name,
+        row.amount,
+        'friendly',
+        res.payment_link || undefined
+      )
+      navigateTabOrOpenWhatsApp(waTab, phone10, msg)
       setToast({
         type: 'ok',
         text: `WhatsApp + link → ${row.name}`,
         link: res.payment_link || undefined,
       })
     } catch {
-      openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
+      let payUrl = null
+      try {
+        const pay = await postPaymentLink({
+          amount: row.amount,
+          customer_name: row.name,
+          phone: phone10,
+          ...(rowCust?.id ? { customer_id: rowCust.id } : {}),
+        })
+        payUrl = pay.payment_link
+      } catch {
+        /* demo link in draft */
+      }
+      navigateTabOrOpenWhatsApp(
+        waTab,
+        phone10,
+        buildWhatsappCollectionMessage(row.name, row.amount, 'friendly', payUrl || undefined)
+      )
       setToast({
         type: 'warn',
         text: t(
-          'API ठीक नहीं — ड्राफ़्ट खोला',
-          'API failed — opened draft',
-          { hinglish: 'API fail — draft khola' },
+          'API ठीक नहीं – ड्राफ़्ट खोला (लिंक जोड़ा)',
+          'API failed – opened draft (link added)',
+          { hinglish: 'API fail – draft khola (link added)' },
         ),
+        link: payUrl || undefined,
       })
     } finally {
       setBusy(null)
@@ -97,13 +123,12 @@ export default function People() {
 
   async function queueCall(row) {
     setBusy('call')
+    openTelDialer(phone10)
     const script = buildHindiPaymentScript(row.name, row.amount)
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
-      if (res.mock) openTelDialer(phone10)
       setToast({ type: res.mock ? 'warn' : 'ok', text: res.mock ? 'Dialer / demo' : 'Call queued' })
     } catch (e) {
-      openTelDialer(phone10)
       setToast({ type: 'warn', text: getApiErrorMessage(e) })
     } finally {
       setBusy(null)
@@ -118,25 +143,25 @@ export default function People() {
           <div>
             <h1 className="text-xl font-bold text-violet-950">
               {t(
-                'लॉग — पैसे लेने वाले',
-                'Log — receivables',
-                { hinglish: 'Log — paise lene wale' },
+                'लॉग – पैसे लेने वाले',
+                'Log – receivables',
+                { hinglish: 'Log – paise lene wale' },
               )}
             </h1>
             <p className="text-sm text-violet-800/70">
               {creditMode
                 ? t(
-                    'क्रेडिट-भारी व्यवसाय: पहले इन लोगों को फ़ॉलो करें — हर पंक्ति पर संदेश / कॉल',
-                    'Credit-heavy business: follow these people first — Message / Call on each row',
+                    'क्रेडिट-भारी व्यवसाय: पहले इन लोगों को फ़ॉलो करें – हर पंक्ति पर संदेश / कॉल',
+                    'Credit-heavy business: follow these people first – Message / Call on each row',
                     {
                       hinglish:
-                        'Credit-heavy business: pehle in logon ko follow karein — har row par Message / Call',
+                        'Credit-heavy business: pehle in logon ko follow karein – har row par Message / Call',
                     },
                   )
                 : t(
-                    'इंजन क़तार — हर पंक्ति पर संदेश या कॉल',
-                    'Engine queue — message or call on each row',
-                    { hinglish: 'Engine queue — har row par message ya call' },
+                    'इंजन क़तार – हर पंक्ति पर संदेश या कॉल',
+                    'Engine queue – message or call on each row',
+                    { hinglish: 'Engine queue – har row par message ya call' },
                   )}
             </p>
           </div>
@@ -175,9 +200,9 @@ export default function People() {
         ) : rows.length === 0 ? (
           <p className="py-12 text-center text-violet-600">
             {t(
-              'अभी क़तार खाली — इंजन डेटा कनेक्ट करें',
-              'Queue is empty — connect engine data',
-              { hinglish: 'Abhi queue khali — engine data connect karo' },
+              'अभी क़तार खाली – इंजन डेटा कनेक्ट करें',
+              'Queue is empty – connect engine data',
+              { hinglish: 'Abhi queue khali – engine data connect karo' },
             )}
           </p>
         ) : (
@@ -189,9 +214,9 @@ export default function People() {
               { hinglish: 'Aaj collect karein' },
             )}
             subtitle={t(
-              'इंजन के अनुसार रैंक — रिस्क बार = देर से भुगतान का जोखिम',
-              'Ranked by engine — risk bar = late-payment risk',
-              { hinglish: 'Ranked by engine — risk bar = late-payment risk' },
+              'इंजन के अनुसार रैंक – रिस्क बार = देर से भुगतान का जोखिम',
+              'Ranked by engine – risk bar = late-payment risk',
+              { hinglish: 'Ranked by engine – risk bar = late-payment risk' },
             )}
             totalDueLabel={t('कुल', 'Total', { hinglish: 'Total' })}
             busyKey={() => busy}
@@ -214,17 +239,29 @@ export default function People() {
             onPaymentLink={async () => {
               setBusy('sys')
               try {
-                await postPaymentLink({
+                const key = String(timelineRow.name || '').trim().toLowerCase()
+                const cust = customersByName[key]
+                const res = await postPaymentLink({
                   amount: Number(timelineRow.amount),
                   customer_name: timelineRow.name,
                   phone: phone10,
+                  ...(cust?.id ? { customer_id: cust.id } : {}),
                 })
-                setToast({ type: 'ok', text: 'Payment link' })
+                const url = res.payment_link
+                if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                  await navigator.clipboard.writeText(url)
+                }
+                setToast({
+                  type: 'ok',
+                  text: t('पेमेंट लिंक कॉपी हो गया।', 'Payment link copied to clipboard.'),
+                  link: url,
+                })
               } catch (e) {
                 setToast({ type: 'err', text: getApiErrorMessage(e) })
               } finally {
                 setBusy(null)
                 setTimelineRow(null)
+                setTimeout(() => setToast(null), 12000)
               }
             }}
           />

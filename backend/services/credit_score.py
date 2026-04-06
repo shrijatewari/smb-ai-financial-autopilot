@@ -1,5 +1,5 @@
 """
-SMB credit signal (0–1000) — composite from ledger velocity, GST compliance, receivables,
+SMB credit signal (0–1000) – composite from ledger velocity, GST compliance, receivables,
 and RL engagement. Persisted as CreditScoreSnapshot for lender-facing exports.
 """
 
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from db.prisma_client import prisma
+from prisma.fields import Json
 
 
 def score_band(score: int) -> str:
@@ -105,7 +106,7 @@ async def compute_and_persist_credit_score(user_id: int) -> dict[str, Any]:
             "user_id": user_id,
             "score": score,
             "band": band,
-            "factors": factors,
+            "factors": Json(factors),
         }
     )
 

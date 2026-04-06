@@ -1,4 +1,4 @@
-"""Business onboarding — persists intelligence layer inputs (per authenticated user)."""
+"""Business onboarding – persists intelligence layer inputs (per authenticated user)."""
 
 from __future__ import annotations
 

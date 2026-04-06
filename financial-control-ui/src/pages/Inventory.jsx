@@ -87,7 +87,7 @@ export default function Inventory() {
     () =>
       items.map((it) => (
         <option key={it.id} value={it.id}>
-          {it.name} ({it.sku}) — {it.quantity}
+          {it.name} ({it.sku}) – {it.quantity}
           {it.unit ? ` ${it.unit}` : ''}
         </option>
       )),
@@ -146,7 +146,7 @@ export default function Inventory() {
         setLines(linesFromVision(res.suggested_lines))
         setToast({
           type: 'success',
-          text: res.message || 'Photo saved — sale lines AI se bhari gayi. Verify karke Apply karein.',
+          text: res.message || 'Photo saved – sale lines AI se bhari gayi. Verify karke Apply karein.',
         })
       } else {
         setLines([newLine()])
@@ -222,7 +222,7 @@ export default function Inventory() {
       </p>
       <PageHeader
         title="Inventory & khata"
-        subtitle="Add products, then photograph your khata and record sales — stock goes down and cash (credit) hits the ledger."
+        subtitle="Add products, then photograph your khata and record sales – stock goes down and cash (credit) hits the ledger."
       />
 
       {toast && (
@@ -255,12 +255,12 @@ export default function Inventory() {
             <li>Upload a photo of your khata page for your records (optional but recommended).</li>
             <li>
               Khata photo upload par <strong>AI photo padhta hai</strong> (OpenAI vision) aur sale lines suggest
-              karta hai — aap verify karke <strong>Apply</strong> dabate ho. Galat match ho to product dropdown
+              karta hai – aap verify karke <strong>Apply</strong> dabate ho. Galat match ho to product dropdown
               change karo.
             </li>
           </ol>
           <p className="mt-3 text-xs text-violet-950/55">
-            Requires <code className="rounded bg-violet-100 px-1">OPENAI_API_KEY</code> in backend — same as
+            Requires <code className="rounded bg-violet-100 px-1">OPENAI_API_KEY</code> in backend – same as
             assistant. Hindi / English mixed handwriting supported to an extent; hamesha confirm karein.
           </p>
         </CardContent>
@@ -349,7 +349,7 @@ export default function Inventory() {
             </label>
             {khataUploadId && (
               <p className="text-xs text-violet-700">
-                Upload #{khataUploadId} — Apply par ledger ke saath link hoga.
+                Upload #{khataUploadId} – Apply par ledger ke saath link hoga.
               </p>
             )}
             {visionNotes && (
@@ -372,7 +372,7 @@ export default function Inventory() {
         <CardHeader className="p-0 pb-4">
           <CardTitle className="text-lg">Record sales from khata</CardTitle>
           <p className="text-sm text-violet-200/90">
-            Photo upload ke baad AI yahan lines bhar sakta hai — aap sirf check karke Apply karo. Har line stock
+            Photo upload ke baad AI yahan lines bhar sakta hai – aap sirf check karke Apply karo. Har line stock
             kam karti hai aur ₹ cash ledger mein jama hota hai.
           </p>
         </CardHeader>
@@ -451,7 +451,7 @@ export default function Inventory() {
         {loading ? (
           <p className="text-sm text-violet-950/60">Loading…</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-violet-950/60">No products yet — add one above.</p>
+          <p className="text-sm text-violet-950/60">No products yet – add one above.</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items.map((item, i) => (

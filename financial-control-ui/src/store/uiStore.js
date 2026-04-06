@@ -16,6 +16,10 @@ export const useUiStore = create(
       guidedStep: 0,
       /** Cmd+K command palette (search customers, jump, actions). */
       commandPaletteOpen: false,
+      /** Brief highlight on notification bell when a receivable clears from the engine queue. */
+      bellPaymentHighlight: false,
+      setBellPaymentHighlight: (bellPaymentHighlight) => set({ bellPaymentHighlight }),
+      dismissBellPaymentHighlight: () => set({ bellPaymentHighlight: false }),
       setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       setAssistantOpen: (open) => set({ assistantOpen: open }),

@@ -25,7 +25,7 @@ def build_actions(
                 "action": "collect_payment",
                 "priority": "high" if probability_of_negative_cash > ACTION_TRIGGER_THRESHOLD else "medium",
                 "reason": (
-                    "Cash runway is tight — collect overdue receivables today before inflows slip further."
+                    "Cash runway is tight – collect overdue receivables today before inflows slip further."
                 ),
                 "confidence": min(0.95, 0.55 + 0.45 * probability_of_negative_cash),
                 "metadata": {

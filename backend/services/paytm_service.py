@@ -1,7 +1,7 @@
 """
 Simulated Paytm-style payment APIs for demo / hackathon integrations.
 
-No real network calls — returns deterministic fake URLs and success payloads.
+No real network calls – returns deterministic fake URLs and success payloads.
 """
 
 from __future__ import annotations
@@ -52,5 +52,5 @@ def send_payment_request(customer: str, amount: float, link: str | None = None) 
         payment_tracking.mark_sent(link)
     return (
         f"Payment request sent to '{customer[:50]}' for ₹{amount:,.2f} "
-        "(simulated — no funds moved)."
+        "(simulated – no funds moved)."
     )

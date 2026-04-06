@@ -1,4 +1,4 @@
-"""Nightly-style peer benchmarks — anonymized p50/p90 by industry (business_type)."""
+"""Nightly-style peer benchmarks – anonymized p50/p90 by industry (business_type)."""
 
 from __future__ import annotations
 

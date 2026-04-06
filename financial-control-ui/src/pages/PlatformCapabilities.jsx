@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
@@ -23,6 +23,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
+import { fetchCollectionCustomers, fetchLedgerTransactions, fetchRlDebug } from '../services/api'
+import { fetchExpenseCategoryMom } from '../lib/expenseCategoryMom'
+import { getNextSeasonalRetailEvent } from '../lib/seasonalRetailCalendar'
 import {
   MOCK_ANOMALY_FLAGS,
   MOCK_AA_STATUS,
@@ -31,12 +34,31 @@ import {
   MOCK_PWA_INFO,
   MOCK_RAZORPAY_WEBHOOK_EVENT,
   MOCK_RL_OUTCOMES,
-  MOCK_SEASONAL_CONTEXT,
   MOCK_WA_INTENTS,
   MOCK_BUSINESSES,
   mockScenarioResult,
 } from '../lib/platformMocks'
 import { formatInr } from '../lib/collections'
+
+/** Twin snapshot alerts: strings (fraud/spike) + suspicious_txn objects from the pipeline. */
+function normalizeTwinAlerts(alerts) {
+  if (!Array.isArray(alerts)) return []
+  return alerts.map((a, i) => {
+    if (typeof a === 'string') {
+      return { key: `str-${i}`, kind: 'text', text: a }
+    }
+    if (a && typeof a === 'object' && a.type === 'suspicious_txn') {
+      return {
+        key: `txn-${i}`,
+        kind: 'suspicious',
+        date: a.date,
+        amount: a.amount,
+        z: a.z_score,
+      }
+    }
+    return { key: `o-${i}`, kind: 'text', text: JSON.stringify(a) }
+  })
+}
 
 function StatusBadge({ kind }) {
   const map = {
@@ -45,7 +67,7 @@ function StatusBadge({ kind }) {
     mock: 'bg-violet-100 text-violet-900 border-violet-200',
     planned: 'bg-slate-100 text-slate-700 border-slate-200',
   }
-  const label = { live: 'Live backend', partial: 'Partial', mock: 'Mock UI', planned: 'Planned' }[kind] || kind
+  const label = { live: 'Live', partial: 'Partial', mock: 'Mock UI', planned: 'Planned' }[kind] || kind
   return (
     <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${map[kind] || map.mock}`}>
       {label}
@@ -54,17 +76,88 @@ function StatusBadge({ kind }) {
 }
 
 export default function PlatformCapabilities() {
-  const { streamStatus } = useSystemSnapshot()
+  const { streamStatus, snapshot } = useSystemSnapshot()
   const [delayDays, setDelayDays] = useState(0)
   const [hire, setHire] = useState(0)
+  const [rlDebug, setRlDebug] = useState(null)
+  const [customersPayload, setCustomersPayload] = useState(null)
+  const [expenseInsight, setExpenseInsight] = useState(null)
+  const [expenseLoading, setExpenseLoading] = useState(true)
+  const seasonalHint = useMemo(() => getNextSeasonalRetailEvent(), [])
   const scenario = useMemo(() => mockScenarioResult({ delayDaysExtra: delayDays, hireCostMonthly: hire }), [delayDays, hire])
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([fetchRlDebug().catch(() => null), fetchCollectionCustomers().catch(() => null)]).then(([rl, cust]) => {
+      if (!cancelled) {
+        setRlDebug(rl)
+        setCustomersPayload(cust)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    setExpenseLoading(true)
+    fetchExpenseCategoryMom(fetchLedgerTransactions)
+      .then((r) => {
+        if (!cancelled) setExpenseInsight(r)
+      })
+      .catch(() => {
+        if (!cancelled) setExpenseInsight(null)
+      })
+      .finally(() => {
+        if (!cancelled) setExpenseLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const twinAlerts = useMemo(() => normalizeTwinAlerts(snapshot?.alerts), [snapshot?.alerts])
+  const rlMeta = snapshot?.meta?.rl && typeof snapshot.meta.rl === 'object' ? snapshot.meta.rl : null
+
+  const liveLateRows = useMemo(() => {
+    const items = customersPayload?.items || []
+    if (!items.length) return []
+    return [...items]
+      .filter((c) => c && (Number(c.total_due) > 0 || c.risk_score != null))
+      .sort((a, b) => Number(b.risk_score ?? 0) - Number(a.risk_score ?? 0))
+      .slice(0, 4)
+      .map((c) => {
+        const risk = Number(c.risk_score ?? 0.5)
+        const reliabilityPct = Math.max(0, Math.min(100, Math.round((1 - risk) * 100)))
+        return {
+          name: c.name,
+          note: `${formatInr(c.total_due)} due · risk ${(risk * 100).toFixed(0)}% (DB)`,
+          payThisWeek: reliabilityPct / 100,
+        }
+      })
+  }, [customersPayload])
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-16 pt-8 sm:px-6">
       <PageHeader
         title="Platform capabilities"
-        subtitle="What the product covers today (backend + UI), what is mocked for demos, and quick links. Many items from the roadmap are already implemented server-side — this page surfaces them in one place."
+        subtitle="What is live vs illustrative. The twin runs fraud checks, z-scores, and RL ranking on each tick. This page also loads debit ledger rows to show month-over-month spend by category, and a client-side India retail calendar for the next seasonal cluster (Monte Carlo still uses ledger + simulation only)."
       />
+
+      <Card className="mb-6 border border-sky-200/80 bg-sky-50/50">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-sky-950">Why it used to look “all mock”</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm leading-relaxed text-sky-950/90">
+          <p>
+            This page originally showed <strong>static cards</strong> so demos worked offline. The backend already computes{' '}
+            <strong>real anomaly-style alerts</strong> (fraud flags + statistical spikes + suspicious rows) and{' '}
+            <strong>real RL metadata</strong> (<code className="rounded bg-white/80 px-1 text-xs">meta.rl</code> in the twin
+            snapshot, plus Q-learning on the server). Below also pulls <strong>GET /transactions/ledger</strong> debits for category MoM and shows the next seasonal hint from a built-in retail calendar (not the MC engine).
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="mb-8 border border-violet-200/80 bg-white/95">
         <CardHeader>
@@ -75,7 +168,7 @@ export default function PlatformCapabilities() {
               {streamStatus === 'live' ? 'Live' : streamStatus === 'reconnecting' ? 'Reconnecting' : 'Starting'}
             </span>
             . Razorpay webhook, AA routes, GST summary, WhatsApp inbound, daily briefing scheduler, and RL hooks exist in
-            the FastAPI app — see OpenAPI <code className="rounded bg-violet-100 px-1 text-xs">/docs</code>.
+            the FastAPI app – see OpenAPI <code className="rounded bg-violet-100 px-1 text-xs">/docs</code>.
           </p>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -94,17 +187,17 @@ export default function PlatformCapabilities() {
                 ['Razorpay webhook → ledger', 'live', 'Transactions source filter + mock event below'],
                 ['SSE snapshot push', 'live', 'Top bar + Today'],
                 ['Morning WhatsApp briefing', 'live', '/profile'],
-                ['WhatsApp bot intents', 'live', 'Meta webhook — try intents below'],
-                ['Late payment score', 'partial', 'People + mock %'],
-                ['Anomaly flags', 'mock', 'This page'],
+                ['WhatsApp bot intents', 'live', 'Meta webhook – try intents below'],
+                ['Late payment score', 'live', 'Customers DB + risk_score (below)'],
+                ['Anomaly flags', 'live', 'Twin alerts + suspicious_txn from pipeline'],
                 ['What-if scenario', 'mock', 'Slider below'],
-                ['Seasonal / festival bias', 'mock', 'Copy block'],
-                ['Expense category trend', 'mock', 'Bars below'],
-                ['RL outcome tracking', 'partial', 'Mock table + POST /rl/feedback'],
+                ['Seasonal / festival bias', 'live', 'Client retail calendar (twin MC separate)'],
+                ['Expense category trend', 'live', 'Ledger debits MoM by category'],
+                ['RL outcome tracking', 'live', 'meta.rl + GET /rl/debug + POST /rl/feedback'],
                 ['PWA offline', 'planned', 'Mock install panel'],
                 ['Multi-business / CA', 'planned', 'Mock grid'],
                 ['Explain this (voice)', 'live', 'Today → Assistant'],
-                ['Notification log (briefing)', 'live', 'Profile — mock rows if GET /notifications fails'],
+                ['Notification log (briefing)', 'live', 'Profile – mock rows if GET /notifications fails'],
               ].map(([cap, be, fe]) => (
                 <tr key={cap} className="border-b border-violet-50">
                   <td className="py-2 pr-3 font-medium">{cap}</td>
@@ -170,13 +263,16 @@ export default function PlatformCapabilities() {
             <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-violet-700" />
-                <CardTitle className="text-base">Late payment score (demo)</CardTitle>
+                <CardTitle className="text-base">Late payment &amp; risk (customers)</CardTitle>
               </div>
-              <StatusBadge kind="mock" />
+              <StatusBadge kind={liveLateRows.length ? 'live' : 'mock'} />
             </CardHeader>
             <CardContent className="space-y-2">
-              {MOCK_LATE_PAYMENT_SCORES.map((r) => (
-                <div key={r.name} className="flex items-center justify-between rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2 text-sm">
+              {(liveLateRows.length ? liveLateRows : MOCK_LATE_PAYMENT_SCORES).map((r) => (
+                <div
+                  key={r.name}
+                  className="flex items-center justify-between rounded-lg border border-violet-100 bg-violet-50/40 px-3 py-2 text-sm"
+                >
                   <div>
                     <p className="font-medium text-violet-950">{r.name}</p>
                     <p className="text-[11px] text-violet-600">{r.note}</p>
@@ -184,8 +280,13 @@ export default function PlatformCapabilities() {
                   <span className="tabular-nums font-bold text-emerald-800">{(100 * r.payThisWeek).toFixed(0)}%</span>
                 </div>
               ))}
+              <p className="text-[11px] text-violet-500">
+                {liveLateRows.length
+                  ? 'Live: sorted by risk_score from GET /collections/customers. % ≈ (1 − risk) × 100.'
+                  : 'Demo rows – log in and seed customers, or use demo@example.com after seed_mock_data.py.'}
+              </p>
               <Link to="/people" className="inline-flex text-xs font-semibold text-[#6C3BFF] hover:underline">
-                See People / dues (scores merged when queue loads)
+                See People / dues
               </Link>
             </CardContent>
           </Card>
@@ -205,12 +306,12 @@ export default function PlatformCapabilities() {
               <ul className="space-y-1 text-xs text-violet-800">
                 {MOCK_WA_INTENTS.map((x) => (
                   <li key={x.intent}>
-                    <span className="font-semibold">{x.intent}</span> — “{x.example}”
+                    <span className="font-semibold">{x.intent}</span> – “{x.example}”
                   </li>
                 ))}
               </ul>
               <p className="text-xs text-violet-600">
-                Morning briefing: APScheduler + Profile toggle — see{' '}
+                Morning briefing: APScheduler + Profile toggle – see{' '}
                 <Link className="font-semibold text-[#6C3BFF] hover:underline" to="/profile#profile-briefing">
                   Profile → briefing
                 </Link>
@@ -225,20 +326,71 @@ export default function PlatformCapabilities() {
             <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
               <div className="flex items-center gap-2">
                 <Tag className="h-5 w-5 text-violet-600" />
-                <CardTitle className="text-base">Expense categories (mock trend)</CardTitle>
+                <CardTitle className="text-base">Expense categories (ledger MoM)</CardTitle>
               </div>
-              <StatusBadge kind="mock" />
+              <StatusBadge
+                kind={
+                  expenseLoading
+                    ? 'partial'
+                    : expenseInsight?.rows?.length
+                      ? 'live'
+                      : expenseInsight && expenseInsight.totalTxns === 0
+                        ? 'partial'
+                        : 'mock'
+                }
+              />
             </CardHeader>
             <CardContent className="space-y-2">
-              {MOCK_EXPENSE_CATEGORY_TREND.map((e) => (
-                <div key={e.category} className="flex items-center justify-between text-sm">
-                  <span className="capitalize text-violet-800">{e.category.replace('_', ' ')}</span>
-                  <Badge variant={e.deltaPct > 0 ? 'danger' : e.deltaPct < 0 ? 'success' : 'muted'}>
-                    {e.deltaPct > 0 ? '+' : ''}
-                    {e.deltaPct}% MoM
-                  </Badge>
-                </div>
-              ))}
+              <p className="text-[11px] leading-relaxed text-violet-600">
+                Debits from <code className="rounded bg-violet-100 px-1">GET /transactions/ledger</code>, grouped by{' '}
+                <code className="rounded bg-violet-100 px-1">category</code> – previous calendar month vs current (local
+                month boundaries).
+              </p>
+              {expenseLoading ? (
+                <p className="text-sm text-violet-500">Loading ledger…</p>
+              ) : expenseInsight?.rows?.length ? (
+                <>
+                  <p className="text-[10px] text-violet-500">
+                    {expenseInsight.prevYm} → {expenseInsight.curYm} · {expenseInsight.totalTxns} debit row(s) loaded
+                  </p>
+                  {expenseInsight.rows.map((e) => (
+                    <div key={e.category} className="flex flex-wrap items-center justify-between gap-1 text-sm">
+                      <span className="min-w-0 capitalize text-violet-800">{e.category.replace(/_/g, ' ')}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] tabular-nums text-violet-500">
+                          {formatInr(e.prevTotal)} → {formatInr(e.curTotal)}
+                        </span>
+                        <Badge variant={e.deltaPct > 0 ? 'danger' : e.deltaPct < 0 ? 'success' : 'muted'}>
+                          {e.deltaPct > 0 ? '+' : ''}
+                          {e.deltaPct}% MoM
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : expenseInsight && expenseInsight.totalTxns === 0 ? (
+                <p className="text-sm text-violet-600">
+                  No debit rows in the last two calendar months – seed{' '}
+                  <code className="rounded bg-violet-100 px-1 text-xs">load_mock_csv_to_ledger.py</code> or add
+                  transactions.
+                </p>
+              ) : (
+                <>
+                  <p className="text-[11px] text-amber-800">Could not load ledger – demo bars:</p>
+                  {MOCK_EXPENSE_CATEGORY_TREND.map((e) => (
+                    <div key={e.category} className="flex items-center justify-between text-sm opacity-90">
+                      <span className="capitalize text-violet-800">{e.category.replace('_', ' ')}</span>
+                      <Badge variant={e.deltaPct > 0 ? 'danger' : e.deltaPct < 0 ? 'success' : 'muted'}>
+                        {e.deltaPct > 0 ? '+' : ''}
+                        {e.deltaPct}% MoM
+                      </Badge>
+                    </div>
+                  ))}
+                </>
+              )}
+              <Link to="/transactions" className="inline-flex text-xs font-semibold text-[#6C3BFF] hover:underline">
+                Transactions →
+              </Link>
             </CardContent>
           </Card>
         </motion.div>
@@ -248,14 +400,21 @@ export default function PlatformCapabilities() {
             <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-amber-700" />
-                <CardTitle className="text-base">Seasonal context (mock)</CardTitle>
+                <CardTitle className="text-base">Seasonal context</CardTitle>
               </div>
-              <StatusBadge kind="mock" />
+              <StatusBadge kind="live" />
             </CardHeader>
             <CardContent className="text-sm text-violet-950/85">
-              <p className="font-medium">{MOCK_SEASONAL_CONTEXT.nextEvent}</p>
-              <p className="mt-1 text-xs text-violet-700">In ~{MOCK_SEASONAL_CONTEXT.daysAway} days</p>
-              <p className="mt-2 text-xs leading-relaxed text-violet-600">{MOCK_SEASONAL_CONTEXT.hint}</p>
+              <p className="text-[11px] leading-relaxed text-violet-600">
+                Next cluster from the in-app <strong>India retail calendar</strong> (approx. Gregorian dates). The cash
+                twin still forecasts from ledger + Monte Carlo – this block is for merchandising / staffing only.
+              </p>
+              <p className="mt-3 font-medium text-violet-950">{seasonalHint.nextEvent}</p>
+              <p className="mt-1 text-xs text-violet-700">
+                {seasonalHint.daysAway === 0 ? 'Today / underway' : `In ~${seasonalHint.daysAway} day(s)`} ·{' '}
+                <span className="font-mono text-[10px]">{seasonalHint.eventDate}</span>
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-violet-600">{seasonalHint.hint}</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -265,22 +424,48 @@ export default function PlatformCapabilities() {
             <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
               <div className="flex items-center gap-2">
                 <Radar className="h-5 w-5 text-rose-700" />
-                <CardTitle className="text-base">Anomaly hints (mock)</CardTitle>
+                <CardTitle className="text-base">Anomaly &amp; risk hints</CardTitle>
               </div>
-              <StatusBadge kind="mock" />
+              <StatusBadge kind={twinAlerts.length ? 'live' : 'partial'} />
             </CardHeader>
             <CardContent className="space-y-2">
-              {MOCK_ANOMALY_FLAGS.map((a) => (
-                <div key={a.id} className="rounded-lg border border-rose-100 bg-rose-50/50 px-3 py-2 text-xs">
-                  <p className="font-semibold text-rose-950">
-                    {formatInr(a.amount)} · {a.date}
+              {twinAlerts.length > 0 ? (
+                twinAlerts.map((a) =>
+                  a.kind === 'suspicious' ? (
+                    <div key={a.key} className="rounded-lg border border-rose-100 bg-rose-50/50 px-3 py-2 text-xs">
+                      <p className="font-semibold text-rose-950">
+                        {formatInr(a.amount)} · {a.date}
+                        {a.z != null && a.z !== '' ? ` · z=${Number(a.z).toFixed(2)}` : ''}
+                      </p>
+                      <p className="mt-1 text-rose-900/90">Suspicious vs recent pattern (pipeline)</p>
+                      <Badge variant="warning" className="mt-1 capitalize">
+                        review
+                      </Badge>
+                    </div>
+                  ) : (
+                    <div key={a.key} className="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2 text-xs text-amber-950">
+                      {a.text}
+                    </div>
+                  )
+                )
+              ) : (
+                <>
+                  <p className="text-[11px] text-violet-600">
+                    No fraud/spike/suspicious rows in the <strong>latest twin snapshot</strong> – ingest more ledger data or wait for the next engine tick. Static examples:
                   </p>
-                  <p className="mt-1 text-rose-900/90">{a.reason}</p>
-                  <Badge variant="warning" className="mt-1 capitalize">
-                    {a.severity}
-                  </Badge>
-                </div>
-              ))}
+                  {MOCK_ANOMALY_FLAGS.map((a) => (
+                    <div key={a.id} className="rounded-lg border border-dashed border-rose-200/80 bg-white/60 px-3 py-2 text-xs opacity-90">
+                      <p className="font-semibold text-rose-950">
+                        {formatInr(a.amount)} · {a.date} <span className="text-[10px] font-normal text-rose-600">(demo)</span>
+                      </p>
+                      <p className="mt-1 text-rose-900/90">{a.reason}</p>
+                      <Badge variant="warning" className="mt-1 capitalize">
+                        {a.severity}
+                      </Badge>
+                    </div>
+                  ))}
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -334,13 +519,49 @@ export default function PlatformCapabilities() {
             <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
               <div className="flex items-center gap-2">
                 <GitBranch className="h-5 w-5 text-violet-700" />
-                <CardTitle className="text-base">RL outcomes (mock)</CardTitle>
+                <CardTitle className="text-base">RL policy (tabular Q)</CardTitle>
               </div>
-              <StatusBadge kind="mock" />
+              <StatusBadge kind={rlMeta || rlDebug ? 'live' : 'partial'} />
             </CardHeader>
-            <CardContent className="space-y-2 text-xs">
+            <CardContent className="space-y-3 text-xs">
+              {rlMeta ? (
+                <div className="rounded-lg border border-violet-100 bg-violet-50/50 p-2 font-mono text-[11px] text-violet-900">
+                  <p>
+                    <span className="text-violet-600">state_key</span> {String(rlMeta.state_key ?? '–')}
+                  </p>
+                  <p className="mt-1">
+                    <span className="text-violet-600">selected_action</span> {String(rlMeta.selected_action ?? '–')}
+                  </p>
+                  <p className="mt-1">
+                    <span className="text-violet-600">ε</span> {String(rlMeta.epsilon ?? '–')}{' '}
+                    <span className="text-violet-600">mode</span> {String(rlMeta.mode ?? '–')}
+                  </p>
+                  {rlMeta.q_values && (
+                    <p className="mt-1 break-all text-[10px]">
+                      <span className="text-violet-600">q_values</span> {JSON.stringify(rlMeta.q_values)}
+                    </p>
+                  )}
+                  <p className="mt-2 font-sans text-[10px] text-violet-600">
+                    From <code className="rounded bg-white/80 px-1">snapshot.meta.rl</code> (each pipeline tick).
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-violet-600">Connect to the API and wait for a system snapshot – RL meta appears after the engine runs.</p>
+              )}
+              {rlDebug?.last_transition && (
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50/40 p-2 font-mono text-[10px] text-emerald-950">
+                  <p className="text-emerald-800">GET /rl/debug</p>
+                  <pre className="mt-1 max-h-28 overflow-auto whitespace-pre-wrap">{JSON.stringify(rlDebug.last_transition, null, 2)}</pre>
+                </div>
+              )}
+              <p className="font-sans text-[11px] text-violet-600">
+                Feedback loop: <code className="rounded bg-violet-100 px-1">POST /rl/feedback</code>,{' '}
+                <code className="rounded bg-violet-100 px-1">POST /user/interaction</code> – Q-table persisted in{' '}
+                <code className="rounded bg-violet-100 px-1">data/rl_qtable.json</code> on the server.
+              </p>
+              <p className="font-medium text-violet-800">Illustrative “outcomes” (not stored events):</p>
               {MOCK_RL_OUTCOMES.map((r, i) => (
-                <div key={i} className="flex justify-between gap-2 border-b border-violet-50 pb-2 last:border-0">
+                <div key={i} className="flex justify-between gap-2 border-b border-violet-50 pb-2 last:border-0 opacity-80">
                   <span>
                     {r.action} · {r.customer}
                   </span>
@@ -425,7 +646,7 @@ export default function PlatformCapabilities() {
                   <span className="tabular-nums text-violet-700">{(100 * b.risk).toFixed(0)}% risk</span>
                 </div>
               ))}
-              <p className="text-xs text-violet-500">Switcher UI planned — data model TBD.</p>
+              <p className="text-xs text-violet-500">Switcher UI planned – data model TBD.</p>
             </CardContent>
           </Card>
         </motion.div>

@@ -1,5 +1,5 @@
 """
-14-step autonomous collections ladder — one touch per day, logged to NotificationLog.
+14-step autonomous collections ladder – one touch per day, logged to NotificationLog.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from db.prisma_client import prisma
+from prisma.fields import Json
 
 
 MAX_STEP = 13  # 0..13 = 14 touches
@@ -41,7 +42,7 @@ async def start_campaign(user_id: int, customer_id: int) -> dict[str, Any]:
             "step_index": 0,
             "status": "active",
             "next_run_at": now,
-            "metadata": {"ladder": "14d", "version": 1},
+            "metadata": Json({"ladder": "14d", "version": 1}),
         }
     )
     return {
@@ -78,7 +79,7 @@ async def list_campaigns(user_id: int) -> list[dict[str, Any]]:
 
 
 async def process_due_campaigns(limit: int = 50) -> dict[str, Any]:
-    """Invoked by scheduler — advance ladder steps and log outbound touches."""
+    """Invoked by scheduler – advance ladder steps and log outbound touches."""
     now = datetime.now(timezone.utc)
     due = await prisma.collectioncampaign.find_many(
         where={
@@ -105,12 +106,14 @@ async def process_due_campaigns(limit: int = 50) -> dict[str, Any]:
                 "kind": "collection_ladder",
                 "status": "queued",
                 "detail": body[:2000],
-                "metadata": {
-                    "campaign_id": camp.id,
-                    "step": step,
-                    "customer_id": camp.customer_id,
-                    "phone": phone,
-                },
+                "metadata": Json(
+                    {
+                        "campaign_id": camp.id,
+                        "step": step,
+                        "customer_id": camp.customer_id,
+                        "phone": phone,
+                    }
+                ),
             }
         )
         new_step = step + 1

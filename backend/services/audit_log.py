@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from db.prisma_client import prisma
+from prisma.fields import Json
 
 
 async def log_audit(
@@ -23,7 +24,7 @@ async def log_audit(
                 "actor": actor[:32],
                 "action": action[:128],
                 "resource": resource[:255] if resource else None,
-                "metadata": metadata or {},
+                "metadata": Json(metadata or {}),
                 "ip": ip[:64] if ip else None,
             }
         )

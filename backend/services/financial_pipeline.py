@@ -195,6 +195,6 @@ def _revenue_spike_alerts(roll_mu: float, roll_var: float) -> list[str]:
     cv = (roll_var**0.5) / (roll_mu + 1e-6)
     if cv > 1.2:
         return [
-            "Unusual day-to-day revenue variance vs recent mean — possible spike or reporting gap."
+            "Unusual day-to-day revenue variance vs recent mean – possible spike or reporting gap."
         ]
     return []

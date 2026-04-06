@@ -107,7 +107,7 @@ export default function Profile() {
     const aa = searchParams.get('aa')
     if (!aa) return
     if (aa === 'ok') {
-      setAaMsg({ type: 'ok', text: 'Bank linked — AA transactions synced to your ledger.' })
+      setAaMsg({ type: 'ok', text: 'Bank linked – AA transactions synced to your ledger.' })
     } else if (aa === 'failed') {
       setAaMsg({ type: 'err', text: 'Consent was not completed. Try again.' })
     } else if (aa === 'fi_error') {
@@ -234,8 +234,8 @@ export default function Profile() {
       <PageHeader
         title={t('व्यवसाय प्रोफ़ाइल', 'Business profile')}
         subtitle={t(
-          'भाषा, वॉट्सऐप, बैंक लिंक, और हेल्पर — वही लाइव ट्विन आज और पूरे डैशबोर्ड को चलाता है।',
-          'Language, WhatsApp, bank link, and helpers — the same live twin powers Today and the full dashboard.'
+          'भाषा, वॉट्सऐप, बैंक लिंक, और हेल्पर – वही लाइव ट्विन आज और पूरे डैशबोर्ड को चलाता है।',
+          'Language, WhatsApp, bank link, and helpers – the same live twin powers Today and the full dashboard.'
         )}
       />
       <div className="grid gap-6 lg:grid-cols-2">
@@ -316,7 +316,7 @@ export default function Profile() {
                 </strong>
                 <span className="text-emerald-900/80">
                   {' '}
-                  {t('— ऊपर बार में बैज जैसा।', '— matches the badge in the top bar.')}
+                  {t('– ऊपर बार में बैज जैसा।', '– matches the badge in the top bar.')}
                 </span>
               </span>
             </div>
@@ -421,14 +421,14 @@ export default function Profile() {
               <>
                 {notif?._mockFallback && (
                   <p className="rounded-lg border border-amber-300/80 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-950">
-                    Showing <strong>demo notification log</strong> — connect the backend (or fix auth) to load real{' '}
+                    Showing <strong>demo notification log</strong> – connect the backend (or fix auth) to load real{' '}
                     <code className="rounded bg-amber-100 px-1">GET /notifications</code> rows.
                   </p>
                 )}
                 {(notif?.items || []).length === 0 ? (
                   !notif?._mockFallback && (
                     <p className="text-sm text-violet-600">
-                      No entries yet — enable briefing and wait for the next 8:00 AM IST send.
+                      No entries yet – enable briefing and wait for the next 8:00 AM IST send.
                     </p>
                   )
                 ) : (
@@ -446,9 +446,9 @@ export default function Profile() {
                         {(notif.items || []).map((row) => (
                           <tr key={row.id} className="border-b border-violet-50/80">
                             <td className="px-3 py-2 tabular-nums text-violet-800">
-                              {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
+                              {row.created_at ? new Date(row.created_at).toLocaleString() : '–'}
                             </td>
-                            <td className="px-3 py-2 font-medium text-violet-950">{row.kind || '—'}</td>
+                            <td className="px-3 py-2 font-medium text-violet-950">{row.kind || '–'}</td>
                             <td className="px-3 py-2">
                               <span
                                 className={cn(
@@ -463,7 +463,7 @@ export default function Profile() {
                               </span>
                             </td>
                             <td className="max-w-[200px] truncate px-3 py-2 text-violet-700" title={row.detail || ''}>
-                              {row.detail || '—'}
+                              {row.detail || '–'}
                             </td>
                           </tr>
                         ))}
@@ -486,10 +486,10 @@ export default function Profile() {
                 <a href="#profile-briefing" className="font-medium text-[#6C3BFF] underline underline-offset-2">
                   Morning briefing
                 </a>{' '}
-                WhatsApp field (saved or just typed—we send it to AA).
+                WhatsApp field (saved or just typed–we send it to AA).
               </li>
               <li>
-                Tap <span className="font-medium">Link bank account</span> — Setu consent opens in a new tab. Complete
+                Tap <span className="font-medium">Link bank account</span> – Setu consent opens in a new tab. Complete
                 approval there.
               </li>
               <li>
@@ -539,7 +539,7 @@ export default function Profile() {
                   checked={helperApproval}
                   onChange={(e) => setHelperApproval(e.target.checked)}
                 />
-                Actions ke liye helper approval (demo — OTP jald)
+                Actions ke liye helper approval (demo – OTP jald)
               </label>
               <Button type="submit" disabled={helperSaving}>
                 {helperSaving ? t('सेव हो रहा…', 'Saving…') : t('सेव', 'Save')}
@@ -551,7 +551,7 @@ export default function Profile() {
               </p>
             )}
             <p className="mt-2 text-xs text-violet-950/55">
-              Low-literacy owners ke liye: beta, son/helper ko assign karo — future mein OTP se approve.
+              Low-literacy owners ke liye: beta, son/helper ko assign karo – future mein OTP se approve.
             </p>
           </CardContent>
         </Card>

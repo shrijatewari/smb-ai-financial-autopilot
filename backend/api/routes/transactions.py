@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from auth.deps import get_current_user
 from db.prisma_client import prisma
 from prisma.models import User
+from engine.system_engine import refresh_snapshot
 from services import ingestion_service, state_store
 from utils.sms_parser import parse_sms_batch
 
@@ -54,7 +55,7 @@ def _parse_ledger_source_param(raw: str | None) -> str | None:
 
 
 def _parse_ledger_category_param(raw: str | None) -> str | None:
-    """Improvement 16 — optional exact `category` column match (VarChar 32)."""
+    """Improvement 16 – optional exact `category` column match (VarChar 32)."""
     if not raw or not str(raw).strip():
         return None
     s = str(raw).strip()
@@ -74,7 +75,7 @@ def _parse_ledger_txn_type_param(raw: str | None) -> str | None:
 
 
 def _parse_ledger_sort_param(raw: str | None) -> str:
-    """Improvement 15 — optional sort for ledger list + CSV (default: newest by time)."""
+    """Improvement 15 – optional sort for ledger list + CSV (default: newest by time)."""
     if not raw or not str(raw).strip():
         return "date_desc"
     s = str(raw).strip().lower()
@@ -237,7 +238,7 @@ async def export_persisted_ledger_csv(
     date_to: str | None = Query(None, description="Inclusive end date (YYYY-MM-DD, UTC day bounds)."),
     q: str | None = Query(None, description="Case-insensitive substring match on description (max 200 chars)."),
     source: str | None = Query(None, description="Exact ledger source (e.g. razorpay_webhook, max 32 chars)."),
-    txn_type: str | None = Query(None, description="credit or debit — filter by ledger row type."),
+    txn_type: str | None = Query(None, description="credit or debit – filter by ledger row type."),
     sort: str | None = Query(None, description="date_desc | date_asc | amount_desc | amount_asc (default date_desc)."),
     category: str | None = Query(None, description="Exact ledger category (max 32 chars, case-insensitive)."),
 ):
@@ -323,7 +324,7 @@ async def get_ledger_summary(
     date_to: str | None = Query(None, description="Inclusive end date (YYYY-MM-DD, UTC day bounds)."),
     q: str | None = Query(None, description="Case-insensitive substring match on description (max 200 chars)."),
     source: str | None = Query(None, description="Exact ledger source (max 32 chars)."),
-    txn_type: str | None = Query(None, description="credit or debit — filter before aggregating."),
+    txn_type: str | None = Query(None, description="credit or debit – filter before aggregating."),
     category: str | None = Query(None, description="Exact ledger category (max 32 chars, case-insensitive)."),
 ):
     """
@@ -398,7 +399,7 @@ async def get_persisted_ledger(
     date_to: str | None = Query(None, description="Inclusive end date (YYYY-MM-DD, UTC day bounds)."),
     q: str | None = Query(None, description="Case-insensitive substring match on description (max 200 chars)."),
     source: str | None = Query(None, description="Exact ledger source (max 32 chars)."),
-    txn_type: str | None = Query(None, description="credit or debit — filter by ledger row type."),
+    txn_type: str | None = Query(None, description="credit or debit – filter by ledger row type."),
     sort: str | None = Query(None, description="date_desc | date_asc | amount_desc | amount_asc (default date_desc)."),
     category: str | None = Query(None, description="Exact ledger category (max 32 chars, case-insensitive)."),
 ):
@@ -492,9 +493,10 @@ def post_sms_message(body: SmsMessageBody):
     if not parsed:
         raise HTTPException(
             status_code=422,
-            detail="No transactions parsed — include an amount (₹500 / Rs 500) and credit/debit cues.",
+            detail="No transactions parsed – include an amount (₹500 / Rs 500) and credit/debit cues.",
         )
     n = ingestion_service.append_parsed_transactions(parsed, source="sms")
+    refresh_snapshot()
     return {
         "status": "ingested",
         "rows_appended": n,
@@ -512,10 +514,11 @@ def post_sms_message(body: SmsMessageBody):
 
 @router.post("/ingest/sms")
 def ingest_sms(payload: dict):
-    """Legacy: `{"text": "..."}` — same parser as POST /transactions/sms."""
+    """Legacy: `{"text": "..."}` – same parser as POST /transactions/sms."""
     text = str(payload.get("text") or payload.get("message") or "")
     parsed = parse_sms_batch(text)
     if not parsed:
         raise HTTPException(status_code=422, detail="No transactions parsed from SMS payload")
     n = ingestion_service.append_parsed_transactions(parsed, source="sms")
+    refresh_snapshot()
     return {"status": "ingested", "rows_appended": n}

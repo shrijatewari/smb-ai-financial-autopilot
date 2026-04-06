@@ -1,4 +1,4 @@
-/** Client-side supplement when ledger endpoints are limited — blends with live /system/state in UI. */
+/** Client-side supplement when ledger endpoints are limited – blends with live /system/state in UI. */
 
 export function mockTransactionsFromState(snap) {
   const cash = snap?.cash ?? 125000
@@ -8,7 +8,7 @@ export function mockTransactionsFromState(snap) {
       demo: true,
       id: 'm1',
       date: new Date().toISOString().slice(0, 10),
-      description: 'UPI settlement — counter sales',
+      description: 'UPI settlement – counter sales',
       amount: 18400,
       type: 'credit',
       confidence: 0.94,
@@ -30,7 +30,7 @@ export function mockTransactionsFromState(snap) {
       demo: true,
       id: 'm2',
       date: new Date().toISOString().slice(0, 10),
-      description: 'Supplier — dry goods',
+      description: 'Supplier – dry goods',
       amount: -9200,
       type: 'debit',
       confidence: 0.88,

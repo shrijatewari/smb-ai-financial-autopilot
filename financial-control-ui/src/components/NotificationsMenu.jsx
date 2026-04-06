@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 import { fetchNotifications } from '../services/api'
 import { useTr } from '../hooks/useTr'
 import { cn } from '../lib/utils'
+import { useUiStore } from '../store/uiStore'
 
 function formatWhen(iso) {
   if (!iso) return ''
@@ -18,6 +19,8 @@ function formatWhen(iso) {
 
 export function NotificationsMenu() {
   const t = useTr()
+  const bellPaymentHighlight = useUiStore((s) => s.bellPaymentHighlight)
+  const dismissBellPaymentHighlight = useUiStore((s) => s.dismissBellPaymentHighlight)
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [payload, setPayload] = useState({ items: [], count: 0 })
@@ -28,6 +31,7 @@ export function NotificationsMenu() {
       setOpen(false)
       return
     }
+    dismissBellPaymentHighlight()
     setOpen(true)
     setLoading(true)
     fetchNotifications({ limit: 12 })
@@ -61,7 +65,10 @@ export function NotificationsMenu() {
         onClick={toggle}
         className={cn(
           'relative flex h-10 w-10 items-center justify-center rounded-full border border-violet-200/60 bg-white/70 text-violet-800 transition hover:border-[#6C3BFF]/40 hover:shadow-md',
-          open && 'border-[#6C3BFF]/50 ring-2 ring-[#6C3BFF]/20'
+          open && 'border-[#6C3BFF]/50 ring-2 ring-[#6C3BFF]/20',
+          bellPaymentHighlight &&
+            !open &&
+            'border-amber-400/90 bg-amber-50/90 text-amber-950 shadow-[0_0_22px_rgba(251,191,36,0.55)] ring-2 ring-amber-400/70 animate-pulse'
         )}
         aria-label={t('सूचनाएँ', 'Notifications')}
         aria-expanded={open}
@@ -104,9 +111,9 @@ export function NotificationsMenu() {
                     className="rounded-xl border border-transparent px-2 py-2 text-left transition hover:border-violet-100 hover:bg-violet-50/80"
                   >
                     <p className="text-[11px] font-medium uppercase tracking-wide text-violet-500">
-                      {(row.kind || 'notice').replace(/_/g, ' ')} · {row.channel || '—'}
+                      {(row.kind || 'notice').replace(/_/g, ' ')} · {row.channel || '–'}
                     </p>
-                    <p className="line-clamp-2 text-sm text-violet-950/90">{row.detail || row.status || '—'}</p>
+                    <p className="line-clamp-2 text-sm text-violet-950/90">{row.detail || row.status || '–'}</p>
                     <p className="mt-0.5 text-[11px] text-violet-400">{formatWhen(row.created_at)}</p>
                   </li>
                 ))}

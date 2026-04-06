@@ -3,7 +3,7 @@ import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { daysUntilIsoDate } from '../lib/dates'
 
 /**
- * Contextual sidebar badges — mirrors runway, queue, GST due, risk from live snapshot.
+ * Contextual sidebar badges – mirrors runway, queue, GST due, risk from live snapshot.
  */
 export function useNavBadges() {
   const { snapshot: snap } = useSystemSnapshot()

@@ -76,7 +76,7 @@ def estimate_action_outcomes(
     """
     Simple before/after risk labels for the UI (not a second Monte Carlo run).
     """
-    # Heuristic deltas — tuned to read well in demos
+    # Heuristic deltas – tuned to read well in demos
     collect_delta = min(0.55, 0.18 + 0.45 * risk + min(0.12, receivable_exposure / 500_000))
     delay_delta = min(0.25, 0.08 + 0.2 * risk)
 
@@ -88,7 +88,7 @@ def estimate_action_outcomes(
         "if_do_nothing": {
             "label": "cash stress likely" if risk > 0.22 else "slow bleed",
             "risk_stays": round(risk, 4),
-            "summary": "No collection — runway keeps shrinking under current volatility.",
+            "summary": "No collection – runway keeps shrinking under current volatility.",
         },
         "if_collect": {
             "amount_inr": round(suggested_collect_inr, 0),

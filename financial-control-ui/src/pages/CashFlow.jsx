@@ -16,7 +16,7 @@ import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { fetchCashflowPrediction } from '../services/api'
 
 function formatInr(n) {
-  if (n == null || Number.isNaN(n)) return '—'
+  if (n == null || Number.isNaN(n)) return '–'
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 }
 
@@ -72,7 +72,7 @@ export default function CashFlow() {
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
         title="Cash flow"
-        subtitle="Historical path with simulated uncertainty band — drag horizon to stress-test."
+        subtitle="Historical path with simulated uncertainty band – drag horizon to stress-test."
       />
       <Card className="mb-8">
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

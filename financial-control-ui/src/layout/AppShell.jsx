@@ -9,6 +9,7 @@ import { Topbar } from './Topbar'
 import { FloatingAssistant } from './FloatingAssistant'
 import { BottomNav } from './BottomNav'
 import { CommandPalette } from '../components/CommandPalette'
+import { CollectionClearedNotifier } from '../components/CollectionClearedNotifier'
 
 function htmlLangForLocale(mode) {
   const m = normalizeLocaleMode(mode)
@@ -37,6 +38,7 @@ export function AppShell() {
 
   return (
     <SystemStreamProvider>
+    <CollectionClearedNotifier />
     <CommandPalette />
     <div className="twin-app flex min-h-screen">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">

@@ -27,7 +27,7 @@ if ! flyctl auth whoami >/dev/null 2>&1; then
   exit 1
 fi
 
-# Portable parse (macOS sed does not treat \s like GNU sed — avoid broken app names).
+# Portable parse (macOS sed does not treat \s like GNU sed – avoid broken app names).
 APP_NAME="$(awk -F '"' '/^app = / { print $2; exit }' fly.toml)"
 if [[ -z "${APP_NAME}" || "${APP_NAME}" == *"="* ]]; then
   echo "Could not parse app name from fly.toml (expected: app = \"your-app-name\")."

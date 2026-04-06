@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "description": "Monorepo: Vite app lives in financial-control-ui/",
   "scripts": {
-    "build": "cd financial-control-ui && npm install && npm run build"
+    "dev": "cd financial-control-ui && npm run dev",
+    "dev:api": "cd backend && python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "cd financial-control-ui && npm install && npm run build",
+    "preview": "cd financial-control-ui && npm run preview"
   },
   "engines": {
     "node": ">=20.0.0"

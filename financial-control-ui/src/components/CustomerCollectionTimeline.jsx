@@ -1,15 +1,50 @@
-import { X } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { formatInr } from '../lib/collections'
 import { lateRiskPct } from './CollectionQueueList'
 import { cn } from '../lib/utils'
+import { getApiErrorMessage, getBillDetail } from '../services/api'
 
 /**
  * Per-customer collections timeline — past touch, today suggestion, future ladder (demo + product).
+ * @param {object} [customerInfo] — from GET /collections/customers (bill_id, bill, phone).
  */
-export function CustomerCollectionTimeline({ row, onClose, onWhatsApp, onPaymentLink, busy }) {
+export function CustomerCollectionTimeline({
+  row,
+  customerInfo,
+  onClose,
+  onWhatsApp,
+  onPaymentLink,
+  busy,
+}) {
+  const [billOpen, setBillOpen] = useState(false)
+  const [billDetail, setBillDetail] = useState(null)
+  const [billErr, setBillErr] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   if (!row) return null
   const pct = lateRiskPct(row)
   const high = pct >= 55
+  const billId = customerInfo?.bill_id || customerInfo?.bill?.id
+
+  async function loadBill() {
+    if (!billId) return
+    setBillErr(null)
+    try {
+      const d = await getBillDetail(billId)
+      setBillDetail(d)
+    } catch (e) {
+      setBillErr(getApiErrorMessage(e))
+    }
+  }
+
+  function toggleBill() {
+    const next = !billOpen
+    setBillOpen(next)
+    if (next && !billDetail && billId) void loadBill()
+  }
+
+  const lineRows = Array.isArray(billDetail?.parsed_items?.lines) ? billDetail.parsed_items.lines : []
 
   return (
     <div
@@ -43,6 +78,39 @@ export function CustomerCollectionTimeline({ row, onClose, onWhatsApp, onPayment
           </div>
         </div>
 
+        {billId && (
+          <div className="border-b border-violet-100 px-5 py-3">
+            <button
+              type="button"
+              onClick={() => toggleBill()}
+              className="flex w-full items-center justify-between text-left text-sm font-semibold text-[#6C3BFF]"
+            >
+              Bill dekho
+              {billOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {billOpen && (
+              <div className="mt-2 text-xs text-violet-800">
+                {billErr && <p className="text-red-600">{billErr}</p>}
+                {!billErr && billDetail && (
+                  <ul className="space-y-1 rounded-lg bg-violet-50/80 p-3">
+                    <li className="font-medium">Bill #{billDetail.bill_number}</li>
+                    <li>Total: {formatInr(billDetail.total_amount)}</li>
+                    <li>Source: {billDetail.source}</li>
+                    {lineRows
+                      .filter((x) => x && typeof x === 'object')
+                      .map((ln, i) => (
+                        <li key={i}>
+                          • {ln.name} × {ln.qty} {ln.matched === false ? '(unknown SKU)' : ''}
+                        </li>
+                      ))}
+                  </ul>
+                )}
+                {billOpen && !billDetail && !billErr && <p className="text-violet-600">Loading…</p>}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="space-y-0 px-5 py-4">
           <TimelineItem
             tone="done"
@@ -52,11 +120,37 @@ export function CustomerCollectionTimeline({ row, onClose, onWhatsApp, onPayment
           />
           <TimelineItem
             tone="today"
-            title="Aaj: Follow-up + invoice PDF"
+            title="Aaj: Follow-up + bill proof"
             meta="Suggested action · Tap below"
             highlight
           />
           <div className="flex flex-col gap-2 pb-2 pl-8">
+            {billId && (
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(!previewOpen)}
+                className="rounded-xl border border-violet-200 py-2.5 text-sm font-semibold text-violet-800 hover:bg-violet-50"
+              >
+                {previewOpen ? 'Hide' : 'Show'} WhatsApp message preview
+              </button>
+            )}
+            {previewOpen && billId && (
+              <div className="rounded-xl border border-violet-100 bg-violet-50/40 p-3 text-xs leading-relaxed text-violet-900">
+                <p className="font-semibold text-violet-950">Preview (with bill link)</p>
+                <p className="mt-2 whitespace-pre-wrap">
+                  Namaste {row.name} ji,{'\n\n'}
+                  [shop] se aapka {formatInr(row.amount)} rupaye baaki hai.{'\n\n'}
+                  Aapki khareedari ki details:{'\n'}
+                  {billDetail?.parsed_items?.lines
+                    ?.filter((l) => l?.name)
+                    .map((l) => `• ${l.name} x ${l.qty} — ₹…`)
+                    .join('\n') || '• (item lines from linked bill)'}
+                  {'\n\n'}
+                  Kul rakam / Tarikh / Bill number — backend jodega jab aap WhatsApp bhejenge (customer_id
+                  ke saath).
+                </p>
+              </div>
+            )}
             <button
               type="button"
               disabled={busy}

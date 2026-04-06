@@ -16,18 +16,33 @@ router = APIRouter()
 
 @router.get("/customers")
 async def list_customers_for_ladder(user: User = Depends(get_current_user)):
-    rows = await prisma.customer.find_many(where={"user_id": user.id}, order={"name": "asc"})
-    return {
-        "items": [
+    rows = await prisma.customer.find_many(
+        where={"user_id": user.id},
+        order={"name": "asc"},
+        include={"bill": True},
+    )
+    items = []
+    for r in rows:
+        bill_out = None
+        b = getattr(r, "bill", None)
+        if b is not None:
+            bill_out = {
+                "id": b.id,
+                "bill_number": b.bill_number,
+                "total_amount": float(b.total_amount),
+                "source": b.source,
+            }
+        items.append(
             {
                 "id": r.id,
                 "name": r.name,
                 "total_due": float(r.total_due),
                 "phone": r.phone,
+                "bill_id": r.bill_id,
+                "bill": bill_out,
             }
-            for r in rows
-        ],
-    }
+        )
+    return {"items": items}
 
 
 class StartLadderBody(BaseModel):

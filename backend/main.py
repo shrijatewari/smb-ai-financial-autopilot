@@ -54,6 +54,7 @@ from fastapi.staticfiles import StaticFiles
 from api.routes import (
     aa_routes,
     actions,
+    bills_routes,
     alerts,
     assistant,
     auth,
@@ -213,6 +214,7 @@ app.include_router(system.router, prefix="/system", tags=["system"])
 app.include_router(sms_commands.router, prefix="/sms", tags=["sms"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(inventory_routes.router, prefix="/inventory", tags=["inventory"])
+app.include_router(bills_routes.router, prefix="/bills", tags=["bills"])
 app.include_router(notification_routes.router, prefix="/notifications", tags=["notifications"])
 app.include_router(rl_routes.user_router, prefix="/user", tags=["rl"])
 app.include_router(rl_routes.rl_router, prefix="/rl", tags=["rl"])
@@ -263,7 +265,7 @@ def root():
             "prediction_cashflow": "GET /prediction/cashflow",
             "simulation": "GET /simulation/run",
             "decision": "GET /decision",
-            "execute": "POST /execute/action | /execute/payment-link | /execute/whatsapp | /execute/call",
+            "execute": "POST /execute/action | /execute/payment-link | /execute/whatsapp | /execute/collect | /execute/call",
             "transactions_sms": "POST /transactions/sms",
             "dashboard": "GET /dashboard",
             "compliance_gst": "GET /compliance/gst",
@@ -289,5 +291,6 @@ def root():
             "growth": "GET /growth/summary | POST /growth/subscription | GET /growth/benchmarks | POST /growth/benchmarks/refresh | GET /growth/audit",
             "collections_ladder": "GET /collections/customers | POST /collections/ladder/start | GET /collections/ladder",
             "insights_suppliers": "GET /insights/suppliers",
+            "bills": "POST /bills/ingest-json | POST /bills/ingest-ocr | GET /bills/history | GET /bills/{id}/detail | GET /bills/{id}/file",
         },
     }

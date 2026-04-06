@@ -8,6 +8,7 @@ from typing import Any
 def build_dashboard_context(snap: dict[str, Any], onboarding: dict[str, Any] | None) -> dict[str, Any]:
     """
     Drives frontend: what to emphasize (inventory vs service vs credit), risk level, literacy UI.
+    Hint strings are per-locale objects (hi, en, ta, te, bn) so the UI can render pure language.
     """
     ob = onboarding or {}
     risk = float(snap.get("risk") or 0.0)
@@ -47,17 +48,66 @@ def build_dashboard_context(snap: dict[str, Any], onboarding: dict[str, Any] | N
     if show_inv:
         need = 18 + (tick % 12)
         inventory_hint = {
-            "headline": "Stock jaldi kam ho sakta hai",
-            "sub": f"Kal ke liye ~{need} units mangwana / check karein",
-            "cta": "Order karo",
+            "headline": {
+                "hi": "स्टॉक जल्दी कम हो सकता है",
+                "en": "Stock may run low soon",
+                "ta": "பங்கு விரைவில் குறையலாம்",
+                "te": "స్టాక్ త్వరలో తగ్గవచ్చు",
+                "bn": "স্টক শীঘ্রই কমতে পারে",
+            },
+            "sub": {
+                "hi": f"कल के लिए ~{need} यूनिट मंगवाएं / जाँच करें",
+                "en": f"Order / check ~{need} units for tomorrow",
+                "ta": f"நாளைக்கு ~{need} யூனிட்கள் ஆர்டர் / சரிபார்க்கவும்",
+                "te": f"రేపటికి ~{need} యూనిట్లు ఆర్డర్ / తనిఖీ చేయండి",
+                "bn": f"আগামীকালের জন্য ~{need} ইউনিট অর্ডার / যাচাই করুন",
+            },
+            "cta": {
+                "hi": "ऑर्डर करें",
+                "en": "Place order",
+                "ta": "ஆர்டர் செய்யுங்கள்",
+                "te": "ఆర్డర్ చేయండి",
+                "bn": "অর্ডার করুন",
+            },
         }
 
     service_hint = None
     if show_svc:
-        svc_load = ["kam", "theek", "zyada"][tick % 3]
+        variant = tick % 3
+        # Low / medium / high demand tone (rotates with tick)
+        service_rows: list[dict[str, str]] = [
+            {
+                "hi": "कल मांग कम लग रही है — स्लॉट / कॉल पर जाएँ।",
+                "en": "Tomorrow's demand looks low — follow up on slots / calls.",
+                "ta": "நாளை தேவை குறைவாக உள்ளது — ஸ்லாட் / அழைப்புகளை பின்பற்றவும்.",
+                "te": "రేపటి డిమాండ్ తక్కువగా ఉంది — స్లాట్లు / కాల్‌లను ఫాలో అప్ చేయండి.",
+                "bn": "আগামীকাল চাহিদা কম মনে হচ্ছে — স্লট / কল ফলো করুন।",
+            },
+            {
+                "hi": "कल मांग ठीक-ठाक है — स्लॉट / कॉल पर जाएँ।",
+                "en": "Tomorrow's demand looks moderate — follow up on slots / calls.",
+                "ta": "நாளை தேவை மிதமாக உள்ளது — ஸ்லாட் / அழைப்புகளை பின்பற்றவும்.",
+                "te": "రేపటి డిమాండ్ మోడరేట్‌గా ఉంది — స్లాట్లు / కాల్‌లను ఫాలో అప్ చేయండి.",
+                "bn": "আগামীকাল চাহিদা মাঝারি মনে হচ্ছে — স্লট / কল ফলো করুন।",
+            },
+            {
+                "hi": "कल मांग ज़्यादा लग रही है — स्लॉट / कॉल पर जाएँ।",
+                "en": "Tomorrow's demand looks high — follow up on slots / calls.",
+                "ta": "நாளை தேவை அதிகமாக உள்ளது — ஸ்லாட் / அழைப்புகளை பின்பற்றவும்.",
+                "te": "రేపటి డిమాండ్ ఎక్కువగా ఉంది — స్లాట్లు / కాల్‌లను ఫాలో అప్ చేయండి.",
+                "bn": "আগামীকাল চাহিদা বেশি মনে হচ্ছে — স্লট / কল ফলো করুন।",
+            },
+        ]
+        sub_row = service_rows[variant]
         service_hint = {
-            "headline": "Kal bookings",
-            "sub": f"Kal demand {svc_load} lag rahi hai — slots / calls follow karein.",
+            "headline": {
+                "hi": "कल की बुकिंगें",
+                "en": "Tomorrow's bookings",
+                "ta": "நாளைய முன்பதிவுகள்",
+                "te": "రేపటి బుకింగ్‌లు",
+                "bn": "আগামীকালের বুকিং",
+            },
+            "sub": sub_row,
         }
 
     return {

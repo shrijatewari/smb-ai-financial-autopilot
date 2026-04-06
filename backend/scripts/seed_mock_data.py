@@ -6,6 +6,11 @@ Run from repo:  cd backend && python scripts/seed_mock_data.py
 Login after seed:
   email:    demo@example.com
   password: DemoPass123!
+
+Growth / collections data is per user_id. If the UI calls a remote API (e.g. Fly),
+DATABASE_URL in backend/.env must point at THAT Postgres when you seed — otherwise
+you only populate local DB while the app reads an empty production DB. Use the same
+demo login on the environment that was seeded.
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ load_dotenv(_BACKEND / ".env")
 from auth.password import hash_password
 from db.prisma_client import prisma
 from prisma.fields import Json
+from services.benchmark_service import refresh_benchmark_aggregates
 
 
 DEMO_EMAIL = "demo@example.com"
@@ -195,6 +201,30 @@ async def main() -> None:
                     "last_payment_date": now - timedelta(days=3),
                     "risk_score": Decimal("0.09"),
                 },
+                {
+                    "user_id": uid,
+                    "name": "Suresh Kirana",
+                    "phone": "919876543210",
+                    "total_due": Decimal("15300.00"),
+                    "last_payment_date": now - timedelta(days=20),
+                    "risk_score": Decimal("0.22"),
+                },
+                {
+                    "user_id": uid,
+                    "name": "Anita Stores",
+                    "phone": "919912300045",
+                    "total_due": Decimal("6800.00"),
+                    "last_payment_date": now - timedelta(days=7),
+                    "risk_score": Decimal("0.11"),
+                },
+                {
+                    "user_id": uid,
+                    "name": "Vikram Cold Storage",
+                    "phone": "919988776655",
+                    "total_due": Decimal("42100.75"),
+                    "last_payment_date": now - timedelta(days=45),
+                    "risk_score": Decimal("0.35"),
+                },
             ]
         )
 
@@ -212,6 +242,16 @@ async def main() -> None:
                 },
                 {
                     "user_id": uid,
+                    "amount": Decimal("8800.00"),
+                    "txn_type": "credit",
+                    "category": "revenue",
+                    "source": "sms",
+                    "occurred_at": now - timedelta(days=5),
+                    "confidence_score": Decimal("0.85"),
+                    "description": "UPI received — walk-in",
+                },
+                {
+                    "user_id": uid,
                     "amount": Decimal("4200.00"),
                     "txn_type": "debit",
                     "category": "supplier",
@@ -219,6 +259,16 @@ async def main() -> None:
                     "occurred_at": now - timedelta(hours=8),
                     "confidence_score": Decimal("0.95"),
                     "description": "Supplier payment — grains",
+                },
+                {
+                    "user_id": uid,
+                    "amount": Decimal("3100.00"),
+                    "txn_type": "debit",
+                    "category": "supplier",
+                    "source": "manual",
+                    "occurred_at": now - timedelta(days=2),
+                    "confidence_score": Decimal("0.91"),
+                    "description": "Supplier — oil stock",
                 },
                 {
                     "user_id": uid,
@@ -293,10 +343,16 @@ async def main() -> None:
             }
         )
 
+        bm = await refresh_benchmark_aggregates()
         print("Seed complete.")
         print(f"  User id: {uid}")
         print(f"  Login:   {DEMO_EMAIL} / {DEMO_PASSWORD}")
+        print(f"  Customers: 5 | Benchmark aggregates refreshed: {bm}")
         print("  Open UI: http://localhost:5173  |  API: http://127.0.0.1:8000/docs")
+        print(
+            "  Remote API: seed must use the SAME database as the API (set DATABASE_URL in backend/.env). "
+            "Then log in as demo@example.com — a different account has no seeded rows."
+        )
     finally:
         await prisma.disconnect()
 

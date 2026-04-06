@@ -1,7 +1,17 @@
+import './migrateLegacyUiStorage.js'
+import { initOfflineSync } from './lib/offlineSync'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+
+initOfflineSync()
+
+if (import.meta.env.PROD && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {})
+  })
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

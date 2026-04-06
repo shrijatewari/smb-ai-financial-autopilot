@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, ArrowRight, PlusCircle, FileText, MessageCircle, Phone, Link2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Search, ArrowRight, PlusCircle, FileText, MessageCircle, Phone, Link2, Download } from 'lucide-react'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { useUiStore } from '../store/uiStore'
 import { useTr } from '../hooks/useTr'
 import { formatInr, normalizePhone10, openWhatsAppDraft, buildWhatsappCollectionMessage, openTelDialer, buildHindiPaymentScript } from '../lib/collections'
-import { getApiErrorMessage, postPaymentLink, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
+import { getApiErrorMessage, postExecuteCollect, postPaymentLink, postTwilioVoiceCall } from '../services/api'
 import { attachMockPayScores } from '../lib/platformMocks'
 
 const DEFAULT_PHONE = '9004930401'
@@ -49,32 +49,89 @@ export function CommandPalette() {
   const navHits = useMemo(() => {
     const s = q.trim().toLowerCase()
     const routes = [
-      { k: 'people log dues', to: '/people', label: 'Log / Dues', sub: 'Full collection queue' },
+      {
+        k: 'export data download csv backup offline',
+        to: '/export',
+        hi: 'डेटा निर्यात',
+        en: 'Export data',
+        subHi: 'CSV / ऑफ़लाइन बैकअप',
+        subEn: 'CSV & offline backup',
+      },
+      {
+        k: 'people log dues',
+        to: '/people',
+        hi: 'लोग / बकाया',
+        en: 'Log / Dues',
+        subHi: 'पूरी वसूली कतार',
+        subEn: 'Full collection queue',
+      },
       {
         k: 'gst tax',
         to: '/gst',
-        label: 'GST summary',
-        sub:
+        hi: 'GST सारांश',
+        en: 'GST summary',
+        subHi:
+          gst?.next_due_date && gst?.estimated_liability_inr != null
+            ? `अगला देय · अनुमान ${formatInr(gst.estimated_liability_inr)}`
+            : 'अनुपालन और फ़ाइलिंग',
+        subEn:
           gst?.next_due_date && gst?.estimated_liability_inr != null
             ? `Next due · est. ${formatInr(gst.estimated_liability_inr)}`
             : 'Compliance & filing',
       },
-      { k: 'transaction len den', to: '/transactions', label: 'Transactions', sub: 'Ledger & filters' },
-      { k: 'growth credit', to: '/growth', label: 'Growth', sub: 'Credit score & referrals' },
-      { k: 'risk', to: '/risk', label: 'Risk', sub: 'Simulation & runway' },
-      { k: 'document upload', to: '/documents', label: 'Documents', sub: 'Smart upload' },
+      {
+        k: 'transaction len den',
+        to: '/transactions',
+        hi: 'लेन-देन',
+        en: 'Transactions',
+        subHi: 'लेजर और फ़िल्टर',
+        subEn: 'Ledger & filters',
+      },
+      {
+        k: 'growth credit',
+        to: '/growth',
+        hi: 'विकास',
+        en: 'Growth',
+        subHi: 'क्रेडिट स्कोर और रेफ़रल',
+        subEn: 'Credit score & referrals',
+      },
+      {
+        k: 'risk',
+        to: '/risk',
+        hi: 'जोखिम',
+        en: 'Risk',
+        subHi: 'सिमुलेशन और रनवे',
+        subEn: 'Simulation & runway',
+      },
+      {
+        k: 'document upload',
+        to: '/documents',
+        hi: 'दस्तावेज़',
+        en: 'Documents',
+        subHi: 'स्मार्ट अपलोड',
+        subEn: 'Smart upload',
+      },
     ]
-    if (!s) return routes.slice(0, 4)
-    return routes.filter((r) => r.k.includes(s) || r.label.toLowerCase().includes(s)).slice(0, 6)
+    if (!s) return routes.slice(0, 6)
+    return routes
+      .filter(
+        (r) =>
+          r.k.includes(s) ||
+          r.hi.toLowerCase().includes(s) ||
+          r.en.toLowerCase().includes(s) ||
+          r.subHi.toLowerCase().includes(s) ||
+          r.subEn.toLowerCase().includes(s)
+      )
+      .slice(0, 6)
   }, [q, gst])
 
   async function wa(row) {
     try {
-      await postWhatsappReminder({ customer: row.name, phone: phone10, amount: row.amount, tone: 'friendly' })
-      setToast('WhatsApp queued')
+      await postExecuteCollect({ customer: row.name, phone: phone10, amount: row.amount, tone: 'friendly' })
+      setToast(t('वॉट्सऐप + Razorpay लिंक भेजा', 'WhatsApp + Razorpay link sent'))
     } catch {
       openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
-      setToast('Draft opened')
+      setToast(t('ड्राफ़्ट खोला', 'Draft opened'))
     }
     setTimeout(() => setToast(null), 3000)
   }
@@ -84,7 +141,7 @@ export function CommandPalette() {
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
       if (res.mock) openTelDialer(phone10)
-      setToast(res.mock ? 'Dialer' : 'Call queued')
+      setToast(res.mock ? t('डायलर', 'Dialer') : t('कॉल कतार में', 'Call queued'))
     } catch (e) {
       openTelDialer(phone10)
       setToast(getApiErrorMessage(e))
@@ -95,7 +152,7 @@ export function CommandPalette() {
   async function payLink(row) {
     try {
       const res = await postPaymentLink({ amount: row.amount, customer_name: row.name, phone: phone10 })
-      setToast(res?.payment_link ? 'Link created' : 'OK')
+      setToast(res?.payment_link ? t('लिंक बना', 'Link created') : t('ठीक', 'OK'))
       if (res?.payment_link) window.open(res.payment_link, '_blank', 'noopener,noreferrer')
     } catch (e) {
       setToast(getApiErrorMessage(e))
@@ -110,28 +167,42 @@ export function CommandPalette() {
       className="fixed inset-0 z-[120] flex items-start justify-center bg-black/45 p-4 pt-[12vh] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label={t('Command palette', 'Command palette')}
+      aria-label={t('कमांड पैलेट', 'Command palette')}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) setOpen(false)
       }}
     >
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-violet-200/80 bg-white shadow-2xl shadow-violet-500/20">
-        <div className="flex items-center gap-2 border-b border-violet-100 px-3 py-2">
-          <Search className="h-5 w-5 shrink-0 text-violet-400" />
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t('Ramesh, GST, ya page…', 'Search name, GST, or page…')}
-            className="h-11 flex-1 border-0 bg-transparent text-sm text-violet-950 outline-none placeholder:text-violet-400"
-          />
-          <kbd className="hidden rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] text-violet-600 sm:inline">⌘K</kbd>
+        <div className="flex flex-wrap items-center gap-2 border-b border-violet-100 px-3 py-2.5 sm:flex-nowrap sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Search className="h-5 w-5 shrink-0 text-violet-400" />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t('रमेश, GST, या पेज…', 'Search name, GST, or page…')}
+              className="h-11 min-w-0 flex-1 border-0 bg-transparent text-sm text-violet-950 outline-none placeholder:text-violet-400"
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+            <Link
+              to="/export"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#6C3BFF] bg-[#6C3BFF] px-3 py-2 text-xs font-bold text-white shadow-md shadow-[#6C3BFF]/25 transition hover:bg-[#5a32d6] hover:shadow-lg"
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              <span>{t('डेटा निर्यात', 'Export')}</span>
+            </Link>
+            <kbd className="hidden rounded border border-violet-200 bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600 sm:inline">
+              ⌘K
+            </kbd>
+          </div>
         </div>
 
         <div className="max-h-[min(60vh,420px)] overflow-y-auto p-2">
           {filteredCustomers.length > 0 && (
             <p className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wider text-violet-400">
-              {t('Customers', 'Customers')}
+              {t('ग्राहक', 'Customers')}
             </p>
           )}
           {filteredCustomers.map((row) => (
@@ -142,7 +213,9 @@ export function CommandPalette() {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-violet-950">{row.name}</p>
-                  <p className="text-sm text-violet-700">{formatInr(row.amount)} due</p>
+                  <p className="text-sm text-violet-700">
+                    {formatInr(row.amount)} {t('बकाया', 'due')}
+                  </p>
                 </div>
                 <ArrowRight className="mt-1 h-4 w-4 text-violet-300" />
               </div>
@@ -153,7 +226,7 @@ export function CommandPalette() {
                   className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white"
                 >
                   <MessageCircle className="h-3.5 w-3.5" />
-                  WhatsApp
+                  {t('वॉट्सऐप', 'WhatsApp')}
                 </button>
                 <button
                   type="button"
@@ -161,7 +234,7 @@ export function CommandPalette() {
                   className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-bold text-violet-900"
                 >
                   <Phone className="h-3.5 w-3.5" />
-                  Call
+                  {t('कॉल', 'Call')}
                 </button>
                 <button
                   type="button"
@@ -169,14 +242,14 @@ export function CommandPalette() {
                   className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-bold text-violet-900"
                 >
                   <Link2 className="h-3.5 w-3.5" />
-                  Payment link
+                  {t('पेमेंट लिंक', 'Payment link')}
                 </button>
               </div>
             </div>
           ))}
 
           <p className="mb-1 mt-2 px-2 text-[10px] font-bold uppercase tracking-wider text-violet-400">
-            {t('Jump', 'Jump')}
+            {t('जाओ', 'Jump')}
           </p>
           {navHits.map((r) => (
             <button
@@ -190,12 +263,14 @@ export function CommandPalette() {
             >
               {r.to === '/gst' ? (
                 <FileText className="h-5 w-5 text-emerald-600" />
+              ) : r.to === '/export' ? (
+                <Download className="h-5 w-5 text-[#6C3BFF]" />
               ) : (
                 <PlusCircle className="h-5 w-5 text-violet-400" />
               )}
               <span>
-                <span className="font-semibold text-violet-950">{r.label}</span>
-                <span className="mt-0.5 block text-xs text-violet-600">{r.sub}</span>
+                <span className="font-semibold text-violet-950">{t(r.hi, r.en)}</span>
+                <span className="mt-0.5 block text-xs text-violet-600">{t(r.subHi, r.subEn)}</span>
               </span>
             </button>
           ))}

@@ -84,7 +84,7 @@ export function NotificationsMenu() {
               {t('सूचनाएँ', 'Notifications')}
             </p>
             <p className="text-xs text-violet-600/80">
-              {t('Briefing aur outbound log', 'Briefing & outbound log')}
+              {t('ब्रीफ़िंग और आउटबाउंड लॉग', 'Briefing & outbound log')}
             </p>
           </div>
           <div className="max-h-[min(60vh,320px)] overflow-y-auto px-2 py-2">
@@ -94,7 +94,7 @@ export function NotificationsMenu() {
               </p>
             ) : items.length === 0 ? (
               <p className="px-2 py-6 text-center text-sm text-violet-600/80">
-                {t('Abhi koi nayi suchna nahi', 'No notifications yet')}
+                {t('अभी कोई नई सूचना नहीं', 'No notifications yet')}
               </p>
             ) : (
               <ul className="space-y-1">
@@ -119,7 +119,7 @@ export function NotificationsMenu() {
               className="block rounded-lg px-2 py-2 text-center text-sm font-medium text-[#6C3BFF] hover:bg-violet-50"
               onClick={() => setOpen(false)}
             >
-              {t('Poora log dekho', 'View full log')}
+              {t('पूरा लॉग देखो', 'View full log')}
             </Link>
           </div>
         </div>

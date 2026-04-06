@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { normalizeLocaleMode } from '../lib/i18n.jsx'
 
 export const useUiStore = create(
   persist(
@@ -8,7 +9,7 @@ export const useUiStore = create(
       assistantOpen: false,
       /** 'basic' = 3-button style + reduced nav; 'advanced' = full dashboard & nav */
       uiMode: 'basic',
-      /** Screen text: Hindi only, English only, or both (Hindi + English). */
+      /** Screen text + TTS: hi | en | both (Hinglish) | ta | te | bn */
       localeDisplay: 'both',
       voiceGuidanceEnabled: true,
       guidedHandActive: false,
@@ -26,12 +27,19 @@ export const useUiStore = create(
       dismissGuidedHand: () => set({ guidedHandActive: false, guidedStep: 0 }),
     }),
     {
-      name: 'smb-ui-storage',
+      name: 'smb-ui-storage-v2',
       partialize: (s) => ({
         uiMode: s.uiMode,
         localeDisplay: s.localeDisplay,
         voiceGuidanceEnabled: s.voiceGuidanceEnabled,
       }),
+      merge: (persistedState, currentState) => {
+        const next = { ...currentState, ...persistedState }
+        next.localeDisplay = normalizeLocaleMode(
+          persistedState?.localeDisplay ?? currentState.localeDisplay
+        )
+        return next
+      },
     }
   )
 )

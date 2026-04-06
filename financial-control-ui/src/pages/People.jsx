@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Download } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   buildHindiPaymentScript,
@@ -7,15 +8,23 @@ import {
   openTelDialer,
   openWhatsAppDraft,
 } from '../lib/collections'
-import { getApiErrorMessage, postPaymentLink, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
+import {
+  fetchCollectionCustomers,
+  getApiErrorMessage,
+  postExecuteCollect,
+  postPaymentLink,
+  postTwilioVoiceCall,
+} from '../services/api'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { attachMockPayScores } from '../lib/platformMocks'
 import { CollectionQueueList } from '../components/CollectionQueueList'
 import { CustomerCollectionTimeline } from '../components/CustomerCollectionTimeline'
+import { useTr } from '../hooks/useTr'
 
 const DEFAULT_PHONE = '9004930401'
 
 export default function People() {
+  const t = useTr()
   const { snapshot: snap } = useSystemSnapshot()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -24,6 +33,19 @@ export default function People() {
   const [creditMode, setCreditMode] = useState(false)
   const [timelineRow, setTimelineRow] = useState(null)
   const [busy, setBusy] = useState(null)
+  const [customersByName, setCustomersByName] = useState({})
+
+  useEffect(() => {
+    fetchCollectionCustomers()
+      .then((d) => {
+        const m = {}
+        for (const c of d.items || []) {
+          m[String(c.name || '').trim().toLowerCase()] = c
+        }
+        setCustomersByName(m)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (snap == null) return
@@ -43,16 +65,30 @@ export default function People() {
   async function queueMessage(row) {
     setBusy('wa')
     try {
-      await postWhatsappReminder({
+      const key = String(row.name || '').trim().toLowerCase()
+      const cust = customersByName[key]
+      const res = await postExecuteCollect({
         customer: row.name,
         phone: phone10,
         amount: row.amount,
         tone: 'friendly',
+        ...(cust?.id ? { customer_id: cust.id } : {}),
       })
-      setToast({ type: 'ok', text: `WhatsApp → ${row.name}` })
+      setToast({
+        type: 'ok',
+        text: `WhatsApp + link → ${row.name}`,
+        link: res.payment_link || undefined,
+      })
     } catch {
       openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
-      setToast({ type: 'warn', text: 'API fail — draft khola' })
+      setToast({
+        type: 'warn',
+        text: t(
+          'API ठीक नहीं — ड्राफ़्ट खोला',
+          'API failed — opened draft',
+          { hinglish: 'API fail — draft khola' },
+        ),
+      })
     } finally {
       setBusy(null)
       setTimeout(() => setToast(null), 6000)
@@ -80,38 +116,84 @@ export default function People() {
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-violet-950">Log — paise lene wale</h1>
+            <h1 className="text-xl font-bold text-violet-950">
+              {t(
+                'लॉग — पैसे लेने वाले',
+                'Log — receivables',
+                { hinglish: 'Log — paise lene wale' },
+              )}
+            </h1>
             <p className="text-sm text-violet-800/70">
               {creditMode
-                ? 'Credit-heavy business: pehle in logon ko follow karein — har row par Message / Call'
-                : 'Engine queue — har row par message ya call'}
+                ? t(
+                    'क्रेडिट-भारी व्यवसाय: पहले इन लोगों को फ़ॉलो करें — हर पंक्ति पर संदेश / कॉल',
+                    'Credit-heavy business: follow these people first — Message / Call on each row',
+                    {
+                      hinglish:
+                        'Credit-heavy business: pehle in logon ko follow karein — har row par Message / Call',
+                    },
+                  )
+                : t(
+                    'इंजन क़तार — हर पंक्ति पर संदेश या कॉल',
+                    'Engine queue — message or call on each row',
+                    { hinglish: 'Engine queue — har row par message ya call' },
+                  )}
             </p>
           </div>
           <Link to="/" className="text-sm font-medium text-[#6C3BFF] hover:underline">
-            ← Aaj wapas
+            {t('← आज वापस', '← Back to Today', { hinglish: '← Aaj wapas' })}
           </Link>
         </div>
 
-        <label className="mb-4 block text-xs text-violet-800/80">
-          Default number (WhatsApp / call)
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="mt-1 w-full max-w-xs rounded-lg border border-violet-200 px-3 py-2 font-mono text-sm"
-          />
-        </label>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <label className="block min-w-0 flex-1 text-xs text-violet-800/80">
+            {t(
+              'डिफ़ॉल्ट नंबर (वॉट्सऐप / कॉल)',
+              'Default number (WhatsApp / call)',
+              { hinglish: 'Default number (WhatsApp / call)' },
+            )}
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="mt-1 w-full max-w-xs rounded-lg border border-violet-200 px-3 py-2 font-mono text-sm"
+            />
+          </label>
+          <Link
+            to="/export"
+            className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full border border-[#6C3BFF]/45 bg-white px-4 py-2.5 text-sm font-semibold text-[#6C3BFF] shadow-sm ring-1 ring-[#6C3BFF]/10 transition hover:bg-[#6C3BFF]/10 sm:self-auto"
+          >
+            <Download className="h-4 w-4 shrink-0" aria-hidden />
+            {t('डाउनलोड / निर्यात', 'Download / export', { hinglish: 'Download / export' })}
+          </Link>
+        </div>
 
         {loading ? (
-          <p className="py-12 text-center text-violet-600">Loading…</p>
+          <p className="py-12 text-center text-violet-600">
+            {t('लोड हो रहा है…', 'Loading…', { hinglish: 'Loading…' })}
+          </p>
         ) : rows.length === 0 ? (
-          <p className="py-12 text-center text-violet-600">Abhi queue khali — engine data connect karo</p>
+          <p className="py-12 text-center text-violet-600">
+            {t(
+              'अभी क़तार खाली — इंजन डेटा कनेक्ट करें',
+              'Queue is empty — connect engine data',
+              { hinglish: 'Abhi queue khali — engine data connect karo' },
+            )}
+          </p>
         ) : (
           <CollectionQueueList
             rows={rows}
-            title="Aaj collect karein"
-            subtitle="Ranked by engine — risk bar = late-payment risk"
-            totalDueLabel="Total"
+            title={t(
+              'आज वसूली करें',
+              'Collect today',
+              { hinglish: 'Aaj collect karein' },
+            )}
+            subtitle={t(
+              'इंजन के अनुसार रैंक — रिस्क बार = देर से भुगतान का जोखिम',
+              'Ranked by engine — risk bar = late-payment risk',
+              { hinglish: 'Ranked by engine — risk bar = late-payment risk' },
+            )}
+            totalDueLabel={t('कुल', 'Total', { hinglish: 'Total' })}
             busyKey={() => busy}
             onMessage={(row) => void queueMessage(row)}
             onCall={(row) => void queueCall(row)}
@@ -122,6 +204,7 @@ export default function People() {
         {timelineRow && (
           <CustomerCollectionTimeline
             row={timelineRow}
+            customerInfo={customersByName[String(timelineRow.name || '').trim().toLowerCase()]}
             busy={!!busy}
             onClose={() => setTimelineRow(null)}
             onWhatsApp={() => {
@@ -148,7 +231,7 @@ export default function People() {
         )}
 
         {toast && (
-          <p
+          <div
             className={`fixed bottom-24 left-1/2 z-50 max-w-md -translate-x-1/2 rounded-lg border px-4 py-2 text-sm shadow-lg ${
               toast.type === 'err'
                 ? 'border-red-200 bg-red-50 text-red-900'
@@ -157,8 +240,28 @@ export default function People() {
                   : 'border-violet-200 bg-white text-violet-950'
             }`}
           >
-            {toast.text}
-          </p>
+            <p>{toast.text}</p>
+            {toast.link && (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <a href={toast.link} target="_blank" rel="noreferrer" className="font-medium text-blue-700 underline">
+                  {t('लिंक', 'Link')}
+                </a>
+                <button
+                  type="button"
+                  className="font-semibold text-violet-800 underline"
+                  onClick={() => {
+                    try {
+                      void navigator.clipboard.writeText(toast.link)
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >
+                  {t('कॉपी', 'Copy')}
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -56,6 +56,7 @@ model User {
   collection_campaigns       CollectionCampaign[]
   referral_events_as_referrer ReferralEvent[]         @relation("ReferralReferrer")
   referral_event_as_referee   ReferralEvent?          @relation("ReferralReferee")
+  bills                      Bill[]
 
   @@map("users")
 }
@@ -218,11 +219,15 @@ model Customer {
   total_due         Decimal   @default(0) @db.Decimal(18, 2)
   last_payment_date DateTime?
   risk_score        Decimal?  @db.Decimal(6, 4)
+  /// Latest bill linked as proof for WhatsApp udhar reminders (optional).
+  bill_id           Int?
+  bill              Bill?     @relation(fields: [bill_id], references: [id], onDelete: SetNull)
   created_at        DateTime  @default(now())
   updated_at        DateTime  @updatedAt
 
   @@index([user_id])
   @@index([user_id, phone])
+  @@index([bill_id])
   collection_campaigns CollectionCampaign[]
   @@map("customers")
 }
@@ -272,19 +277,48 @@ model OnboardingProfile {
 
 /// SKU stock for this user — khata sales deduct quantity here.
 model InventoryItem {
-  id                Int      @id @default(autoincrement())
-  user_id           Int
-  user              User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  sku               String   @db.VarChar(64)
-  name              String   @db.VarChar(255)
-  quantity          Float    @default(0)
-  unit              String?  @db.VarChar(32)
-  reorder_threshold Float    @default(20)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id                    Int       @id @default(autoincrement())
+  user_id               Int
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  sku                   String    @db.VarChar(64)
+  name                  String    @db.VarChar(255)
+  quantity              Float     @default(0)
+  unit                  String?   @db.VarChar(32)
+  reorder_threshold     Float     @default(20)
+  /// High-water mark for stock % bar (≥ quantity; grows on restock, not reduced by sales).
+  stock_ceiling         Float?
+  /// Last time stock was auto-reduced from bill/POS ingest.
+  last_bill_deduct_at   DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
 
   @@index([user_id])
   @@map("inventory_items")
+}
+
+/// POS / OCR ingested bills — inventory + ledger + optional khaata link.
+model Bill {
+  id              Int      @id @default(autoincrement())
+  user_id         Int
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  bill_number     String   @db.VarChar(128)
+  /// api | ocr
+  source          String   @db.VarChar(16)
+  raw_payload     Json?
+  parsed_items    Json
+  total_amount    Decimal  @db.Decimal(18, 2)
+  customer_phone  String?  @db.VarChar(20)
+  customer_name   String?  @db.VarChar(255)
+  file_path       String?  @db.Text
+  /// completed | partial | failed
+  status          String   @db.VarChar(32)
+  error_message   String?  @db.Text
+  created_at      DateTime @default(now())
+
+  customers Customer[]
+
+  @@index([user_id, created_at])
+  @@map("bills")
 }
 
 /// Inbound provider webhooks (Razorpay, Meta, etc.) — audit + replay support.

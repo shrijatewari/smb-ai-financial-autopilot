@@ -121,15 +121,24 @@ async def _handle_reminder(user: User, text: str, lang: str) -> str:
     notes = None
     if customer_row:
         notes = {"user_id": str(user.id), "customer_id": str(customer_row.id)}
+    bp = await prisma.businessprofile.find_first(where={"user_id": user.id})
+    shop = (bp.business_type if bp else None) or user.name or "Dukaan"
     rzp = create_razorpay_payment_link(
         float(amount),
         display_name[:120],
         phone,
         email=None,
         notes=notes,
+        description=f"Payment to {shop} - outstanding dues",
     )
     link = rzp.get("payment_link") or ""
-    msg = generate_payment_message(display_name, float(amount), tone="friendly", payment_link=link)
+    msg = generate_payment_message(
+        display_name,
+        float(amount),
+        tone="friendly",
+        payment_link=link,
+        shop_name=str(shop),
+    )
     send_whatsapp_message(phone, msg)
     return (
         f"Reminder bheja: {display_name} ({_format_inr(amount)})."

@@ -2,7 +2,8 @@
 [build]
   base = "financial-control-ui"
   command = "npm run build"
-  publish = "financial-control-ui/dist"
+  # Relative to `base` (monorepo); not repo-root/financial-control-ui/dist twice.
+  publish = "dist"
 
 # Baked into the JS bundle at build time (must match your Fly / public API origin, no trailing slash).
 [build.environment]

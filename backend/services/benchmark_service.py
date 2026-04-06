@@ -27,12 +27,13 @@ async def refresh_benchmark_aggregates() -> dict[str, int]:
 
     upserts = 0
     for industry, vals in buckets.items():
-        if len(vals) < 2:
+        if len(vals) < 1:
             continue
         vals_sorted = sorted(vals)
         n = len(vals_sorted)
         p50 = vals_sorted[n // 2]
-        p90 = vals_sorted[min(n - 1, int(n * 0.9))]
+        # Single business: p90 = p50 so solo demos still get a benchmark row after refresh.
+        p90 = vals_sorted[min(n - 1, int(n * 0.9))] if n > 1 else vals_sorted[0]
         await prisma.benchmarkaggregate.upsert(
             where={
                 "industry_key_metric": {

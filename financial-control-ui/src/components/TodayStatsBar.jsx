@@ -4,9 +4,11 @@ import { formatInr } from '../lib/collections'
 import { fetchLedgerSummary } from '../services/api'
 import { istDateString } from '../lib/dates'
 import { cn } from '../lib/utils'
+import { useTr } from '../hooks/useTr'
 
 /** 3 quick stats + runway meter — uses snapshot + optional today ledger credit. */
 export function TodayStatsBar({ snap, loading }) {
+  const t = useTr()
   const dc = snap?.daily_control
   const daysNeg = dc?.days_to_negative
   const queue = dc?.collection_queue ?? []
@@ -62,12 +64,18 @@ export function TodayStatsBar({ snap, loading }) {
   const runwayTone =
     daysNeg == null ? 'neutral' : daysNeg <= 7 ? 'critical' : daysNeg <= 14 ? 'warn' : 'ok'
 
+  const dayWord = t('दिन', 'days')
+  const customerWord =
+    customerCount === 1 ? t('ग्राहक', 'customer') : t('ग्राहक', 'customers')
+  const paymentWord =
+    inflowPayments === 1 ? t('भुगतान', 'payment') : t('भुगतान', 'payments')
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-violet-200/80 bg-white/90 shadow-sm">
       <div className="grid grid-cols-1 gap-px sm:grid-cols-3 sm:divide-x sm:divide-violet-100">
         <div className="p-4 px-4 sm:p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500">
-            Cash runway
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500 normal-case">
+            {t('नकद रनवे', 'Cash runway')}
           </p>
           <div className="mt-1 flex items-baseline gap-2">
             <span
@@ -79,7 +87,7 @@ export function TodayStatsBar({ snap, loading }) {
                 runwayTone === 'neutral' && 'text-violet-900'
               )}
             >
-              {daysNeg != null ? `${daysNeg} din` : '—'}
+              {daysNeg != null ? `${daysNeg} ${dayWord}` : '—'}
             </span>
             {runwayDelta != null && runwayDelta !== 0 && (
               <span
@@ -89,42 +97,44 @@ export function TodayStatsBar({ snap, loading }) {
                 )}
               >
                 {runwayDelta > 0 ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
-                {runwayDelta > 0 ? `↓ ${runwayDelta} din` : `↑ ${-runwayDelta} din`} vs last view
+                {runwayDelta > 0
+                  ? `↓ ${runwayDelta} ${dayWord} ${t('पिछले देखने से', 'vs last view')}`
+                  : `↑ ${-runwayDelta} ${dayWord} ${t('पिछले देखने से', 'vs last view')}`}
               </span>
             )}
           </div>
         </div>
         <div className="p-4 px-4 sm:p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500">
-            Pending receivables
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500 normal-case">
+            {t('लंबित प्राप्य', 'Pending receivables')}
           </p>
           <p className="mt-1 text-3xl font-bold tabular-nums text-violet-950">{formatInr(receivableTotal)}</p>
           <p className="mt-0.5 text-xs text-violet-600/80">
-            {customerCount} customer{customerCount === 1 ? '' : 's'}
+            {customerCount} {customerWord}
           </p>
         </div>
         <div className="p-4 px-4 sm:p-5">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500">
-            Today&apos;s inflow
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-500 normal-case">
+            {t('आज का आगमन', "Today's inflow")}
           </p>
           <p className="mt-1 text-3xl font-bold tabular-nums text-emerald-700">
             {todayInflow != null ? formatInr(todayInflow) : '—'}
           </p>
           <p className="mt-0.5 text-xs text-violet-600/80">
-            {inflowPayments != null ? `${inflowPayments} payment${inflowPayments === 1 ? '' : 's'}` : ' ledger'}
+            {inflowPayments != null ? `${inflowPayments} ${paymentWord}` : t('लेजर', 'ledger')}
           </p>
         </div>
       </div>
       <div className="border-t border-violet-100 px-4 py-3 sm:px-5">
         <div className="mb-1 flex justify-between text-[10px] font-medium text-violet-500">
-          <span>Safe zone</span>
-          <span>Critical</span>
+          <span>{t('सुरक्षित क्षेत्र', 'Safe zone')}</span>
+          <span>{t('गंभीर', 'Critical')}</span>
         </div>
         <div className="relative h-3 w-full overflow-hidden rounded-full bg-gradient-to-r from-emerald-400 via-amber-300 to-red-500">
           <div
             className="absolute top-1/2 -mt-2 h-4 w-4 -translate-x-1/2 rounded-full border-2 border-white bg-[#6C3BFF] shadow-md"
             style={{ left: `${meterPct}%` }}
-            title={daysNeg != null ? `~${daysNeg} days` : 'Runway'}
+            title={daysNeg != null ? `~${daysNeg} ${t('दिन', 'days')}` : t('रनवे', 'Runway')}
           />
         </div>
       </div>

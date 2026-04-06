@@ -78,9 +78,10 @@ DATABASE_URL=postgresql://smb:smb@localhost:5432/smb_ai
 | `/onboarding` | GET/POST business profile (persisted) |
 | `/system/state` | Live dashboard snapshot (JWT optional but required for per-user modules) |
 | `/transactions` | Upload, SMS ingest, Paytm mock, persisted ledger — see **Persisted ledger** below |
-| `/execute` | `payment-link`, `whatsapp`, `call`, `action` |
+| `/execute` | `payment-link` (optional `description`), `whatsapp` (link embedded; returns `payment_link`), **`collect`** (link + WhatsApp in one call), `call`, `twilio-call`, `action` |
 | `/documents` | Multipart upload → OCR → profile merge |
-| `/inventory` | Stock + khata sale application |
+| `/inventory` | Stock + khata sale application; items include **`stock_ceiling`** for stock % UI |
+| `/bills` | **`ingest-json`**, **`ingest-ocr`**, **`history`**, **`{id}/detail`**, **`{id}/file`** — JWT; updates inventory + ledger |
 | `/compliance/gst` | GST stub from onboarding |
 | `/gst/summary` | **GST liability forecast** (GSTIN, due date, filing warning) — auth |
 | `/notifications` | **Notification log** (morning brief attempts, etc.) — auth |
@@ -158,9 +159,10 @@ Env template and setup notes: **`.env.example`**.
 
 ---
 
-## Razorpay
+## Razorpay & collections
 
-Payment links from `POST /execute/payment-link` when **`RAZORPAY_KEY_ID`** and **`RAZORPAY_KEY_SECRET`** are set; otherwise structured mock responses.
+- **`POST /execute/payment-link`** — creates a Payment Link (SDK or REST `POST /v1/payment_links`); optional **`description`**; mock `https://rzp.io/i/plink_*` when keys are absent.  
+- **`POST /execute/whatsapp`** / **`POST /execute/collect`** — build the same Razorpay link for the amount, append to WhatsApp body (shop-aware copy), send via Meta or mock; response includes **`payment_link`** for clients.
 
 ---
 

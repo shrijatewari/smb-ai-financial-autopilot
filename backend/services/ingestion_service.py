@@ -75,9 +75,20 @@ def validate_and_normalize(df: pd.DataFrame) -> pd.DataFrame:
 
 def load_sample_csv(path: Path | None = None) -> pd.DataFrame:
     """Default demo data when no upload exists."""
+    from io import StringIO
+
     base = Path(__file__).resolve().parent.parent / "data" / "sample_transactions.csv"
     p = path or base
-    df = pd.read_csv(p)
+    if not p.is_file():
+        # Fallback if CSV was omitted from deploy (should not happen after Docker includes data/).
+        _minimal = """date,amount,type,description
+2026-03-01,125.50,credit,Card sale
+2026-03-01,2100.00,debit,Supplier invoice
+2026-03-02,89.00,credit,POS sale
+"""
+        df = pd.read_csv(StringIO(_minimal))
+    else:
+        df = pd.read_csv(p)
     out = validate_and_normalize(df)
     out["source"] = "csv"
     global _source_mix

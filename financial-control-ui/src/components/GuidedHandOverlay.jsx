@@ -4,34 +4,44 @@ import { useTr } from '../hooks/useTr'
 
 /**
  * Step-by-step coach; pairs with data-guided-step on targets + pulse classes.
+ * Pass `steps` to override the default Today-page copy (e.g. Predictions / other screens).
  */
-export function GuidedHandOverlay({ open, step, onNext, onDismiss, totalSteps = 3 }) {
+export function GuidedHandOverlay({
+  open,
+  step,
+  onNext,
+  onDismiss,
+  totalSteps: totalStepsProp,
+  steps: stepsProp,
+}) {
   const t = useTr()
-  const idx = Math.min(Math.max(0, step), totalSteps - 1)
-
-  const steps = [
+  const defaultTodaySteps = [
     {
-      label: t('Step 1', 'Step 1'),
+      label: t('चरण १', 'Step 1'),
       text: t(
-        'Yahan customer ka number daalo ya check karo.',
+        'यहाँ ग्राहक का नंबर डालो या जाँच करो।',
         'Enter or check the customer phone number here.'
       ),
     },
     {
-      label: t('Step 2', 'Step 2'),
+      label: t('चरण २', 'Step 2'),
       text: t(
-        'Ek kaam chuno — WhatsApp, call, ya system.',
+        'एक काम चुनो — वॉट्सऐप, कॉल, या सिस्टम।',
         'Pick one action — WhatsApp, call, or system.'
       ),
     },
     {
-      label: t('Step 3', 'Step 3'),
+      label: t('चरण ३', 'Step 3'),
       text: t(
-        'Haan / Nahi se confirm karo — phir result sunoge.',
+        'हाँ / नहीं से पुष्टि करो — फिर परिणाम सुनोगे।',
         'Confirm with Yes / No — then you will hear the result.'
       ),
     },
   ]
+
+  const steps = stepsProp ?? defaultTodaySteps
+  const totalSteps = totalStepsProp ?? steps.length
+  const idx = Math.min(Math.max(0, step), totalSteps - 1)
 
   const s = steps[idx] || steps[0]
 
@@ -52,14 +62,14 @@ export function GuidedHandOverlay({ open, step, onNext, onDismiss, totalSteps = 
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-[#6C3BFF]">{s.label}</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#6C3BFF] normal-case">{s.label}</p>
                 <p className="mt-2 text-lg font-semibold leading-snug text-violet-950">{s.text}</p>
               </div>
               <button
                 type="button"
                 onClick={onDismiss}
                 className="rounded-full p-2 text-violet-600 hover:bg-violet-100"
-                aria-label={t('Band karo', 'Close')}
+                aria-label={t('बंद करो', 'Close')}
               >
                 <X className="h-5 w-5" />
               </button>
@@ -71,7 +81,7 @@ export function GuidedHandOverlay({ open, step, onNext, onDismiss, totalSteps = 
                   onClick={onNext}
                   className="flex-1 rounded-2xl bg-gradient-to-r from-[#6C3BFF] to-violet-600 py-3.5 text-base font-bold text-white shadow-lg"
                 >
-                  {t('Aage →', 'Next →')}
+                  {t('आगे →', 'Next →')}
                 </button>
               ) : (
                 <button
@@ -79,7 +89,7 @@ export function GuidedHandOverlay({ open, step, onNext, onDismiss, totalSteps = 
                   onClick={onDismiss}
                   className="flex-1 rounded-2xl bg-emerald-600 py-3.5 text-base font-bold text-white"
                 >
-                  {t('Samajh gaya', 'Got it')}
+                  {t('समझ गया', 'Got it')}
                 </button>
               )}
             </div>

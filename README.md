@@ -51,8 +51,10 @@ This is **not** a passive dashboard. It is an **operating layer** that sits on t
 - Tabular RL hooks — action ordering can improve over feedback  
 
 ### Execution layer
-- **Razorpay payment links** (`POST /execute/payment-link`) when keys are set  
-- **Meta WhatsApp** outbound reminders when `WHATSAPP_*` is configured  
+- **Razorpay payment links** (`POST /execute/payment-link`) when `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` are set; optional `description` for the link; otherwise structured mock `rzp.io` URLs  
+- **Collections in one step** — `POST /execute/collect` creates a Razorpay link for the outstanding amount and sends the WhatsApp message with the link embedded (same body as `POST /execute/whatsapp`)  
+- **`POST /execute/whatsapp`** — reminder text includes shop name and ends with the Razorpay payment link; response returns `payment_link`, `payment_link_mock`, `razorpay_id` for the UI  
+- **Meta WhatsApp** outbound when `WHATSAPP_*` is configured; otherwise simulated send  
 - **Twilio** Hindi voice calls (`POST /execute/twilio-call`) when `TWILIO_*` is set  
 - Simulated call scripts when integrations are off  
 
@@ -66,11 +68,29 @@ This is **not** a passive dashboard. It is an **operating layer** that sits on t
 - Document OCR (Google Vision optional; local Tesseract fallback)  
 - Paytm-style mock feed  
 - Inventory + **khata** sale → stock + ledger movement when you apply a sale  
+- **Bills (POS / OCR)** — `POST /bills/ingest-json`, `POST /bills/ingest-ocr`, `GET /bills/history`, detail + file routes; updates inventory (auto-creates SKUs when names don’t match), ledger credit (`sale` / `bill_ingest`), optional khaata (Customer) link + WhatsApp proof hooks  
+- **Inventory stock %** — `stock_ceiling` high-water field so “Stock level” reflects real depletion (not stuck at 100% when quantity ≫ reorder band)  
 - **Persisted ledger** (`LedgerTransaction` in PostgreSQL) — filtered list, aggregates, and CSV export via `GET /transactions/ledger*`, with the **Transactions** page (`/transactions`) in `financial-control-ui` staying in sync (bookmarkable query string). See **Persisted ledger API** below and `backend/README.md`.  
 
 ### Adaptive UI
 - Onboarding-driven **business profile** → module mix and emphasis  
 - **Today** home (`/`) — action-first; full analytics under `/dashboard`  
+- **Bills** (`/bills`) — POS JSON + PDF/image OCR ingest, guided overlay + voice summary (header speaker); collection toasts show copyable Razorpay links  
+- **Predictions / Andaza** — guided steps + voice aligned with Today  
+- **Voice guidance** — header mute cancels browser TTS and pending Hinglish follow-up; works across Today, Bills, Predictions  
+
+---
+
+## Recently implemented (product + API)
+
+| Area | What shipped |
+|------|----------------|
+| **Collections** | `POST /execute/collect` = Razorpay link + WhatsApp in one call; messages use shop name from profile / override; Razorpay `description` like `Payment to {shop} - outstanding dues` |
+| **WhatsApp reminders** | `POST /execute/whatsapp` embeds the same payment link; optional `shop_name`, `customer_email`; bill-proof path unchanged for `customer_id` + linked bill |
+| **Bills** | Prisma `Bill` model; ingest pipelines; `Customer.bill_id`; inventory `last_bill_deduct_at`; history table in UI when API is deployed |
+| **Inventory** | `stock_ceiling` on `InventoryItem`; bar uses `quantity / ceiling` when set |
+| **Frontend deploy** | Netlify: `financial-control-ui/netlify.toml` + root monorepo `netlify.toml` with `VITE_API_URL`; CLI `netlify deploy --build --prod` from repo root |
+| **Backend deploy** | Fly.io: `backend/fly.toml`, `Dockerfile`, release `prisma db push`; example API host `https://smb-financial-api.fly.dev` (rename app in `fly.toml` for your org) |
 
 ---
 
@@ -197,9 +217,10 @@ Persistent entities (see `backend/prisma/schema.prisma`):
 - **OnboardingProfile / BusinessProfile** — business context for the twin  
 - **LedgerTransaction** (`transactions` table) — persisted movements (ingestion, webhooks, AA); list/summary/export via `GET /transactions/ledger*`  
 - **Predictions / actions / executions** — financial and decision trace  
-- **Customers** — receivable-oriented records  
+- **Customers** — receivable-oriented records; optional **`bill_id`** link to proof for WhatsApp udhar flows  
 - **Documents** — OCR pipeline outputs  
-- **InventoryItem / KhataUpload** — stock and paper khata  
+- **InventoryItem** (incl. **`stock_ceiling`**, **`last_bill_deduct_at`**) / **KhataUpload** — stock and paper khata  
+- **Bill** — POS / OCR ingested bills (lines, totals, status)  
 - **RlState** — learning metadata  
 
 The **live cash / risk / collection queue** in the demo is also driven by an **in-memory snapshot** updated by the engine (fast path for hackathon demos); Prisma holds durable business state.
@@ -222,9 +243,10 @@ The **live cash / risk / collection queue** in the demo is also driven by an **i
 
 1. **Risk** — Snapshot shows stress horizon (e.g. cash shortage probability over N days).  
 2. **Action** — “Collect from [top of collection queue]” with ₹ amount.  
-3. **Execute** — Generate **Razorpay link**; send **WhatsApp** reminder (live with Meta keys); **call** (Twilio when configured).  
-4. **Voice** — Open **`/assistant`**, choose **हिंदी**, ask: *“Mujhe kya karna chahiye?”*  
-5. **Today screen** — **`/`** shows one-line risk + one action + WhatsApp / Call / System buttons.
+3. **Execute** — **Send WhatsApp** runs **`POST /execute/collect`** (Razorpay link embedded in the message); **Copy payment link only** uses **`POST /execute/payment-link`**; **call** via Twilio when configured.  
+4. **Bills** — **`/bills`** — paste POS JSON or upload a bill image/PDF (needs backend with `/bills` routes + DB migrated).  
+5. **Voice** — Open **`/assistant`**, choose **हिंदी**, ask: *“Mujhe kya karna chahiye?”*  
+6. **Today screen** — **`/`** shows one-line risk + one action + WhatsApp / copy link / Call / System buttons.
 
 ---
 
@@ -263,11 +285,27 @@ Open **http://localhost:5173** — Vite proxies `/api` → backend (see `vite.co
 
 **Auth:** sign up → complete **onboarding** → app unlocks.
 
-### Deploy UI (Vercel)
+### Deploy UI
 
-Root **`vercel.json`** builds `financial-control-ui/`. Set **`VITE_API_URL`** in Vercel to your **HTTPS API origin** (no trailing slash). Backend needs a long-running host (Railway, Render, Fly, VPS) + Postgres — not Vercel serverless.
+| Target | Notes |
+|--------|--------|
+| **Netlify** | Root **`netlify.toml`** (`base = financial-control-ui`) or deploy from **`financial-control-ui/`**; set **`VITE_API_URL=https://&lt;your-api-host&gt;`** (no trailing slash). Example in **`financial-control-ui/.env.example`**. |
+| **Vercel** | Root **`vercel.json`** builds **`financial-control-ui/`**. Set **`VITE_API_URL`** to your HTTPS API origin. |
+
+Backend must be a **long-running** host (Fly, Railway, Render, VPS) + PostgreSQL — not Vercel/Netlify serverless functions for the FastAPI app.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fshrijatewari%2Fsmb-ai-financial-autopilot&root-directory=.)
+
+### Deploy API (Fly.io example)
+
+From **`backend/`**:
+
+```bash
+fly auth login
+fly deploy --wait-timeout 30m --release-command-timeout 30m
+```
+
+`fly.toml` runs **`prisma db push`** on release. Ensure **`DATABASE_URL`** and secrets are set on the Fly app.
 
 ---
 
@@ -275,8 +313,8 @@ Root **`vercel.json`** builds `financial-control-ui/`. Set **`VITE_API_URL`** in
 
 | File | Purpose |
 |------|---------|
-| `backend/.env` | `DATABASE_URL`, JWT, Razorpay, WhatsApp, Twilio, OpenAI (optional), engine tuning |
-| `financial-control-ui/.env` | Production: `VITE_API_URL` pointing at your API origin |
+| `backend/.env` | `DATABASE_URL`, JWT, **`RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`** (payment links; omit for demo mocks), **`WHATSAPP_*`** (Meta), Twilio, OpenAI (optional), engine tuning |
+| `financial-control-ui/.env` | Production: **`VITE_API_URL`** = public API origin (must expose `/bills`, `/execute/*`, etc. that you use) |
 
 Copy from each **`.env.example`**. Never commit secrets.
 
@@ -285,11 +323,11 @@ Copy from each **`.env.example`**. Never commit secrets.
 ## Future work
 
 - Deeper **Paytm / bank** integrations  
-- **Razorpay webhooks** → auto-post settlements into ledger  
+- **Razorpay webhooks** → auto-post settlements into ledger (partial support exists — wire all events)  
 - Richer **RL** policies and evaluation  
 - **Credit / lending** scoring APIs  
 - More **regional languages** end-to-end  
-- SSE / WebSocket for **push** snapshots instead of polling  
+- SSE / WebSocket for **push** snapshots instead of polling (SSE **`/system/stream`** already available for live feed)  
 
 ---
 
@@ -303,11 +341,14 @@ Copy from each **`.env.example`**. Never commit secrets.
 
 | Topic | Where |
 |-------|--------|
-| Backend route details & persisted ledger | `backend/README.md` |
-| Frontend ledger / `api.js` | `financial-control-ui/README.md` |
-| Vercel deploy (UI) | Root `vercel.json` — set `VITE_API_URL` to your API |
-| Prisma | `backend/prisma/schema.prisma`, `./scripts/sync-prisma-db.sh` |
-| Troubleshooting | Prisma on `PATH`, DB up, onboarding completed — see legacy notes in git history if needed |
+| Backend routes, ledger, Prisma | `backend/README.md` |
+| Frontend routes, `api.js`, Transactions | `financial-control-ui/README.md` |
+| **Bills API** | `GET/POST /bills/*` — see OpenAPI `/docs` |
+| **Execute: payment link, WhatsApp, collect** | `POST /execute/payment-link`, `/execute/whatsapp`, `/execute/collect` |
+| UI deploy | Root **`vercel.json`** · **`netlify.toml`** (monorepo) · **`financial-control-ui/netlify.toml`** |
+| API deploy | **`backend/fly.toml`**, **`backend/Dockerfile`** |
+| Prisma schema | `backend/prisma/schema.prisma`, `./scripts/sync-prisma-db.sh` |
+| Troubleshooting | Prisma on `PATH`, DB up, onboarding completed; frontend 404 on `/bills` → deploy latest UI bundle; API 404 on `/bills/*` → deploy latest backend + `prisma db push` |
 
 **License:** Add a `LICENSE` when you open-source; until then all rights reserved unless stated otherwise.
 

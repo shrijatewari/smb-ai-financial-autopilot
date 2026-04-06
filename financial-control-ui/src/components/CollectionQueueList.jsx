@@ -1,6 +1,7 @@
 import { MessageCircle, Phone } from 'lucide-react'
 import { formatInr } from '../lib/collections'
 import { cn } from '../lib/utils'
+import { useTr } from '../hooks/useTr'
 
 function initials(name) {
   const s = String(name || '?')
@@ -37,6 +38,7 @@ export function CollectionQueueList({
   subtitle,
   totalDueLabel,
 }) {
+  const t = useTr()
   const total = rows.reduce((s, r) => s + Number(r.amount ?? 0), 0)
 
   return (
@@ -47,7 +49,7 @@ export function CollectionQueueList({
           {subtitle && <p className="text-xs text-violet-600/80">{subtitle}</p>}
         </div>
         <span className="rounded-full bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-800">
-          {totalDueLabel} {formatInr(total)} due
+          {totalDueLabel} {formatInr(total)} {t('बकाया', 'due', { hinglish: 'bakaya' })}
         </span>
       </div>
       <ul className="divide-y divide-violet-50">
@@ -86,7 +88,7 @@ export function CollectionQueueList({
                       />
                     </div>
                     <span className="shrink-0 text-[11px] font-medium tabular-nums text-violet-700">
-                      {pct}% late risk
+                      {pct}% {t('देरी जोखिम', 'late risk', { hinglish: 'deri jokhim' })}
                     </span>
                   </div>
                 </div>
@@ -102,7 +104,7 @@ export function CollectionQueueList({
                   className="inline-flex items-center gap-1.5 rounded-full border-2 border-violet-200 bg-white px-4 py-2 text-sm font-bold text-violet-900 shadow-sm hover:bg-violet-50 disabled:opacity-50"
                 >
                   <MessageCircle className="h-4 w-4 text-emerald-600" />
-                  WA
+                  {t('वॉट्सऐप', 'WA', { hinglish: 'WhatsApp' })}
                 </button>
                 <button
                   type="button"
@@ -114,7 +116,7 @@ export function CollectionQueueList({
                   className="inline-flex items-center gap-1.5 rounded-full border-2 border-violet-300 bg-white px-4 py-2 text-sm font-bold text-violet-950 shadow-sm hover:bg-violet-50 disabled:opacity-50"
                 >
                   <Phone className="h-4 w-4" />
-                  Call
+                  {t('कॉल', 'Call', { hinglish: 'Call' })}
                 </button>
               </div>
             </li>

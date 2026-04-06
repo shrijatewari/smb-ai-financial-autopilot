@@ -38,9 +38,24 @@ cp .env.example .env.local
 
 ---
 
-## Deploying (Vercel)
+## Deploying
 
-The monorepo root includes **`vercel.json`** so Vercel builds this app from **`financial-control-ui/`** and serves the SPA. Set **`VITE_API_URL`** in the Vercel project to your deployed FastAPI base URL (see repository **`../README.md` → “Deploy frontend to Vercel”**).
+| Platform | Config |
+|----------|--------|
+| **Vercel** | Monorepo root **`vercel.json`** builds this folder. Set **`VITE_API_URL`** to your FastAPI origin. |
+| **Netlify** | Root **`netlify.toml`** (`base = financial-control-ui`) or **`netlify.toml`** inside this folder; **`[build.environment] VITE_API_URL`** for production builds. |
+
+See repository **`../README.md`** → **Deploy UI** and **Deploy API**.
+
+---
+
+## Collections, bills, and execute helpers
+
+- **Today** (`/`) — **Send WhatsApp** uses **`postExecuteCollect()`** → `POST /execute/collect` (Razorpay link inside the message); toast shows a copyable **`payment_link`**. **Copy payment link only** uses **`postPaymentLink()`** → `POST /execute/payment-link`.  
+- **People** / **⌘K palette** — same collect endpoint for queue rows where applicable.  
+- **Bills** (`/bills`) — **`getBillHistory`**, **`ingestBillJson`**, **`ingestBillOcr`** in **`api.js`**; requires backend **`/bills`** routes and DB migrated.  
+
+Voice mute in the header cancels browser TTS (see **`src/lib/voice.js`**).
 
 ---
 

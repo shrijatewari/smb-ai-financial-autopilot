@@ -60,14 +60,18 @@ async def list_items(user: User = Depends(get_current_user)):
 
 @router.post("/items")
 async def create_item(body: InventoryItemCreate, user: User = Depends(get_current_user)):
+    q = float(body.quantity)
+    th = float(body.reorder_threshold)
+    sc = max(q, th * 5.0)
     r = await prisma.inventoryitem.create(
         data={
             "user_id": user.id,
             "sku": body.sku.strip(),
             "name": body.name.strip(),
-            "quantity": float(body.quantity),
+            "quantity": q,
             "unit": body.unit.strip() if body.unit else None,
-            "reorder_threshold": float(body.reorder_threshold),
+            "reorder_threshold": th,
+            "stock_ceiling": sc,
         }
     )
     return {"item": _item_out(r)}
@@ -85,6 +89,10 @@ async def patch_item(item_id: int, body: InventoryItemPatch, user: User = Depend
         data["reorder_threshold"] = float(body.reorder_threshold)
     if not data:
         return {"item": _item_out(existing)}
+    new_q = float(data.get("quantity", existing.quantity))
+    new_th = float(data.get("reorder_threshold", existing.reorder_threshold))
+    old_ce = getattr(existing, "stock_ceiling", None)
+    data["stock_ceiling"] = max(float(old_ce) if old_ce is not None else 0.0, new_q, new_th * 5.0)
     r = await prisma.inventoryitem.update(where={"id": item_id}, data=data)
     return {"item": _item_out(r)}
 
@@ -173,8 +181,15 @@ async def apply_khata_sale(body: KhataApplyBody, user: User = Depends(get_curren
                 detail=f"Not enough stock for {item.name}: have {item.quantity}, need {line.quantity}",
             )
 
-        new_q = float(item.quantity) - float(line.quantity)
-        await prisma.inventoryitem.update(where={"id": item.id}, data={"quantity": new_q})
+        old_q = float(item.quantity)
+        new_q = old_q - float(line.quantity)
+        th = float(item.reorder_threshold)
+        old_ce = getattr(item, "stock_ceiling", None)
+        ceiling = max(float(old_ce) if old_ce is not None else 0.0, old_q, th * 5.0)
+        await prisma.inventoryitem.update(
+            where={"id": item.id},
+            data={"quantity": new_q, "stock_ceiling": ceiling},
+        )
 
         rows_for_ledger.append(
             {
@@ -198,10 +213,19 @@ async def apply_khata_sale(body: KhataApplyBody, user: User = Depends(get_curren
 def _item_out(r) -> dict:
     q = float(r.quantity)
     th = float(r.reorder_threshold)
-    # Visual fill: 100% ≈ 5× reorder level as "comfort stock"
-    denom = max(th * 5.0, 1e-6)
-    pct = min(100.0, max(0.0, (q / denom) * 100.0))
+    ce_raw = getattr(r, "stock_ceiling", None)
+    # % of peak capacity: ceiling tracks high-water (restocks raise it; sales do not lower it).
+    if ce_raw is not None and float(ce_raw) > 0:
+        ce = max(float(ce_raw), q, 1e-9)
+        pct = min(100.0, max(0.0, (q / ce) * 100.0))
+    else:
+        # No ceiling yet (run migration or save item once) — reorder band only.
+        denom = max(th * 5.0, 1e-6)
+        pct = min(100.0, max(0.0, (q / denom) * 100.0))
     status = "low" if q <= th else "ok"
+    last_bill = None
+    if getattr(r, "last_bill_deduct_at", None) is not None:
+        last_bill = r.last_bill_deduct_at.isoformat() if hasattr(r.last_bill_deduct_at, "isoformat") else str(r.last_bill_deduct_at)
     return {
         "id": r.id,
         "sku": r.sku,
@@ -211,4 +235,5 @@ def _item_out(r) -> dict:
         "reorder_threshold": th,
         "stock_pct": round(pct, 1),
         "status": status,
+        "last_bill_deduct_at": last_bill,
     }

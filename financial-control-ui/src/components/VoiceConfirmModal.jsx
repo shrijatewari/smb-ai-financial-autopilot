@@ -1,12 +1,11 @@
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { speakHindi, cancelSpeech } from '../lib/voice'
+import { speakForLocale, speakHinglish, cancelSpeech } from '../lib/voice'
 import { useUiStore } from '../store/uiStore'
 import { useTr } from '../hooks/useTr'
 
 /**
- * Voice-first confirmation: speaks prompt in Hindi; Haan / Nahi (YES cancels = NO execute pattern handled by parent).
- * Optional messageHi + messageEn for bilingual on-screen copy; speech always uses Hindi (messageHi or legacy message).
+ * Voice-first confirmation: TTS follows display language (EN / HI / HI+EN / TA / TE / BN).
  */
 export function VoiceConfirmModal({ open, title, message, messageHi, messageEn, onConfirm, onCancel }) {
   const t = useTr()
@@ -16,10 +15,28 @@ export function VoiceConfirmModal({ open, title, message, messageHi, messageEn, 
   const en = messageEn ?? message
 
   useEffect(() => {
-    if (!open || !voiceOn || !hi) return
-    speakHindi(hi)
+    if (!open || !voiceOn) return
+    if (messageEn != null && messageHi != null) {
+      if (localeDisplay === 'both') speakHinglish(hi, en)
+      else speakForLocale(t(hi, en), localeDisplay)
+    } else if (message) {
+      speakForLocale(message, localeDisplay)
+    }
     return () => cancelSpeech()
-  }, [open, hi, voiceOn])
+  }, [open, hi, en, message, voiceOn, localeDisplay, t, messageHi, messageEn])
+
+  const bodyLang =
+    localeDisplay === 'en'
+      ? 'en'
+      : localeDisplay === 'hi'
+        ? 'hi'
+        : localeDisplay === 'ta'
+          ? 'ta'
+          : localeDisplay === 'te'
+            ? 'te'
+            : localeDisplay === 'bn'
+              ? 'bn'
+              : undefined
 
   return (
     <AnimatePresence>
@@ -44,24 +61,22 @@ export function VoiceConfirmModal({ open, title, message, messageHi, messageEn, 
             </h2>
             <div className="mt-3 text-base leading-relaxed text-violet-900/90">
               {messageEn != null && messageHi != null ? (
-                localeDisplay === 'en' ? (
-                  <p lang="en">{en}</p>
-                ) : localeDisplay === 'hi' ? (
-                  <p>{hi}</p>
-                ) : (
+                localeDisplay === 'both' ? (
                   <>
-                    <p>{hi}</p>
+                    <p lang="hi">{hi}</p>
                     <p lang="en" className="mt-2 text-sm text-violet-700/95">
                       {en}
                     </p>
                   </>
+                ) : (
+                  <p lang={bodyLang}>{t(hi, en)}</p>
                 )
               ) : (
                 <p>{message}</p>
               )}
             </div>
             <p className="mt-2 text-xs text-violet-600">
-              {t('Boliye YES ya Nahi — ya neeche dabayein.', 'Say YES or NO — or tap below.')}
+              {t('YES या NO बोलिए — या नीचे दबाएँ।', 'Say YES or NO — or tap below.')}
             </p>
             <div className="mt-6 flex gap-3">
               <button
@@ -72,7 +87,7 @@ export function VoiceConfirmModal({ open, title, message, messageHi, messageEn, 
                   onConfirm?.()
                 }}
               >
-                {t('Haan (Yes)', 'Yes')}
+                {t('हाँ (Yes)', 'Yes')}
               </button>
               <button
                 type="button"
@@ -82,7 +97,7 @@ export function VoiceConfirmModal({ open, title, message, messageHi, messageEn, 
                   onCancel?.()
                 }}
               >
-                {t('Nahi (No)', 'No')}
+                {t('नहीं (No)', 'No')}
               </button>
             </div>
           </motion.div>

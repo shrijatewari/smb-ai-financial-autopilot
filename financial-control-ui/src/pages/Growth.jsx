@@ -112,14 +112,14 @@ export default function Growth() {
       <div>
         <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-800">
           <TrendingUp className="h-3.5 w-3.5" />
-          {t('Growth & moat', 'Growth & moat')}
+          {t('विकास और मोट', 'Growth & moat')}
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-violet-950">
-          {t('Credit · subscription · referrals', 'Credit · subscription · referrals')}
+          {t('क्रेडिट · सदस्यता · रेफ़रल', 'Credit · subscription · referrals')}
         </h1>
         <p className="mt-1 text-sm text-violet-800/70">
           {t(
-            'Lender signal, MRR tier, referral loop, 14-day collection ladder, payables, benchmarks.',
+            'लेंडर सिग्नल, एमआरआर टियर, रेफ़रल लूप, १४-दिन वसूली सीढ़ी, देय, बेंचमार्क।',
             'Lender signal, MRR tier, referral loop, 14-day collection ladder, payables, benchmarks.'
           )}
         </p>
@@ -131,17 +131,33 @@ export default function Growth() {
         </p>
       )}
 
+      {!err && customers.length === 0 && (
+        <p
+          className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          {t(
+            'इस खाते में अभी कोई ग्राहक रिकॉर्ड नहीं। सीड उसी डेटाबेस में चलाएँ जिसे API इस्तेमाल करता है, फिर demo@example.com से लॉग इन करें।',
+            'No customer rows for this account. Run the backend seed against the same database your API uses, then sign in as demo@example.com (seed creates 5 customers for that user).',
+            {
+              hinglish:
+                'No customer rows for this account. Seed the same DB as the API, then login as demo@example.com — seed adds 5 customers.',
+            },
+          )}
+        </p>
+      )}
+
       <section className="rounded-2xl border border-white/50 bg-white/70 p-5 shadow-sm backdrop-blur">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-violet-950">{t('Credit score', 'Credit score')}</h2>
+            <h2 className="text-sm font-semibold text-violet-950">{t('क्रेडिट स्कोर', 'Credit score')}</h2>
             <p className="text-xs text-violet-800/60">
-              {t('Ledger + GST + receivables + RL — 0 se 1000', 'Ledger + GST + receivables + RL — 0–1000')}
+              {t('लेजर + GST + प्राप्य + RL — ० से १०००', 'Ledger + GST + receivables + RL — 0–1000')}
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onRefreshCredit}>
             <RefreshCw className="mr-1 h-3.5 w-3.5" />
-            {t('Naya hisaab', 'Recompute')}
+            {t('नया हिसाब', 'Recompute')}
           </Button>
         </div>
         {credit && (
@@ -149,8 +165,8 @@ export default function Growth() {
             <div>
               <p className="text-4xl font-bold tabular-nums text-[#6C3BFF]">{credit.score}</p>
               <p className="text-xs text-violet-800/60">
-                {t('Band', 'Band')}: <span className="font-semibold">{credit.band}</span>
-                {credit.cached ? ` · ${t('cache', 'cached')}` : ''}
+                {t('बैंड', 'Band')}: <span className="font-semibold">{credit.band}</span>
+                {credit.cached ? ` · ${t('कैश्ड', 'cached')}` : ''}
               </p>
             </div>
             {credit.factors?.weights && (
@@ -163,11 +179,11 @@ export default function Growth() {
       </section>
 
       <section className="rounded-2xl border border-white/50 bg-white/70 p-5 shadow-sm backdrop-blur">
-        <h2 className="text-sm font-semibold text-violet-950">{t('Subscription & referral', 'Subscription & referral')}</h2>
+        <h2 className="text-sm font-semibold text-violet-950">{t('सदस्यता और रेफ़रल', 'Subscription & referral')}</h2>
         {summary && (
           <div className="mt-4 space-y-3 text-sm">
             <p>
-              <span className="text-violet-800/60">{t('Tier', 'Tier')}: </span>
+              <span className="text-violet-800/60">{t('टियर', 'Tier')}: </span>
               <span className="font-medium capitalize">{summary.subscription_tier}</span>
             </p>
             <div className="flex flex-wrap gap-2">
@@ -185,11 +201,11 @@ export default function Growth() {
                 className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-white px-2 py-1 text-xs text-violet-800 hover:bg-violet-50"
               >
                 <Copy className="h-3 w-3" />
-                {t('Copy', 'Copy')}
+                {t('कॉपी', 'Copy')}
               </button>
             </div>
             <p className="text-violet-800/70">
-              {t('Referrals', 'Referrals')}: <strong>{summary.referrals_count}</strong>
+              {t('रेफ़रल', 'Referrals')}: <strong>{summary.referrals_count}</strong>
             </p>
           </div>
         )}
@@ -198,20 +214,23 @@ export default function Growth() {
       <section className="rounded-2xl border border-white/50 bg-white/70 p-5 shadow-sm backdrop-blur">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-[#6C3BFF]" />
-          <h2 className="text-sm font-semibold text-violet-950">{t('14-din collection ladder', '14-day collection ladder')}</h2>
+          <h2 className="text-sm font-semibold text-violet-950">{t('१४-दिन वसूली सीढ़ी', '14-day collection ladder')}</h2>
         </div>
         <p className="mt-1 text-xs text-violet-800/60">
-          {t('Har din ek reminder — notification log + WhatsApp jab API laga ho', 'One touch per day — notification log + WhatsApp when API is set')}
+          {t(
+            'हर दिन एक रिमाइंडर — सूचना लॉग + वॉट्सऐप जब API लगा हो',
+            'One touch per day — notification log + WhatsApp when API is set'
+          )}
         </p>
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="flex flex-col text-xs">
-            <span className="text-violet-800/70">{t('Customer', 'Customer')}</span>
+            <span className="text-violet-800/70">{t('ग्राहक', 'Customer')}</span>
             <select
               value={custId}
               onChange={(e) => setCustId(e.target.value)}
               className="mt-1 min-w-[200px] rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm"
             >
-              <option value="">{t('Chuno…', 'Select…')}</option>
+              <option value="">{t('चुनो…', 'Select…')}</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} (#{c.id}) — ₹{Number(c.total_due).toFixed(0)}
@@ -220,7 +239,7 @@ export default function Growth() {
             </select>
           </label>
           <Button type="button" disabled={busy || !custId} onClick={onStartLadder}>
-            {t('Shuru karo', 'Start ladder')}
+            {t('शुरू करो', 'Start ladder')}
           </Button>
         </div>
         <ul className="mt-4 space-y-2 text-sm">
@@ -233,19 +252,19 @@ export default function Growth() {
               </span>
             </li>
           ))}
-          {!ladders.length && <li className="text-violet-800/50">{t('Koi campaign nahi', 'No active campaigns')}</li>}
+          {!ladders.length && <li className="text-violet-800/50">{t('कोई अभियान नहीं', 'No active campaigns')}</li>}
         </ul>
       </section>
 
       <section className="rounded-2xl border border-white/50 bg-white/70 p-5 shadow-sm backdrop-blur">
         <div className="flex items-center gap-2">
           <Building2 className="h-4 w-4 text-emerald-700" />
-          <h2 className="text-sm font-semibold text-violet-950">{t('Payables / suppliers', 'Payables / suppliers')}</h2>
+          <h2 className="text-sm font-semibold text-violet-950">{t('देय / आपूर्तिकर्ता', 'Payables / suppliers')}</h2>
         </div>
         {suppliers && (
           <div className="mt-3 space-y-2 text-sm text-violet-900">
             <p>
-              {t('Total debit (ledger)', 'Total debit (ledger)')}: ₹{Number(suppliers.total_debit_inr).toLocaleString('en-IN')}
+              {t('कुल डेबिट (लेजर)', 'Total debit (ledger)')}: ₹{Number(suppliers.total_debit_inr).toLocaleString('en-IN')}
             </p>
             <ul className="space-y-1">
               {(suppliers.top_categories || []).slice(0, 8).map((row) => (
@@ -268,16 +287,16 @@ export default function Growth() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-amber-700" />
-            <h2 className="text-sm font-semibold text-violet-950">{t('Peer benchmarks', 'Peer benchmarks')}</h2>
+            <h2 className="text-sm font-semibold text-violet-950">{t('समकक्ष बेंचमार्क', 'Peer benchmarks')}</h2>
           </div>
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onRefreshBenchmarks}>
-            {t('Refresh data', 'Refresh data')}
+            {t('डेटा रिफ़्रेश', 'Refresh data')}
           </Button>
         </div>
         <p className="mt-1 text-xs text-violet-800/60">
           {benchmarks?.industry_key
-            ? `${t('Industry', 'Industry')}: ${benchmarks.industry_key}`
-            : t('Onboarding mein business type set karein', 'Set business type in onboarding')}
+            ? `${t('उद्योग', 'Industry')}: ${benchmarks.industry_key}`
+            : t('ऑनबोर्डिंग में व्यवसाय प्रकार सेट करें', 'Set business type in onboarding')}
         </p>
         <ul className="mt-3 space-y-2 text-sm">
           {(benchmarks?.items || []).map((b) => (
@@ -291,7 +310,7 @@ export default function Growth() {
             </li>
           ))}
           {!(benchmarks?.items || []).length && (
-            <li className="text-violet-800/50">{t('Abhi data kam — refresh ya zyada users', 'Sparse data — refresh or more users')}</li>
+            <li className="text-violet-800/50">{t('अभी डेटा कम — रिफ़्रेश या ज़्यादा उपयोगकर्ता', 'Sparse data — refresh or more users')}</li>
           )}
         </ul>
       </section>

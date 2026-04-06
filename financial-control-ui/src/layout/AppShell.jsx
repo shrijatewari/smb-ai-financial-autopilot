@@ -1,17 +1,39 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { SystemStreamProvider } from '../context/SystemStreamContext'
-import { warmSpeechVoices } from '../lib/voice'
+import { normalizeLocaleMode } from '../lib/i18n.jsx'
+import { cancelSpeech, warmSpeechVoices } from '../lib/voice'
+import { useUiStore } from '../store/uiStore'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { FloatingAssistant } from './FloatingAssistant'
 import { BottomNav } from './BottomNav'
 import { CommandPalette } from '../components/CommandPalette'
 
+function htmlLangForLocale(mode) {
+  const m = normalizeLocaleMode(mode)
+  if (m === 'both') return 'hi'
+  return m
+}
+
 export function AppShell() {
+  const localeDisplay = useUiStore((s) => s.localeDisplay)
+  const voiceGuidanceEnabled = useUiStore((s) => s.voiceGuidanceEnabled)
+
   useEffect(() => {
     warmSpeechVoices()
   }, [])
+
+  /** Stop TTS + pending Hinglish English when user turns voice off (any code path). */
+  useEffect(() => {
+    if (!voiceGuidanceEnabled) cancelSpeech()
+  }, [voiceGuidanceEnabled])
+
+  useEffect(() => {
+    const lang = htmlLangForLocale(localeDisplay)
+    document.documentElement.lang = lang
+    document.documentElement.dataset.locale = normalizeLocaleMode(localeDisplay)
+  }, [localeDisplay])
 
   return (
     <SystemStreamProvider>

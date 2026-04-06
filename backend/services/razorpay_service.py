@@ -25,9 +25,11 @@ def create_payment_link(
     phone: str,
     email: str | None = None,
     notes: dict[str, str] | None = None,
+    description: str | None = None,
 ) -> dict[str, Any]:
     """
-    Create a payment link. Amount in INR; Razorpay expects paise (amount * 100).
+    Create a payment link (POST https://api.razorpay.com/v1/payment_links).
+    Amount in INR; Razorpay expects paise (amount * 100).
 
     Returns: payment_link (short_url), status, id, mock (bool), optional fallback_reason.
     """
@@ -41,11 +43,12 @@ def create_payment_link(
     else:
         contact = "+919004930401"
 
+    desc = (description or "").strip() or f"Payment request — {customer_name[:80]}"
     payload: dict[str, Any] = {
         "amount": paise,
         "currency": "INR",
         "accept_partial": False,
-        "description": f"Payment request — {customer_name[:80]}",
+        "description": desc[:255],
         "customer": {
             "name": customer_name[:120],
             "contact": contact,

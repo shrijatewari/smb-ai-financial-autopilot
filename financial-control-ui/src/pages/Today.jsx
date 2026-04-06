@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Mic, Phone, Sparkles, Users, MessageCircle, Wallet, ListTodo, Play } from 'lucide-react'
+import { Copy, Mic, Phone, Sparkles, Users, MessageCircle, Wallet, ListTodo, Play } from 'lucide-react'
 import {
   buildHindiPaymentScript,
   buildWhatsappCollectionMessage,
@@ -10,17 +10,24 @@ import {
   openTelDialer,
   openWhatsAppDraft,
 } from '../lib/collections'
-import { executeAction, getApiErrorMessage, postPaymentLink, postTwilioVoiceCall, postWhatsappReminder } from '../services/api'
+import {
+  executeAction,
+  getApiErrorMessage,
+  postExecuteCollect,
+  postPaymentLink,
+  postTwilioVoiceCall,
+} from '../services/api'
 import { useSystemSnapshot } from '../context/SystemStreamContext'
 import { VoiceConfirmModal } from '../components/VoiceConfirmModal'
 import { GuidedHandOverlay } from '../components/GuidedHandOverlay'
 import { ShowMeVideoModal } from '../components/ShowMeVideoModal'
 import { HELP_VIDEOS } from '../constants/helpVideos'
-import { speakHindi, cancelSpeech } from '../lib/voice'
+import { speakForLocale, speakHinglish, cancelSpeech } from '../lib/voice'
 import { useUiStore } from '../store/uiStore'
 import { useAuth } from '../context/AuthContext'
 import { useTr } from '../hooks/useTr'
-import { Bilingual } from '../lib/i18n'
+import { Bilingual, pickLine, pickLocaleNode } from '../lib/i18n'
+import { layer1FromSnap } from '../lib/todayHeadlines'
 import { cn } from '../lib/utils'
 import { TodayStatsBar } from '../components/TodayStatsBar'
 import { CollectionQueueList } from '../components/CollectionQueueList'
@@ -29,75 +36,6 @@ import { attachMockPayScores } from '../lib/platformMocks'
 
 const DEFAULT_PHONE = '9004930401'
 const GUIDED_DONE_KEY = 'SMB_GUIDED_FIRST_DONE'
-
-function headlineFromSnap(snap) {
-  const dc = snap?.daily_control
-  const daysNeg = dc?.days_to_negative
-  const risk = snap?.risk
-  if (daysNeg != null && daysNeg <= 14) {
-    return {
-      hi: `⚠️ ${daysNeg} din mein paisa khatam ho sakta hai`,
-      en: `⚠️ Cash may run out in ~${daysNeg} days`,
-      urgent: true,
-    }
-  }
-  if (risk != null && risk > 0.25) {
-    const pct = (100 * risk).toFixed(0)
-    return {
-      hi: `⚠️ Cash risk zyada hai — lagbhag ${pct}% chance stress ke saath`,
-      en: `⚠️ Cash risk is high — about ${pct}% chance of stress`,
-      urgent: true,
-    }
-  }
-  if (daysNeg != null) {
-    return {
-      hi: `Stress timing ~${daysNeg} din — collections follow karein`,
-      en: `Stress timing ~${daysNeg} days — follow up collections`,
-      urgent: false,
-    }
-  }
-  return {
-    hi: 'Aaj cash stable lag raha hai — phir bhi dues follow karein',
-    en: 'Cash looks stable today — still follow up on dues',
-    urgent: false,
-  }
-}
-
-/** Layer 1 — Today status: contextual, no graph overload (uses backend dashboard_context when present). */
-function layer1FromSnap(snap, ctx) {
-  const dc = snap?.daily_control
-  const daysNeg = dc?.days_to_negative
-  const risk = snap?.risk
-  const rl = ctx?.risk_level
-
-  if (rl === 'high' || (daysNeg != null && daysNeg <= 7) || (risk != null && risk > 0.35)) {
-    const d = daysNeg
-    if (d != null) {
-      return {
-        hi: `⚠️ Urgent: ~${d} din mein cash khatam`,
-        en: `⚠️ Urgent: cash may run out in ~${d} days`,
-        urgent: true,
-      }
-    }
-    return {
-      hi: '⚠️ Urgent: cash risk bahut zyada — abhi collect karein',
-      en: '⚠️ Urgent: very high cash risk — collect now',
-      urgent: true,
-    }
-  }
-  if (
-    rl === 'low' &&
-    (daysNeg == null || daysNeg > 14) &&
-    (risk == null || risk < 0.18)
-  ) {
-    return {
-      hi: '✅ Aaj sab safe hai — phir bhi dues follow karein',
-      en: '✅ All safe today — still follow up on dues',
-      urgent: false,
-    }
-  }
-  return headlineFromSnap(snap)
-}
 
 export default function Today() {
   const { user } = useAuth()
@@ -136,7 +74,7 @@ export default function Today() {
   const act = primary?.action || 'collect_payment'
   const ctx = snap?.dashboard_context
   const line = useMemo(() => {
-    if (!snap) return { hi: '', en: '', urgent: false }
+    if (!snap) return { hi: '', en: '', ta: '', te: '', bn: '', urgent: false }
     return layer1FromSnap(snap, ctx)
   }, [snap, ctx])
   const literacyMinimal = ctx?.literacy_ui === 'minimal'
@@ -186,19 +124,22 @@ export default function Today() {
   }, [loading, snap, line.urgent, setGuidedHand])
 
   useEffect(() => {
-    if (!loading && snap && voiceOn && line.hi && !headlineSpoken.current) {
+    if (!loading && snap && voiceOn && (line.hi || line.en) && !headlineSpoken.current) {
       headlineSpoken.current = true
-      speakHindi(line.hi)
+      if (localeDisplay === 'both') speakHinglish(line.hinglish ?? line.hi, line.en)
+      else speakForLocale(pickLine(line, localeDisplay), localeDisplay)
     }
-  }, [loading, snap, line.hi, voiceOn])
+  }, [loading, snap, line, voiceOn, localeDisplay])
 
   function finishGuided() {
     if (typeof localStorage !== 'undefined') localStorage.setItem(GUIDED_DONE_KEY, '1')
     dismissGuidedHand()
   }
 
-  function receipt(msg) {
-    if (voiceOn) speakHindi(msg)
+  function receiptVoice(hi, en) {
+    if (!voiceOn) return
+    if (localeDisplay === 'both') speakHinglish(hi, en)
+    else speakForLocale(t(hi, en), localeDisplay)
   }
 
   function helperBlocks() {
@@ -208,41 +149,47 @@ export default function Today() {
 
   async function runWhatsApp() {
     if (helperBlocks()) {
-      const msg = t(
-        'Helper approval abhi demo mein band hai. Profile se helper number save karein — OTP jald.',
-        'Helper approval is off in this demo. Save a helper number in Profile — OTP soon.'
-      )
+      const hi =
+        'Helper approval अभी डेमो में बंद है। प्रोफ़ाइल से हेल्पर नंबर सेव करें — OTP जल्द।'
+      const en = 'Helper approval is off in this demo. Save a helper number in Profile — OTP soon.'
+      const msg = t(hi, en)
       setToast({ type: 'warn', text: msg })
-      receipt(msg)
+      receiptVoice(hi, en)
       return
     }
     setBusy('wa')
     setToast(null)
     try {
-      await postWhatsappReminder({
+      const res = await postExecuteCollect({
         customer: collectName,
         phone: phone10,
         amount: collectAmount,
         tone: 'friendly',
       })
-      const ok = `${formatInr(collectAmount)} ka reminder ${collectName.split('(')[0].trim()} ko bhej diya gaya hai.`
+      const short = collectName.split('(')[0].trim()
+      const okHi = `${formatInr(collectAmount)} का रिमाइंडर ${short} को भेज दिया गया है।`
+      const okEn = `Reminder of ${formatInr(collectAmount)} sent to ${short}.`
       setToast({
         type: 'ok',
         text: t(
-          'Reminder bheja gaya (WhatsApp / Meta API jab configured ho).',
-          'Reminder sent (when WhatsApp / Meta API is configured).'
+          'Reminder + Razorpay लिंक भेजा गया (WhatsApp / Meta जब कॉन्फ़िगर हो)।',
+          'Reminder + Razorpay link sent (WhatsApp / Meta when configured).'
         ),
+        link: res.payment_link || undefined,
       })
-      receipt(ok)
+      receiptVoice(okHi, okEn)
     } catch (e) {
       const msg = getApiErrorMessage(e)
       const draft = buildWhatsappCollectionMessage(collectName, collectAmount, 'friendly')
       openWhatsAppDraft(phone10, draft)
       setToast({
         type: 'warn',
-        text: `${msg} — ${t('WhatsApp draft khola.', 'WhatsApp draft opened.')}`,
+        text: `${msg} — ${t('वॉट्सऐप ड्राफ्ट खोला।', 'WhatsApp draft opened.')}`,
       })
-      receipt('WhatsApp draft khul gaya — aap wahan se bhej sakte hain.')
+      receiptVoice(
+        'WhatsApp ड्राफ्ट खुल गया — आप वहाँ से भेज सकते हैं।',
+        'WhatsApp draft opened — you can send from there.'
+      )
     } finally {
       setBusy(null)
       setTimeout(() => setToast(null), 8000)
@@ -251,12 +198,11 @@ export default function Today() {
 
   async function runCall() {
     if (helperBlocks()) {
-      const msg = t(
-        'Helper approval demo: abhi seedha call karenge — OTP flow jald.',
-        'Helper approval demo: calling directly for now — OTP flow soon.'
-      )
+      const hi = 'Helper approval डेमो: अभी सीधा कॉल करेंगे — OTP फ्लो जल्द।'
+      const en = 'Helper approval demo: calling directly for now — OTP flow soon.'
+      const msg = t(hi, en)
       setToast({ type: 'warn', text: msg })
-      receipt(msg)
+      receiptVoice(hi, en)
       return
     }
     setBusy('call')
@@ -277,21 +223,21 @@ export default function Today() {
               script.slice(0, 80) +
               '…',
         })
-        receipt('Dialer khul gaya — aap call kar sakte hain.')
+        receiptVoice('डायलर खुल गया — आप कॉल कर सकते हैं।', 'Dialer opened — you can place the call.')
       } else {
         setToast({
           type: 'ok',
-          text: `${t('Call queue:', 'Call queue:')} ${res.sid || 'ok'}`,
+          text: `${t('कॉल कतार:', 'Call queue:')} ${res.sid || 'ok'}`,
         })
-        receipt('Call queue lag gayi.')
+        receiptVoice('कॉल कतार में लग गई।', 'Call queued.')
       }
     } catch (e) {
       openTelDialer(phone10)
       setToast({
         type: 'warn',
-        text: `${getApiErrorMessage(e)} — ${t('dialer khola.', 'dialer opened.')}`,
+        text: `${getApiErrorMessage(e)} — ${t('डायलर खोला।', 'dialer opened.')}`,
       })
-      receipt('Dialer khul gaya.')
+      receiptVoice('डायलर खुल गया।', 'Dialer opened.')
     } finally {
       setBusy(null)
       setTimeout(() => setToast(null), 12000)
@@ -300,12 +246,11 @@ export default function Today() {
 
   async function runSystemHandle() {
     if (helperBlocks()) {
-      const msg = t(
-        'Helper approval: payment link demo ke liye helper OTP baad mein.',
-        'Helper approval: helper OTP for payment link demo later.'
-      )
+      const hi = 'Helper approval: पेमेंट लिंक डेमो के लिए हेल्पर OTP बाद में।'
+      const en = 'Helper approval: helper OTP for payment link demo later.'
+      const msg = t(hi, en)
       setToast({ type: 'warn', text: msg })
-      receipt(msg)
+      receiptVoice(hi, en)
       return
     }
     setBusy('sys')
@@ -325,16 +270,20 @@ export default function Today() {
       setToast({
         type: 'ok',
         text: t(
-          'System ne payment link + action log kiya.',
+          'सिस्टम ने पेमेंट लिंक + एक्शन लॉग किया।',
           'System created payment link + logged action.'
         ),
         link: payRes.payment_link,
       })
-      receipt('Payment link ban gaya aur system ne action log kar diya.')
+      receiptVoice(
+        'पेमेंट लिंक बन गया और सिस्टम ने एक्शन लॉग कर दिया।',
+        'Payment link created and the system logged the action.'
+      )
     } catch (e) {
       setToast({ type: 'err', text: getApiErrorMessage(e) })
-      receipt(
-        t('Kuch gadbad ho gayi — screen par message dekho.', 'Something went wrong — see message on screen.')
+      receiptVoice(
+        'कुछ गड़बड़ हो गई — स्क्रीन पर मैसेज देखें।',
+        'Something went wrong — see message on screen.'
       )
     } finally {
       setBusy(null)
@@ -342,15 +291,51 @@ export default function Today() {
     }
   }
 
+  async function copyPaymentLinkOnly() {
+    if (helperBlocks()) {
+      setToast({ type: 'warn', text: t('हेल्पर अनुमोदन डेमो…', 'Helper approval demo…') })
+      return
+    }
+    setBusy('link')
+    setToast(null)
+    try {
+      const res = await postPaymentLink({
+        amount: collectAmount,
+        customer_name: collectName,
+        phone: phone10,
+      })
+      const url = res.payment_link
+      if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+        setToast({
+          type: 'ok',
+          text: t('पेमेंट लिंक कॉपी हो गया।', 'Payment link copied to clipboard.'),
+          link: url,
+        })
+      } else {
+        setToast({
+          type: 'ok',
+          text: t('पेमेंट लिंक तैयार।', 'Payment link ready.'),
+          link: url,
+        })
+      }
+    } catch (e) {
+      setToast({ type: 'err', text: getApiErrorMessage(e) })
+    } finally {
+      setBusy(null)
+      setTimeout(() => setToast(null), 12000)
+    }
+  }
+
   async function queueMessage(row) {
     if (helperBlocks()) {
-      setToast({ type: 'warn', text: t('Helper approval demo…', 'Helper approval demo…') })
+      setToast({ type: 'warn', text: t('हेल्पर अनुमोदन डेमो…', 'Helper approval demo…') })
       return
     }
     setBusy('wa')
     setToast(null)
     try {
-      await postWhatsappReminder({
+      const res = await postExecuteCollect({
         customer: row.name,
         phone: phone10,
         amount: Number(row.amount),
@@ -358,7 +343,8 @@ export default function Today() {
       })
       setToast({
         type: 'ok',
-        text: t('Reminder bheja gaya.', 'Reminder sent.'),
+        text: t('रिमाइंडर + लिंक भेजा गया।', 'Reminder + link sent.'),
+        link: res.payment_link || undefined,
       })
     } catch (e) {
       openWhatsAppDraft(phone10, buildWhatsappCollectionMessage(row.name, row.amount, 'friendly'))
@@ -371,7 +357,7 @@ export default function Today() {
 
   async function queueCall(row) {
     if (helperBlocks()) {
-      setToast({ type: 'warn', text: t('Helper approval demo…', 'Helper approval demo…') })
+      setToast({ type: 'warn', text: t('हेल्पर अनुमोदन डेमो…', 'Helper approval demo…') })
       return
     }
     setBusy('call')
@@ -380,7 +366,10 @@ export default function Today() {
     try {
       const res = await postTwilioVoiceCall({ phone: phone10, text: script })
       if (res.mock) openTelDialer(phone10)
-      setToast({ type: res.mock ? 'warn' : 'ok', text: res.mock ? 'Dialer' : 'Call queued' })
+      setToast({
+        type: res.mock ? 'warn' : 'ok',
+        text: res.mock ? t('डायलर', 'Dialer') : t('कॉल कतार में', 'Call queued'),
+      })
     } catch (e) {
       openTelDialer(phone10)
       setToast({ type: 'warn', text: getApiErrorMessage(e) })
@@ -395,21 +384,24 @@ export default function Today() {
     const amt = formatInr(collectAmount)
     const lines = {
       wa: {
-        hi: `Aap ${short} ko ${amt} ka reminder bhejne wale hain. Boliye YES ya NO.`,
+        hi: `आप ${short} को ${amt} का रिमाइंडर भेजने वाले हैं। YES या NO बोलिए।`,
         en: `You are about to send a ${amt} reminder to ${short}. Say YES or NO.`,
       },
       call: {
-        hi: `Aap ${short} ko call karne wale hain. Boliye YES ya NO.`,
+        hi: `आप ${short} को कॉल करने वाले हैं। YES या NO बोलिए।`,
         en: `You are about to call ${short}. Say YES or NO.`,
       },
       sys: {
-        hi: 'Aap system se payment link banane wale hain. Boliye YES ya NO.',
+        hi: 'आप सिस्टम से पेमेंट लिंक बनाने वाले हैं। YES या NO बोलिए।',
         en: 'You are about to create a payment link from the system. Say YES or NO.',
       },
     }
     const { hi, en } = lines[kind]
     setConfirm({ kind, messageHi: hi, messageEn: en })
-    if (voiceOn) speakHindi(hi)
+    if (voiceOn) {
+      if (localeDisplay === 'both') speakHinglish(hi, en)
+      else speakForLocale(t(hi, en), localeDisplay)
+    }
   }
 
   function onWhatsApp() {
@@ -458,7 +450,12 @@ export default function Today() {
         onCancel={() => {
           cancelSpeech()
           setConfirm(null)
-          if (voiceOn) speakHindi('Theek hai, kuch nahi kiya.')
+          if (voiceOn) {
+            const hi = 'ठीक है, कुछ नहीं किया।'
+            const en = 'Okay, nothing was done.'
+            if (localeDisplay === 'both') speakHinglish(hi, en)
+            else speakForLocale(t(hi, en), localeDisplay)
+          }
         }}
       />
       <ShowMeVideoModal
@@ -479,12 +476,20 @@ export default function Today() {
           onPaymentLink={async () => {
             setBusy('sys')
             try {
-              await postPaymentLink({
+              const res = await postPaymentLink({
                 amount: Number(timelineRow.amount),
                 customer_name: timelineRow.name,
                 phone: phone10,
               })
-              setToast({ type: 'ok', text: t('Payment link banaya.', 'Payment link created.') })
+              const url = res.payment_link
+              if (url && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(url)
+              }
+              setToast({
+                type: 'ok',
+                text: t('पेमेंट लिंक कॉपी हो गया।', 'Payment link copied to clipboard.'),
+                link: url,
+              })
             } catch (e) {
               setToast({ type: 'err', text: getApiErrorMessage(e) })
             } finally {
@@ -497,11 +502,17 @@ export default function Today() {
       )}
 
       <div className="mx-auto max-w-2xl">
-        <div className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500">
+        <div className="text-center text-[11px] font-semibold tracking-[0.2em] text-violet-500">
           <Bilingual
             mode={localeDisplay}
-            hi="Aaj — status"
+            hi="आज — स्थिति"
             en="Today — status"
+            hinglish="Aaj — sthiti"
+            regional={{
+              ta: 'இன்று — நிலை',
+              te: 'ఇవాల్టి — స్థితి',
+              bn: 'আজ — অবস্থা',
+            }}
             className="inline-block text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-500"
             subClassName="text-[10px] normal-case tracking-normal text-violet-500/90"
           />
@@ -515,13 +526,11 @@ export default function Today() {
         >
           {loading ? (
             '…'
-          ) : localeDisplay === 'en' ? (
-            <span lang="en">{line.en}</span>
-          ) : localeDisplay === 'hi' ? (
-            line.hi
-          ) : (
+          ) : localeDisplay === 'both' ? (
             <>
-              <span className="block">{line.hi}</span>
+              <span className="block" lang={line.hinglish ? 'hi-Latn' : 'hi'}>
+                {line.hinglish ?? line.hi}
+              </span>
               <span
                 className="mt-2 block text-lg font-semibold leading-snug text-violet-800/90 sm:text-xl"
                 lang="en"
@@ -529,6 +538,24 @@ export default function Today() {
                 {line.en}
               </span>
             </>
+          ) : (
+            <span
+              lang={
+                localeDisplay === 'en'
+                  ? 'en'
+                  : localeDisplay === 'hi'
+                    ? 'hi'
+                    : localeDisplay === 'ta'
+                      ? 'ta'
+                      : localeDisplay === 'te'
+                        ? 'te'
+                        : localeDisplay === 'bn'
+                          ? 'bn'
+                          : 'en'
+              }
+            >
+              {pickLine(line, localeDisplay)}
+            </span>
           )}
         </motion.h1>
 
@@ -539,7 +566,7 @@ export default function Today() {
               className="inline-flex items-center gap-1 rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 text-xs font-semibold text-[#6C3BFF] shadow-sm hover:bg-violet-50"
             >
               <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              {t('Yeh number samjhao', 'Explain this')}
+              {t('यह नंबर समझाओ', 'Explain this')}
             </Link>
           </div>
         )}
@@ -553,7 +580,7 @@ export default function Today() {
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-violet-600/90">
           <span
             className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/70 bg-white/90 px-3 py-1.5 shadow-sm"
-            title={t('System stream', 'System stream')}
+            title={t('सिस्टम स्ट्रीम', 'System stream')}
           >
             <span
               className={cn(
@@ -564,39 +591,39 @@ export default function Today() {
               aria-hidden
             />
             {streamStatus === 'reconnecting'
-              ? t('Twin dobara jod rahe…', 'Reconnecting twin…')
+              ? t('ट्विन दोबारा जोड़ रहे…', 'Reconnecting twin…')
               : streamStatus === 'live'
-                ? t('Twin live (SSE)', 'Twin live (SSE)')
-                : t('Twin start…', 'Twin starting…')}
+                ? t('ट्विन लाइव (SSE)', 'Twin live (SSE)')
+                : t('ट्विन शुरू…', 'Twin starting…')}
           </span>
           <Link
             to="/profile"
             className="rounded-full border border-violet-200/80 bg-white/90 px-3 py-1.5 font-medium text-[#6C3BFF] shadow-sm hover:bg-violet-50"
           >
-            {t('Briefing · Bank · WhatsApp', 'Briefing · bank · WhatsApp')}
+            {t('ब्रीफ़िंग · बैंक · वॉट्सऐप', 'Briefing · bank · WhatsApp')}
           </Link>
           <Link
             to="/profile#profile-notifications"
             className="rounded-full border border-violet-200/50 bg-white/70 px-3 py-1.5 text-violet-800 hover:bg-violet-50"
           >
-            {t('Briefing log', 'Briefing log')}
+            {t('ब्रीफ़िंग लॉग', 'Briefing log')}
           </Link>
           <Link
             to="/transactions"
             className="rounded-full border border-violet-200/60 bg-white/60 px-3 py-1.5 text-violet-800 hover:bg-violet-50"
           >
-            {t('Len-den', 'Transactions')}
+            {t('लेन-देन', 'Transactions')}
           </Link>
         </div>
 
         {gstCtx?.show_warning && gstCtx.gst_registered && (
           <div className="mt-4 rounded-2xl border border-amber-300/80 bg-amber-50/95 px-4 py-3 text-left shadow-sm">
             <p className="text-sm font-bold text-amber-950">
-              {t('GST jaldi file karna — due paas hai', 'GST filing due within 2 weeks')}
+              {t('GST जल्दी फ़ाइल करें — ड्यू पास है', 'GST filing due within 2 weeks')}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-amber-950/90">
               {t(
-                `Lagbhag ${formatInr(gstCtx.estimated_liability_inr)} — due ${gstCtx.next_due_date ?? '—'}`,
+                `लगभग ${formatInr(gstCtx.estimated_liability_inr)} — देय ${gstCtx.next_due_date ?? '—'}`,
                 `Estimated ${formatInr(gstCtx.estimated_liability_inr)} · due ${gstCtx.next_due_date ?? '—'}`,
               )}
             </p>
@@ -607,7 +634,7 @@ export default function Today() {
               to="/gst"
               className="mt-2 inline-block text-xs font-semibold text-amber-900 underline underline-offset-2"
             >
-              {t('GST detail dekho', 'Open GST page')}
+              {t('GST विवरण देखो', 'Open GST page')}
             </Link>
           </div>
         )}
@@ -618,17 +645,23 @@ export default function Today() {
               type="button"
               className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-violet-200 bg-white py-5 shadow-md transition hover:border-[#6C3BFF]/40"
               onClick={() => {
-                if (voiceOn)
-                  speakHindi(
+                if (voiceOn) {
+                  const hi =
                     cashHint != null
-                      ? `Aapke paas lagbhag ${formatInr(cashHint)} cash hai.`
-                      : 'Cash abhi estimate nahi hai.'
-                  )
+                      ? `आपके पास लगभग ${formatInr(cashHint)} नकद है।`
+                      : 'नकद अभी अनुमानित नहीं है।'
+                  const en =
+                    cashHint != null
+                      ? `You have roughly ${formatInr(cashHint)} in cash.`
+                      : 'Cash estimate is not available yet.'
+                  if (localeDisplay === 'both') speakHinglish(hi, en)
+                  else speakForLocale(t(hi, en), localeDisplay)
+                }
               }}
             >
               <Wallet className="h-8 w-8 text-[#6C3BFF]" />
               <span className="text-center text-sm font-bold text-violet-950">
-                {t('Paisa dekho', 'View cash')}
+                {t('पैसा देखो', 'View cash')}
               </span>
               {cashHint != null && (
                 <span className="text-xs font-bold text-emerald-700">{formatInr(cashHint)}</span>
@@ -641,7 +674,7 @@ export default function Today() {
             >
               <ListTodo className="h-8 w-8 text-[#6C3BFF]" />
               <span className="text-center text-sm font-bold text-violet-950">
-                {t('Kya karna hai', 'What to do')}
+                {t('क्या करना है', 'What to do')}
               </span>
             </button>
             <Link
@@ -650,7 +683,7 @@ export default function Today() {
             >
               <Users className="h-8 w-8 text-emerald-700" />
               <span className="text-center text-sm font-bold text-emerald-900">
-                {t('Logon se paise lo', 'Collect from people')}
+                {t('लोगों से पैसे लो', 'Collect from people')}
               </span>
             </Link>
           </div>
@@ -658,21 +691,25 @@ export default function Today() {
 
         {ctx?.flags?.show_inventory_strip && ctx?.inventory_hint && (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/95 px-4 py-3 text-center shadow-sm">
-            <p className="text-sm font-bold text-amber-950">{ctx.inventory_hint.headline}</p>
-            <p className="mt-1 text-xs text-amber-950/90">{ctx.inventory_hint.sub}</p>
+            <p className="text-sm font-bold text-amber-950">
+              {pickLocaleNode(ctx.inventory_hint.headline, localeDisplay)}
+            </p>
+            <p className="mt-1 text-xs text-amber-950/90">
+              {pickLocaleNode(ctx.inventory_hint.sub, localeDisplay)}
+            </p>
             <Link
               to="/inventory"
               className="mt-3 inline-block rounded-full bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md"
             >
-              {ctx.inventory_hint.cta}
+              {pickLocaleNode(ctx.inventory_hint.cta, localeDisplay)}
             </Link>
           </div>
         )}
 
         {ctx?.flags?.show_service_booking_hint && ctx?.service_hint && (
           <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/95 px-4 py-3 text-center text-sky-950 shadow-sm">
-            <p className="text-sm font-bold">{ctx.service_hint.headline}</p>
-            <p className="mt-1 text-xs opacity-90">{ctx.service_hint.sub}</p>
+            <p className="text-sm font-bold">{pickLocaleNode(ctx.service_hint.headline, localeDisplay)}</p>
+            <p className="mt-1 text-xs opacity-90">{pickLocaleNode(ctx.service_hint.sub, localeDisplay)}</p>
           </div>
         )}
 
@@ -684,7 +721,7 @@ export default function Today() {
         >
           <label className="flex flex-col gap-1 text-xs text-violet-800/80">
             <span className="font-medium">
-              {t('Default WhatsApp / call number (sab customers)', 'Default number for WhatsApp / calls')}
+              {t('डिफ़ॉल्ट वॉट्सऐप / कॉल नंबर (सभी ग्राहक)', 'Default number for WhatsApp / calls')}
             </span>
             <input
               type="tel"
@@ -698,9 +735,9 @@ export default function Today() {
           {!loading && queueRows.length > 0 && (
             <CollectionQueueList
               rows={queueRows}
-              title={t('Aaj collect karein', 'Collect today')}
-              subtitle={t('Poori ranked list — row par tap karke timeline dekho', 'Full ranked list — tap a row for timeline')}
-              totalDueLabel={t('Total', 'Total')}
+              title={t('आज वसूली करें', 'Collect today')}
+              subtitle={t('पूरी रैंक सूची — पंक्ति पर टैप करके टाइमलाइन देखो', 'Full ranked list — tap a row for timeline')}
+              totalDueLabel={t('कुल', 'Total')}
               busyKey={() => busy}
               onMessage={(row) => void queueMessage(row)}
               onCall={(row) => void queueCall(row)}
@@ -710,7 +747,7 @@ export default function Today() {
 
           <div className="rounded-2xl border border-violet-200/80 bg-white/90 px-4 py-3 text-center shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-500">
-              {literacyMinimal ? t('Top priority', 'Top priority') : t('Engine — pehla target', 'Engine top target')}
+              {literacyMinimal ? t('सबसे ज़रूरी', 'Top priority') : t('इंजन — पहला लक्ष्य', 'Engine top target')}
             </p>
             <p className="mt-1 text-sm font-semibold text-violet-950">
               {loading
@@ -728,8 +765,8 @@ export default function Today() {
           </div>
         </div>
 
-        <p className="mt-10 text-center text-[10px] font-semibold uppercase tracking-[0.25em] text-violet-400">
-          {t('Ab karo — WhatsApp / call / system', 'Do it — WhatsApp / call / auto')}
+        <p className="mt-10 text-center text-[10px] font-semibold tracking-[0.25em] text-violet-400 normal-case">
+          {t('अब करो — वॉट्सऐप / कॉल / सिस्टम', 'Do it — WhatsApp / call / auto')}
         </p>
         <div ref={actionRef} className="mt-3 flex flex-col gap-3">
           <div className="flex justify-end gap-2">
@@ -738,12 +775,12 @@ export default function Today() {
               className="inline-flex items-center gap-1 rounded-full border border-violet-200 px-3 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-50"
               onClick={() =>
                 setVideoOpen({
-                  title: t('WhatsApp reminder', 'WhatsApp reminder'),
+                  title: t('वॉट्सऐप रिमाइंडर', 'WhatsApp reminder'),
                   url: HELP_VIDEOS.whatsapp || HELP_VIDEOS.default,
                 })
               }
             >
-              <Play className="h-3.5 w-3.5" /> {t('Dikhao', 'Show me')}
+              <Play className="h-3.5 w-3.5" /> {t('दिखाओ', 'Show me')}
             </button>
           </div>
           <button
@@ -757,8 +794,19 @@ export default function Today() {
           >
             <MessageCircle className="h-6 w-6" />
             {busy === 'wa'
-              ? t('Bhej rahe hain…', 'Sending…')
-              : t('WhatsApp bhejo', 'Send WhatsApp')}
+              ? t('भेज रहे हैं…', 'Sending…')
+              : t('वॉट्सऐप भेजो', 'Send WhatsApp')}
+          </button>
+          <button
+            type="button"
+            disabled={!!busy || loading}
+            onClick={() => void copyPaymentLinkOnly()}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-emerald-200 bg-white py-3 text-sm font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-50 disabled:opacity-50"
+          >
+            <Copy className="h-4 w-4" />
+            {busy === 'link'
+              ? t('लिंक कॉपी…', 'Copying…')
+              : t('सिर्फ़ पेमेंट लिंक कॉपी करें', 'Copy payment link only')}
           </button>
           <button
             type="button"
@@ -768,8 +816,8 @@ export default function Today() {
           >
             <Phone className="h-6 w-6" />
             {busy === 'call'
-              ? t('Call…', 'Calling…')
-              : t('Call karo (Hindi voice)', 'Call (Hindi voice)')}
+              ? t('कॉल…', 'Calling…')
+              : t('कॉल करो (हिंदी आवाज़)', 'Call (Hindi voice)')}
           </button>
           <button
             type="button"
@@ -782,8 +830,8 @@ export default function Today() {
           >
             <Sparkles className="h-6 w-6" />
             {busy === 'sys'
-              ? t('Ho raha hai…', 'Working…')
-              : t('System ko handle karne do', 'Let system handle')}
+              ? t('हो रहा है…', 'Working…')
+              : t('सिस्टम को संभालने दो', 'Let system handle')}
           </button>
         </div>
 
@@ -792,23 +840,23 @@ export default function Today() {
           className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 py-4 text-base font-semibold text-violet-900 transition hover:bg-violet-100"
         >
           <Mic className="h-6 w-6" />
-          {t('Awaz se poochho — mic', 'Ask by voice — mic')}
+          {t('आवाज़ से पूछो — माइक', 'Ask by voice — mic')}
         </Link>
 
         <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
           <Link to="/people" className="flex items-center gap-1.5 font-medium text-[#6C3BFF] hover:underline">
             <Users className="h-4 w-4" />
-            {t('Saare log (dues)', 'All people (dues)')}
+            {t('सारे लोग (बकाया)', 'All people (dues)')}
           </Link>
           {!basic && (
             <Link to="/dashboard" className="font-medium text-violet-700/80 hover:underline">
-              {t('Poora dashboard →', 'Full dashboard →')}
+              {t('पूरा डैशबोर्ड →', 'Full dashboard →')}
             </Link>
           )}
           {basic && (
             <span className="text-violet-600/80">
               {t(
-                'Advanced mode mein poora dashboard (upar toggle)',
+                'उन्नत मोड में पूरा डैशबोर्ड (ऊपर टॉगल)',
                 'Full dashboard in Advanced (toggle above)'
               )}
             </span>
@@ -818,7 +866,7 @@ export default function Today() {
         {user?.helper_approval_required && (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-center text-sm text-amber-950">
             {t(
-              'Trusted helper mode: sensitive actions ke liye approval flow jald. Abhi demo mein actions block ho sakte hain — Profile se band karein.',
+              'विश्वसनीय हेल्पर मोड: संवेदनशील क्रियाओं के लिए अनुमोदन फ्लो जल्द। अभी डेमो में क्रियाएँ रुक सकती हैं — प्रोफ़ाइल से बंद करें।',
               'Trusted helper mode: approval flow for sensitive actions soon. In demo, actions may be blocked — turn off in Profile.'
             )}
           </p>
@@ -834,12 +882,12 @@ export default function Today() {
           <div className="fixed bottom-20 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-center justify-between gap-3 rounded-xl border border-violet-200/80 bg-violet-950/95 px-4 py-2.5 text-xs font-medium text-white shadow-xl md:bottom-8">
             <span className="leading-snug">
               {t(
-                'Free tier: outbound messages limited — upgrade for full automation.',
+                'फ़्री टियर: बाहरी संदेश सीमित — पूर्ण ऑटोमेशन के लिए अपग्रेड करें।',
                 'Free tier: outbound messages are limited — upgrade for full automation.'
               )}
             </span>
             <Link to="/growth" className="shrink-0 font-bold text-amber-300 underline-offset-2 hover:underline">
-              {t('Upgrade', 'Upgrade')}
+              {t('अपग्रेड', 'Upgrade')}
             </Link>
           </div>
         )}
@@ -856,9 +904,29 @@ export default function Today() {
           >
             <p>{toast.text}</p>
             {toast.link && (
-              <a href={toast.link} target="_blank" rel="noreferrer" className="mt-2 block text-xs font-medium text-blue-700 underline">
-                {t('Link kholo', 'Open link')}
-              </a>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <a
+                  href={toast.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-medium text-blue-700 underline"
+                >
+                  {t('लिंक खोलो', 'Open link')}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      void navigator.clipboard.writeText(toast.link)
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                  className="rounded-md border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-900 hover:bg-violet-100"
+                >
+                  {t('लिंक कॉपी', 'Copy link')}
+                </button>
+              </div>
             )}
           </div>
         )}

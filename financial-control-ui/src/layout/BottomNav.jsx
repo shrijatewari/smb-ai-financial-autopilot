@@ -4,10 +4,10 @@ import { cn } from '../lib/utils'
 import { useTr } from '../hooks/useTr'
 
 const items = [
-  { to: '/', hi: 'Aaj', en: 'Home', icon: Home, end: true },
-  { to: '/people', hi: 'Log', en: 'People', icon: Users },
-  { to: '/assistant', hi: 'Bolo', en: 'Voice', icon: Mic },
-  { to: '/profile', hi: 'Settings', en: 'Settings', icon: Settings },
+  { to: '/', hi: 'आज', en: 'Home', icon: Home, end: true },
+  { to: '/people', hi: 'लोग', en: 'People', icon: Users },
+  { to: '/assistant', hi: 'बोलो', en: 'Voice', icon: Mic },
+  { to: '/profile', hi: 'सेटिंग', en: 'Settings', icon: Settings },
 ]
 
 export function BottomNav() {

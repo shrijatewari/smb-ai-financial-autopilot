@@ -483,6 +483,15 @@ export default function Inventory() {
                         {item.unit ? ` ${item.unit}` : ''}
                       </span>
                     </p>
+                    {item.last_bill_deduct_at && (
+                      <p className="text-xs text-violet-600">
+                        Last bill update:{' '}
+                        {new Date(item.last_bill_deduct_at).toLocaleString(undefined, {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
+                      </p>
+                    )}
                     <div className="mb-2 flex justify-between text-xs text-violet-600">
                       <span>Stock level</span>
                       <span className="font-medium tabular-nums">{item.stock_pct}%</span>

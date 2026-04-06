@@ -19,6 +19,8 @@ import ActionCenter from './pages/ActionCenter'
 import Profile from './pages/Profile'
 import PlatformCapabilities from './pages/PlatformCapabilities'
 import Growth from './pages/Growth'
+import DataExport from './pages/DataExport'
+import Bills from './pages/Bills'
 
 export default function App() {
   return (
@@ -41,6 +43,8 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/platform" element={<PlatformCapabilities />} />
             <Route path="/growth" element={<Growth />} />
+            <Route path="/export" element={<DataExport />} />
+            <Route path="/bills" element={<Bills />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/assistant" element={<Assistant />} />
             <Route path="/documents" element={<Documents />} />

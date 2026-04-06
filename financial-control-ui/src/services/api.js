@@ -3,15 +3,14 @@ import { getMockNotificationsResponse } from '../lib/platformMocks'
 
 /**
  * Base URL for the Financial Control backend.
- * - Dev: use `/api` so Vite proxies to the backend (see vite.config.js).
- * - Prod: set VITE_API_URL, or deploy API behind the same origin at `/api`.
+ * - Dev (`npm run dev`): always same-origin `/api` — Vite proxies to `VITE_API_URL` or localhost:8000
+ *   (see vite.config.js `loadEnv`). Avoids CORS and flaky client-side env injection.
+ * - Prod build: `VITE_API_URL` (e.g. Netlify), or fallback localhost for broken previews.
  */
 export function resolveApiBaseUrl() {
+  if (import.meta.env.DEV) return '/api'
   const env = import.meta.env.VITE_API_URL
   if (env) return String(env).replace(/\/$/, '')
-  // `npm run dev`: use Vite proxy → backend (avoids direct :8000 connection issues).
-  if (import.meta.env.DEV) return '/api'
-  // `npm run build` + `vite preview` or static hosting: point at API (set VITE_API_URL in real deploys).
   return 'http://localhost:8000'
 }
 
@@ -56,12 +55,24 @@ export function getApiErrorMessage(err) {
   if (detail != null) {
     return typeof detail === 'string' ? detail : JSON.stringify(detail)
   }
+  const status = err?.response?.status
+  if (status === 502 || status === 504) {
+    return (
+      'Dev proxy could not reach the API. Set VITE_API_URL in financial-control-ui/.env (e.g. https://smb-financial-api.fly.dev), ' +
+      'then stop and run `npm run dev` again from that folder.'
+    )
+  }
   const code = err?.code
   const msg = err?.message || ''
   if (code === 'ERR_NETWORK' || msg === 'Network Error') {
+    if (import.meta.env.DEV) {
+      return (
+        'Cannot reach the API. In dev, requests go to `/api` and Vite proxies using VITE_API_URL in financial-control-ui/.env. ' +
+        'Restart the dev server after editing .env. Remote example: VITE_API_URL=https://smb-financial-api.fly.dev'
+      )
+    }
     return (
-      'Cannot reach the API. Start the backend: cd backend && uvicorn main:app --reload --port 8000 ' +
-      '(then keep using npm run dev so /api proxies to it). Or set VITE_API_URL to your API base URL.'
+      'Cannot reach the API. Set VITE_API_URL to your API base URL at build time, or deploy the API behind the same origin as `/api`.'
     )
   }
   return msg || 'Request failed.'
@@ -215,9 +226,15 @@ export async function postPaymentLink(body) {
   return data
 }
 
-/** POST /execute/whatsapp — payment reminder text + simulated send (tone: friendly|formal). */
+/** POST /execute/whatsapp — payment reminder + Razorpay link in body; Meta or mock send (tone: friendly|formal). */
 export async function postWhatsappReminder(body) {
   const { data } = await api.post('/execute/whatsapp', body)
+  return data
+}
+
+/** POST /execute/collect — payment link + WhatsApp in one call; response includes payment_link + preview. */
+export async function postExecuteCollect(body) {
+  const { data } = await api.post('/execute/collect', body)
   return data
 }
 
@@ -406,6 +423,33 @@ export async function fetchCollectionLadders() {
 /** GET /collections/customers — receivable rows for ladder start. */
 export async function fetchCollectionCustomers() {
   const { data } = await api.get('/collections/customers')
+  return data
+}
+
+/** POST /bills/ingest-json — POS JSON bill → inventory + ledger + optional khaata. */
+export async function ingestBillJson(payload) {
+  const { data } = await api.post('/bills/ingest-json', payload)
+  return data
+}
+
+/** POST /bills/ingest-ocr — multipart PDF/image → OCR + same ingest pipeline. */
+export async function ingestBillOcr(file, udhar = false) {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('udhar', udhar ? 'true' : 'false')
+  const { data } = await api.post('/bills/ingest-ocr', form, { timeout: 120000 })
+  return data
+}
+
+/** GET /bills/history — last 20 bills. */
+export async function getBillHistory() {
+  const { data } = await api.get('/bills/history')
+  return data
+}
+
+/** GET /bills/:id/detail — itemized bill for UI proof. */
+export async function getBillDetail(billId) {
+  const { data } = await api.get(`/bills/${billId}/detail`)
   return data
 }
 

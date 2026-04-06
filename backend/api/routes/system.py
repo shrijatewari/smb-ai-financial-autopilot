@@ -4,18 +4,41 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
-from auth.deps import get_current_user_optional
+from auth.deps import get_current_user, get_current_user_optional
 from auth.jwt_tokens import decode_token
 from db.prisma_client import prisma
 from prisma.models import User
 from services.system_snapshot import build_system_snapshot
 
 router = APIRouter()
+
+
+class SyncBatchItem(BaseModel):
+    id: str
+    method: str = "POST"
+    path: str
+    body: dict[str, Any] | list[Any] | None = None
+
+
+class SyncBatchBody(BaseModel):
+    items: list[SyncBatchItem] = Field(default_factory=list, max_length=100)
+
+
+def _safe_sync_path(path: str) -> bool:
+    if not path.startswith("/") or ".." in path:
+        return False
+    if path.rstrip("/") == "/system/sync-batch":
+        return False
+    return True
 
 
 async def _user_from_sse_token(token: str | None) -> User | None:
@@ -77,3 +100,39 @@ async def system_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/sync-batch")
+async def post_sync_batch(
+    body: SyncBatchBody,
+    request: Request,
+    _user: User = Depends(get_current_user),
+):
+    """
+    Replay queued offline mutations against this same app instance (loopback).
+    Each item uses the caller's Authorization header.
+    """
+    auth = request.headers.get("authorization")
+    port = os.environ.get("PORT", "8080")
+    base = f"http://127.0.0.1:{port}"
+    results: list[dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        for it in body.items:
+            if not _safe_sync_path(it.path):
+                results.append({"id": it.id, "ok": False, "error": "invalid path"})
+                continue
+            m = it.method.upper()
+            if m not in ("GET", "POST", "PUT", "PATCH", "DELETE"):
+                results.append({"id": it.id, "ok": False, "error": "bad method"})
+                continue
+            try:
+                kwargs: dict[str, Any] = {"headers": {"Authorization": auth or ""}}
+                if m in ("POST", "PUT", "PATCH", "DELETE") and it.body is not None:
+                    kwargs["json"] = it.body
+                resp = await client.request(m, f"{base}{it.path}", **kwargs)
+                results.append(
+                    {"id": it.id, "ok": resp.status_code < 400, "status": resp.status_code}
+                )
+            except Exception as e:
+                results.append({"id": it.id, "ok": False, "error": str(e)})
+    return {"results": results}

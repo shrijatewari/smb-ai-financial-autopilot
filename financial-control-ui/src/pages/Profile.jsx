@@ -26,8 +26,10 @@ import {
   postAaInitiate,
   postSmsCommand,
 } from '../services/api'
+import { useTr } from '../hooks/useTr'
 
 export default function Profile() {
+  const t = useTr()
   const { user, loadMe } = useAuth()
   const { snapshot: snap, streamStatus } = useSystemSnapshot()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -140,7 +142,7 @@ export default function Profile() {
         morning_briefing_enabled: briefingOn,
       })
       await loadMe()
-      setBriefingMsg({ type: 'ok', text: 'Saved.' })
+      setBriefingMsg({ type: 'ok', text: t('सेव हो गया।', 'Saved.') })
     } catch (err) {
       setBriefingMsg({ type: 'err', text: getApiErrorMessage(err) })
     } finally {
@@ -173,7 +175,7 @@ export default function Profile() {
         helper_approval_required: helperApproval,
       })
       await loadMe()
-      setHelperMsg({ type: 'ok', text: 'Saved.' })
+      setHelperMsg({ type: 'ok', text: t('सेव हो गया।', 'Saved.') })
     } catch (err) {
       setHelperMsg({ type: 'err', text: getApiErrorMessage(err) })
     } finally {
@@ -185,7 +187,9 @@ export default function Profile() {
     setAaBusy(true)
     setAaMsg(null)
     try {
-      const data = await postAaInitiate({})
+      const digits = (waPhone || '').replace(/\D/g, '')
+      const body = digits.length >= 10 ? { mobile: digits.slice(-10) } : {}
+      const data = await postAaInitiate(body)
       if (data?.redirect_url) {
         window.open(data.redirect_url, '_blank', 'noopener,noreferrer')
         setAaMsg({
@@ -228,15 +232,21 @@ export default function Profile() {
   return (
     <div className="w-full max-w-7xl mx-auto">
       <PageHeader
-        title="Business profile"
-        subtitle="Language, WhatsApp, bank link, and helpers — the same live twin powers Today and the full dashboard."
+        title={t('व्यवसाय प्रोफ़ाइल', 'Business profile')}
+        subtitle={t(
+          'भाषा, वॉट्सऐप, बैंक लिंक, और हेल्पर — वही लाइव ट्विन आज और पूरे डैशबोर्ड को चलाता है।',
+          'Language, WhatsApp, bank link, and helpers — the same live twin powers Today and the full dashboard.'
+        )}
       />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="lg:col-span-2 scroll-mt-24 border border-violet-200/60 bg-gradient-to-br from-white to-violet-50/50">
           <CardHeader>
-            <CardTitle>Quick links</CardTitle>
+            <CardTitle>{t('त्वरित लिंक', 'Quick links')}</CardTitle>
             <p className="text-sm font-normal text-violet-950/70">
-              Jump to the screens you use every day. Technical integration status lives under Platform lab.
+              {t(
+                'रोज़ इस्तेमाल वाली स्क्रीन पर जाएँ। तकनीकी इंटीग्रेशन स्थिति प्लेटफ़ॉर्म लैब में है।',
+                'Jump to the screens you use every day. Technical integration status lives under Platform lab.'
+              )}
             </p>
           </CardHeader>
           <CardContent>
@@ -246,8 +256,10 @@ export default function Profile() {
                   className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
                   to="/"
                 >
-                  <p className="font-semibold text-violet-950">Today</p>
-                  <p className="mt-1 text-xs text-violet-600">Runway, collections, command palette</p>
+                  <p className="font-semibold text-violet-950">{t('आज', 'Today')}</p>
+                  <p className="mt-1 text-xs text-violet-600">
+                    {t('रनवे, वसूली, कमांड पैलेट', 'Runway, collections, command palette')}
+                  </p>
                 </Link>
               </li>
               <li>
@@ -255,8 +267,8 @@ export default function Profile() {
                   className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
                   to="/growth"
                 >
-                  <p className="font-semibold text-violet-950">Growth</p>
-                  <p className="mt-1 text-xs text-violet-600">Credit score & referrals</p>
+                  <p className="font-semibold text-violet-950">{t('विकास', 'Growth')}</p>
+                  <p className="mt-1 text-xs text-violet-600">{t('क्रेडिट स्कोर और रेफ़रल', 'Credit score & referrals')}</p>
                 </Link>
               </li>
               <li>
@@ -264,8 +276,8 @@ export default function Profile() {
                   className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
                   to="/transactions"
                 >
-                  <p className="font-semibold text-violet-950">Transactions</p>
-                  <p className="mt-1 text-xs text-violet-600">Ledger, filters, CSV</p>
+                  <p className="font-semibold text-violet-950">{t('लेन-देन', 'Transactions')}</p>
+                  <p className="mt-1 text-xs text-violet-600">{t('लेजर, फ़िल्टर, CSV', 'Ledger, filters, CSV')}</p>
                 </Link>
               </li>
               <li>
@@ -273,44 +285,58 @@ export default function Profile() {
                   className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
                   to="/platform"
                 >
-                  <p className="font-semibold text-violet-950">Platform lab</p>
-                  <p className="mt-1 text-xs text-violet-600">Live vs demo integrations</p>
+                  <p className="font-semibold text-violet-950">{t('प्लेटफ़ॉर्म लैब', 'Platform lab')}</p>
+                  <p className="mt-1 text-xs text-violet-600">{t('लाइव बनाम डेमो इंटीग्रेशन', 'Live vs demo integrations')}</p>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  className="block rounded-xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-[#6C3BFF]/40 hover:shadow-md"
+                  to="/export"
+                >
+                  <p className="font-semibold text-violet-950">{t('डेटा निर्यात', 'Export data')}</p>
+                  <p className="mt-1 text-xs text-violet-600">{t('ऑफ़लाइन कतार, CSV', 'Offline queue, CSV')}</p>
                 </Link>
               </li>
             </ul>
             <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-950">
               <Radio className="h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
               <span>
-                Live twin:{' '}
+                {t('लाइव ट्विन:', 'Live twin:')}{' '}
                 <strong
                   className={cn(
                     streamStatus === 'live' ? 'text-emerald-700' : 'text-amber-700'
                   )}
                 >
                   {streamStatus === 'reconnecting'
-                    ? 'Reconnecting…'
+                    ? t('दोबारा जोड़ रहे…', 'Reconnecting…')
                     : streamStatus === 'live'
-                      ? 'Connected'
-                      : 'Starting…'}
+                      ? t('जुड़ा हुआ', 'Connected')
+                      : t('शुरू हो रहा…', 'Starting…')}
                 </strong>
-                <span className="text-emerald-900/80"> — matches the badge in the top bar.</span>
+                <span className="text-emerald-900/80">
+                  {' '}
+                  {t('— ऊपर बार में बैज जैसा।', '— matches the badge in the top bar.')}
+                </span>
               </span>
             </div>
           </CardContent>
         </Card>
         <Card className="lg:col-span-2 scroll-mt-24" id="conv-lang">
           <CardHeader>
-            <CardTitle>Assistant / voice language</CardTitle>
+            <CardTitle>{t('सहायक / आवाज़ की भाषा', 'Assistant / voice language')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-violet-950/70">
-              Choose Hindi or English for AI assistant replies and voice explanations (separate from
-              screen language in the top bar).
+              {t(
+                'एआई जवाब और आवाज़ समझ के लिए हिंदी या अंग्रेज़ी चुनें (ऊपर बार की स्क्रीन भाषा से अलग)।',
+                'Choose Hindi or English for AI assistant replies and voice explanations (separate from screen language in the top bar).'
+              )}
             </p>
             <form onSubmit={saveConversationLanguage} className="flex flex-wrap items-end gap-4">
               <div>
                 <label className="text-xs font-medium text-violet-950/70" htmlFor="conv-lang">
-                  Conversation
+                  {t('बातचीत', 'Conversation')}
                 </label>
                 <select
                   id="conv-lang"
@@ -323,7 +349,7 @@ export default function Profile() {
                 </select>
               </div>
               <Button type="submit" disabled={convSaving}>
-                {convSaving ? 'Saving…' : 'Save'}
+                {convSaving ? t('सेव हो रहा…', 'Saving…') : t('सेव', 'Save')}
               </Button>
               {convMsg && (
                 <p className={`text-sm ${convMsg.type === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
@@ -335,17 +361,19 @@ export default function Profile() {
         </Card>
         <Card className="lg:col-span-2 scroll-mt-24" id="profile-briefing">
           <CardHeader>
-            <CardTitle>Morning WhatsApp briefing</CardTitle>
+            <CardTitle>{t('सुबह वॉट्सऐप ब्रीफ़िंग', 'Morning WhatsApp briefing')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-violet-950/70">
-              Daily 8:00 AM IST summary (cash, runway, top collection target). Needs your WhatsApp number and
-              Meta WhatsApp API configured on the server.
+              {t(
+                'रोज़ सुबह 8:00 IST सारांश (नकद, रनवे, शीर्ष वसूली लक्ष्य)। वॉट्सऐप नंबर और सर्वर पर Meta API चाहिए।',
+                'Daily 8:00 AM IST summary (cash, runway, top collection target). Needs your WhatsApp number and Meta WhatsApp API configured on the server.'
+              )}
             </p>
             <form onSubmit={saveBriefing} className="flex max-w-xl flex-col gap-4">
               <div>
                 <label className="text-xs font-medium text-violet-950/70" htmlFor="wa-phone">
-                  WhatsApp number (10 digit)
+                  {t('वॉट्सऐप नंबर (१० अंक)', 'WhatsApp number (10 digit)')}
                 </label>
                 <input
                   id="wa-phone"
@@ -363,10 +391,10 @@ export default function Profile() {
                   checked={briefingOn}
                   onChange={(e) => setBriefingOn(e.target.checked)}
                 />
-                Send morning briefing
+                {t('सुबह ब्रीफ़िंग भेजो', 'Send morning briefing')}
               </label>
               <Button type="submit" disabled={briefingSaving}>
-                {briefingSaving ? 'Saving…' : 'Save'}
+                {briefingSaving ? t('सेव हो रहा…', 'Saving…') : t('सेव', 'Save')}
               </Button>
               {briefingMsg && (
                 <p className={`text-sm ${briefingMsg.type === 'ok' ? 'text-emerald-700' : 'text-red-600'}`}>
@@ -378,7 +406,7 @@ export default function Profile() {
         </Card>
         <Card className="lg:col-span-2 scroll-mt-24" id="profile-notifications">
           <CardHeader>
-            <CardTitle>Briefing &amp; notification log</CardTitle>
+            <CardTitle>{t('ब्रीफ़िंग और सूचना लॉग', 'Briefing & notification log')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-violet-950/75">
@@ -452,11 +480,23 @@ export default function Profile() {
             <CardTitle>Link bank account (Account Aggregator)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-violet-950/75">
-              Connect via RBI Account Aggregator (e.g. Setu). Transactions appear in your ledger under{' '}
-              <span className="font-medium">bank_aa</span>. Save your WhatsApp number above first, or the API will
-              ask for a mobile on initiate.
-            </p>
+            <ol className="list-decimal space-y-2 pl-5 text-sm text-violet-950/75">
+              <li>
+                Enter a 10-digit India mobile in the{' '}
+                <a href="#profile-briefing" className="font-medium text-[#6C3BFF] underline underline-offset-2">
+                  Morning briefing
+                </a>{' '}
+                WhatsApp field (saved or just typed—we send it to AA).
+              </li>
+              <li>
+                Tap <span className="font-medium">Link bank account</span> — Setu consent opens in a new tab. Complete
+                approval there.
+              </li>
+              <li>
+                Bank feeds sync into your ledger with source <span className="font-medium">bank_aa</span> (see
+                Transactions).
+              </li>
+            </ol>
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full bg-violet-100 px-3 py-1 text-xs font-medium text-violet-900">
                 {aaStatus == null ? '…' : aaStatus.status || 'Not linked'}
@@ -502,7 +542,7 @@ export default function Profile() {
                 Actions ke liye helper approval (demo — OTP jald)
               </label>
               <Button type="submit" disabled={helperSaving}>
-                {helperSaving ? 'Saving…' : 'Save'}
+                {helperSaving ? t('सेव हो रहा…', 'Saving…') : t('सेव', 'Save')}
               </Button>
             </form>
             {helperMsg && (

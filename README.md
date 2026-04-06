@@ -352,4 +352,3 @@ Copy from each **`.env.example`**. Never commit secrets.
 
 **License:** Add a `LICENSE` when you open-source; until then all rights reserved unless stated otherwise.
 
-**Author:** [@shrijatewari](https://github.com/shrijatewari) · **`smb-ai-financial-autopilot`**

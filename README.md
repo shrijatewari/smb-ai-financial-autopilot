@@ -320,14 +320,15 @@ Copy from each **`.env.example`**. Never commit secrets.
 
 ---
 
-## Future work
+## Future Work
 
-- Deeper **Paytm / bank** integrations  
-- **Razorpay webhooks** → auto-post settlements into ledger (partial support exists – wire all events)  
-- Richer **RL** policies and evaluation  
-- **Credit / lending** scoring APIs  
-- More **regional languages** end-to-end  
-- SSE / WebSocket for **push** snapshots instead of polling (SSE **`/system/stream`** already available for live feed)  
+* Expand **Paytm and banking integrations** to support real-time transaction sync and reconciliation
+* Fully integrate **Razorpay webhooks** to automatically post settlements into the ledger (extend current partial support to cover all event types)
+* Enhance **Reinforcement Learning (RL)** models with improved policies, training pipelines, and evaluation metrics
+* Develop **credit and lending scoring APIs** for risk assessment and financial insights
+* Add comprehensive **regional language support** across the entire platform for better accessibility
+* Implement **Server-Sent Events (SSE) / WebSockets** for real-time push updates instead of polling (existing SSE endpoint: `/system/stream`)
+
 
 ---
 

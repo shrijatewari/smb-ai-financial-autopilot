@@ -1,6 +1,6 @@
 # Self-Learning Financial Control System for SMBs
 
-**Voice-first AI that predicts cash risk, recommends what to do today, and can execute collections – built for real Indian SMB behavior (Hindi / Hinglish, messy data, action over analytics).**
+**Voice-first AI that predicts cash risk, recommends what to do today, and can execute collections, built for real Indian SMB behavior (Hindi / Hinglish, messy data, action over analytics).**
 
 *Repository: [smb-ai-financial-autopilot](https://github.com/shrijatewari/smb-ai-financial-autopilot)*
 
